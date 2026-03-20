@@ -1,0 +1,41 @@
+/* Styles spécifiques à l'application */
+body {
+    background-color: #f8f9fa;
+}
+
+#app {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.05);
+}
+
+/* --- Responsive mobile --- */
+@media (max-width: 767.98px) {
+    #app {
+        padding: 10px;
+        border-radius: 0;
+    }
+
+    .table th,
+    .table td {
+        font-size: 0.875rem;
+        padding: 0.4rem 0.3rem;
+    }
+
+    /* Titres plus compacts */
+    h2 {
+        font-size: 1.3rem;
+    }
+}
+
+/* Boutons d'action compacts dans les tableaux */
+.btn-group-actions {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-wrap: nowrap;
+}
+
+.btn-group-actions .btn {
+    padding: 0.25rem 0.45rem;
+}
