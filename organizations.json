@@ -4,6 +4,7 @@
     "name": "Default Organization",
     "label": "Organisation par défaut",
     "adminEmail": "admin@default.com",
-    "defaultLanguage": "fr"
+    "defaultLanguage": "fr",
+    "logo": "/favicon.svg"
   }
 ]

@@ -28,12 +28,14 @@ class OrgListView extends AbstractView {
             orgs.forEach(org => {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 mb-4';
+                const logo = org.logo || '/favicon.svg';
                 col.innerHTML = `
-                    <div class="card h-100">
-                        <div class="card-body">
+                    <div class="card h-100 text-center">
+                        <div class="card-body d-flex flex-column align-items-center">
+                            <img src="${logo}" alt="Logo ${org.label}" class="mb-3" style="max-height: 80px; max-width: 100%;">
                             <h5 class="card-title">${org.label}</h5>
                             <p class="card-text text-muted">${org.id}</p>
-                            <a href="/${org.id}" class="btn btn-primary" data-link>Accéder</a>
+                            <a href="/${org.id}" class="btn btn-primary mt-auto" data-link>Accéder</a>
                         </div>
                     </div>
                 `;

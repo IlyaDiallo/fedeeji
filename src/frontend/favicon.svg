@@ -2,7 +2,7 @@
   <circle cx="50" cy="50" r="48" fill="#444444"/>
   <path d="M 12 30 A 48 48 0 0 0 12 70" stroke="white" stroke-width="8" fill="none"/>
   <path d="M 88 30 A 48 48 0 0 1 88 70" stroke="white" stroke-width="8" fill="none"/>
-  <circle cx="39" cy="27" r="6" fill="white"/>
+  <circle cx="36" cy="27" r="6" fill="white"/>
   <circle cx="71" cy="27" r="6" fill="white"/>
   <line x1="41" y1="53" x2="41" y2="83" stroke="white" stroke-width="8" stroke-linecap="round"/>
   <path d="M 41 53 Q 41 41 53 41 L 57 41" stroke="white" stroke-width="8" fill="none" stroke-linecap="round"/>
