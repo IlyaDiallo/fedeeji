@@ -5,6 +5,7 @@
     "label": "Organisation par défaut",
     "adminEmail": "admin@default.com",
     "defaultLanguage": "fr",
-    "logo": "/favicon.svg"
+    "logo": "/favicon.svg",
+    "registrationPassword": "test"
   }
 ]

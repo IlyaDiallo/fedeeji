@@ -111,6 +111,11 @@ class LoginView extends AbstractView {
                                                 ${t("login_btn")}
                                             </button>
                                         </div>
+                                        <div class="mt-3 text-center">
+                                            <a href="/${this.orgId}/register" data-link data-i18n="register_request">
+                                                ${t("register_request")}
+                                            </a>
+                                        </div>
                                         <div id="member-login-error"
                                             class="text-danger mt-3
                                                 text-center d-none">

@@ -26,7 +26,7 @@ let currentOrgId = null;
  */
 const canAccessRoute = (path) => {
     // Routes de login toujours accessibles
-    if (path === '/login' || path === '/:orgId/login') {
+    if (path === '/login' || path === '/:orgId/login' || path === '/:orgId/register') {
         return true;
     }
 
@@ -231,6 +231,7 @@ const router = async () => {
     const routes = [
         { path: "/login", view: LoginView },
         { path: "/:orgId/login", view: LoginView },
+        { path: "/:orgId/register", view: RegisterView },
         { path: "/", view: OrgListView },
         { path: "/:orgId", view: HomeView },
         { path: "/:orgId/users", view: UsersView },
@@ -273,7 +274,8 @@ const router = async () => {
     const params = getParams(match);
     const isLoginRoute =
         match.route.path === '/login'
-        || match.route.path === '/:orgId/login';
+        || match.route.path === '/:orgId/login'
+        || match.route.path === '/:orgId/register';
 
     // Mettre à jour l'orgId courant (sauf sur les pages login)
     if (!isLoginRoute) {

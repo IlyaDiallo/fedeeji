@@ -91,6 +91,20 @@ class Api {
 
     // --- Méthodes d'authentification ---
 
+    async verifyRegistrationPassword(orgId, password) {
+        return this.request('/auth/verify-registration-password', {
+            method: 'POST',
+            body: JSON.stringify({ orgId, password })
+        });
+    }
+
+    async registerMember({ orgId, password, memberData }) {
+        return this.request('/auth/register', {
+            method: 'POST',
+            body: JSON.stringify({ orgId, password, memberData })
+        });
+    }
+
     /** Connexion superadmin */
     async login(password) {
         const res = await this.request('/auth/login', {

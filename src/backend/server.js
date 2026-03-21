@@ -43,7 +43,7 @@ const authMiddleware = createAuthMiddleware(authService);
 
 // API routes
 const authRouter = createAuthRouter({
-    authService, organizationService
+    authService, organizationService, dataService
 });
 app.use('/auth', authRouter);
 

@@ -101,7 +101,12 @@ const translations = {
         "past_event_locked":
             "Cet événement est passé,"
             + " modification impossible",
-        "past_event": "Passé"
+        "past_event": "Passé",
+        "register_request": "Demande d'enregistrement",
+        "registration_password": "Mot de passe d'enregistrement",
+        "verify": "Vérifier",
+        "registration_success": "Votre demande d'enregistrement a été effectuée avec succès. Vous pouvez maintenant vous connecter.",
+        "back_to_login": "Retour à la connexion"
     },
     en: {
         "app_title":
@@ -204,7 +209,12 @@ const translations = {
         "past_event_locked":
             "This event is past,"
             + " modification not allowed",
-        "past_event": "Past"
+        "past_event": "Past",
+        "register_request": "Registration request",
+        "registration_password": "Registration password",
+        "verify": "Verify",
+        "registration_success": "Your registration request was successful. You can now log in.",
+        "back_to_login": "Back to login"
     }
 };
 
