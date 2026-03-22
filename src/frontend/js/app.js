@@ -47,6 +47,7 @@ const canAccessRoute = (path) => {
             '/:orgId',
             '/:orgId/events',
             '/:orgId/participations',
+            '/:orgId/events/:eventId/participation-schedule',
             '/:orgId/schedule',
             '/:orgId/profile',
             '/:orgId/subscriptions'
@@ -244,6 +245,10 @@ const router = async () => {
         {
             path: "/:orgId/participations",
             view: ParticipationsView
+        },
+        {
+            path: "/:orgId/events/:eventId/participation-schedule",
+            view: ParticipationScheduleView
         },
         { path: "/:orgId/schedule", view: ScheduleView },
         { path: "/:orgId/profile", view: ProfileView },

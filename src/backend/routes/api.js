@@ -107,6 +107,79 @@ function createApiRouter({ dataService, trashService, importService }) {
 
     // --- Participations : membres peuvent gérer les leurs ---
 
+    // --- Participations bulk (upsert) ---
+
+    router.post('/participations/bulk',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                const { eventId, memberId, entries } = req.body;
+                if (!eventId || !memberId || !Array.isArray(entries)) {
+                    return res.status(400).json({
+                        error: 'eventId, memberId et entries requis'
+                    });
+                }
+                // Membre : forcer son propre memberId
+                const effectiveMemberId = req.user.role === 'member'
+                    ? req.user.memberId : memberId;
+
+                const existing = await dataService.list({
+                    organisationId: req.organisationId,
+                    collection: 'participations'
+                });
+
+                const results = [];
+                for (const entry of entries) {
+                    const { occurrenceDate, response } = entry;
+                    if (!occurrenceDate) continue;
+
+                    // Chercher une participation existante
+                    const found = existing.find(
+                        p => p.eventId === eventId
+                            && p.memberId === effectiveMemberId
+                            && p.occurrenceDate === occurrenceDate
+                    );
+
+                    if (response === null) {
+                        // Suppression si la participation existe
+                        if (found) {
+                            await dataService.delete({
+                                organisationId: req.organisationId,
+                                collection: 'participations',
+                                id: found.id
+                            });
+                        }
+                    } else if (found) {
+                        // Mise à jour
+                        const updated = await dataService.update({
+                            organisationId: req.organisationId,
+                            collection: 'participations',
+                            id: found.id,
+                            data: { response }
+                        });
+                        results.push(updated);
+                    } else {
+                        // Création
+                        const created = await dataService.create({
+                            organisationId: req.organisationId,
+                            collection: 'participations',
+                            data: {
+                                eventId,
+                                memberId: effectiveMemberId,
+                                occurrenceDate,
+                                response
+                            }
+                        });
+                        results.push(created);
+                    }
+                }
+                res.json({ success: true, count: results.length });
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
     router.get('/participations',
         requireRole('admin', 'member'),
         async (req, res) => {

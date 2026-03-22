@@ -106,3 +106,174 @@ body {
     text-decoration: line-through;
     opacity: 0.6;
 }
+
+/* --- Planning de participation (ParticipationScheduleView) --- */
+
+.participation-calendar {
+    table-layout: fixed;
+}
+
+.participation-calendar th {
+    background-color: #f0f0f0;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.participation-calendar td {
+    height: 60px;
+    vertical-align: middle;
+    padding: 4px;
+    transition: background-color 0.15s, transform 0.1s;
+}
+
+.participation-cell {
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.participation-cell:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    z-index: 1;
+}
+
+.participation-cell .day-number {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.participation-cell .day-badge {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+.participation-cell-empty {
+    opacity: 0.4;
+}
+
+.participation-cell-empty .day-number {
+    font-size: 0.8rem;
+}
+
+/* Couleurs des cellules selon la réponse */
+.cell-yes {
+    background-color: #d4edda !important;
+    border-color: #28a745 !important;
+}
+
+.cell-no {
+    background-color: #f8d7da !important;
+    border-color: #dc3545 !important;
+}
+
+.cell-maybe {
+    background-color: #fff3cd !important;
+    border-color: #ffc107 !important;
+}
+
+.cell-none {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+}
+
+/* Cellule/item annulé */
+.cell-cancelled {
+    background-color: #f5f5f5 !important;
+    border-color: #ccc !important;
+    opacity: 0.65;
+    cursor: default !important;
+}
+
+.cell-cancelled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.cell-cancelled .day-number {
+    text-decoration: line-through;
+}
+
+/* Bouton annuler/rétablir dans la grille calendrier */
+.participation-cell {
+    position: relative;
+}
+
+.btn-cancel-occ {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    padding: 0 3px;
+    font-size: 0.65rem;
+    line-height: 1;
+    background: rgba(255, 255, 255, 0.8);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+    z-index: 2;
+}
+
+.btn-cancel-occ:hover {
+    opacity: 1;
+}
+
+.btn-cancel-occ.cancel {
+    color: #dc3545;
+}
+
+.btn-cancel-occ.restore {
+    color: #28a745;
+}
+
+/* Liste mensuelle */
+.participation-list-item {
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.1s;
+}
+
+.participation-list-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Barre pinceau */
+.participation-brush .brush-btn {
+    min-width: 70px;
+}
+
+.participation-brush .brush-btn.active {
+    box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Légende */
+.participation-legend small {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+@media (max-width: 767.98px) {
+    .participation-calendar td {
+        height: 45px;
+        padding: 2px;
+    }
+
+    .participation-cell .day-number {
+        font-size: 0.75rem;
+    }
+
+    .participation-cell .day-badge {
+        font-size: 0.9rem;
+    }
+
+    .participation-brush {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .participation-brush .ms-auto {
+        margin-left: 0 !important;
+        margin-top: 0.5rem;
+    }
+}

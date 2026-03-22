@@ -318,12 +318,20 @@ class EventsView extends AbstractView {
                 <td>
                     ${this.isMember ? `
                     <div class="btn-group-actions">
+                        ${(event.recurrence && event.recurrence !== 'none') ? `
+                        <a href="/${this.orgId}/events/${event.id}/participation-schedule" class="btn btn-sm btn-outline-primary" data-link title="${t("plan_participations")}">
+                            <i class="bi bi-calendar-check"></i>
+                        </a>` : ''}
                         <a href="/${this.orgId}/participations?eventId=${event.id}" class="btn btn-sm btn-outline-success" data-link title="${t("participations")}">
                             <i class="bi bi-calendar-plus"></i>
                         </a>
                     </div>
                     ` : `
                     <div class="btn-group-actions">
+                        ${(event.recurrence && event.recurrence !== 'none') ? `
+                        <a href="/${this.orgId}/events/${event.id}/participation-schedule" class="btn btn-sm btn-outline-info" data-link title="${t("plan_participations")}">
+                            <i class="bi bi-calendar-check"></i>
+                        </a>` : ''}
                         <button class="btn btn-sm
                             btn-outline-primary btn-edit"
                             data-id="${event.id}"

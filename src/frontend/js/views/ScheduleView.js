@@ -136,15 +136,20 @@ class ScheduleView extends AbstractView {
                         </div>
                         <div class="d-flex align-items-center">
                             ${toggleCancelBtn}
-                            ${isRecurrent && occurrences.length > 1 ? `
+                            ${isRecurrent ? `
+                            <a href="/${this.orgId}/events/${event.id}/participation-schedule" class="btn btn-sm btn-outline-primary ms-2" data-link title="${t("plan_participations")}">
+                                <i class="bi bi-calendar-check"></i>
+                            </a>
+                            ` : ''}
+                            ${!this.isMember && isRecurrent && occurrences.length > 1 ? `
                             <button class="btn btn-sm btn-outline-secondary ms-2 btn-toggle-stack" title="${t("expand_stack")}">
                                 <i class="bi bi-chevron-down"></i>
                             </button>
-                            ` : `
+                            ` : !isRecurrent ? `
                             <a href="/${this.orgId}/participations?eventId=${event.id}&date=${firstOcc.occurrenceDate}" class="btn btn-sm btn-outline-success ms-2" data-link title="${t("participations")}">
                                 <i class="bi bi-calendar-plus"></i>
                             </a>
-                            `}
+                            ` : ''}
                         </div>
                     </div>
                 </div>
@@ -152,52 +157,79 @@ class ScheduleView extends AbstractView {
             
             stackContainer.innerHTML = headerHtml;
 
-            if (isRecurrent && occurrences.length > 1) {
+            // Liste dépliable des occurrences (admin uniquement)
+            if (!this.isMember && isRecurrent
+                && occurrences.length > 1) {
                 const body = document.createElement('div');
-                body.className = 'event-stack-body list-group';
-                
-                for (let i = 1; i < occurrences.length; i++) {
+                body.className =
+                    'event-stack-body list-group';
+                for (let i = 1; i < occurrences.length;
+                    i++) {
                     const occ = occurrences[i];
-                    const occDateObj = new Date(occ.occurrenceDate);
-                    const occDateStr = occDateObj.toLocaleDateString(i18n.lang === 'en' ? 'en-US' : 'fr-FR', {
-                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                    });
-                    
-                    let occCancelledClass = occ.isCancelled ? 'occurrence-cancelled' : '';
-                    let occCancelledLabel = occ.isCancelled ? ` <span class="badge bg-danger ms-2">${t("occurrence_cancelled")}</span>` : '';
-
-                    let toggleCancelBtnOcc = '';
-                    if (!this.isMember) {
-                        toggleCancelBtnOcc = `
-                            <button class="btn btn-sm ms-2 ${occ.isCancelled ? 'btn-outline-success' : 'btn-outline-danger'} btn-toggle-cancel"
-                                data-event-id="${event.id}"
-                                data-date="${occ.occurrenceDate}"
-                                title="${t('cancel_occurrence')}">
-                                <i class="bi bi-${occ.isCancelled ? 'arrow-counterclockwise' : 'x-circle'}"></i>
-                            </button>`;
-                    }
-
-                    const occItem = document.createElement('div');
-                    occItem.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center mb-1 rounded bg-light border';
+                    const occDateObj =
+                        new Date(occ.occurrenceDate);
+                    const occDateStr =
+                        occDateObj.toLocaleDateString(
+                            i18n.lang === 'en'
+                                ? 'en-US' : 'fr-FR',
+                            {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                            }
+                        );
+                    let occCancelledClass =
+                        occ.isCancelled
+                            ? 'occurrence-cancelled' : '';
+                    let occCancelledLabel =
+                        occ.isCancelled
+                            ? ` <span class="badge bg-danger ms-2">${t("occurrence_cancelled")}</span>`
+                            : '';
+                    const toggleCancelBtnOcc = `
+                        <button class="btn btn-sm ms-2
+                            ${occ.isCancelled
+                                ? 'btn-outline-success'
+                                : 'btn-outline-danger'}
+                            btn-toggle-cancel"
+                            data-event-id="${event.id}"
+                            data-date="${occ.occurrenceDate}"
+                            title="${t(
+                                'cancel_occurrence'
+                            )}">
+                            <i class="bi bi-${
+                                occ.isCancelled
+                                    ? 'arrow-counterclockwise'
+                                    : 'x-circle'
+                            }"></i>
+                        </button>`;
+                    const occItem =
+                        document.createElement('div');
+                    occItem.className =
+                        'list-group-item '
+                        + 'list-group-item-action '
+                        + 'd-flex '
+                        + 'justify-content-between '
+                        + 'align-items-center mb-1 '
+                        + 'rounded bg-light border';
                     occItem.innerHTML = `
-                        <div class="ms-2 me-auto ${occCancelledClass}">
-                            <div class="fw-bold text-secondary d-flex align-items-center">
+                        <div class="ms-2 me-auto
+                            ${occCancelledClass}">
+                            <div class="fw-bold
+                                text-secondary d-flex
+                                align-items-center">
                                 ${event.name}${occCancelledLabel}
                             </div>
                             <div class="text-muted mt-1">
                                 <small>🗓️ ${occDateStr}${timeStr}</small>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center">
+                        <div class="d-flex
+                            align-items-center">
                             ${toggleCancelBtnOcc}
-                            <a href="/${this.orgId}/participations?eventId=${event.id}&date=${occ.occurrenceDate}" class="btn btn-sm btn-outline-success ms-2" data-link title="${t("participations")}">
-                                <i class="bi bi-calendar-plus"></i>
-                            </a>
-                        </div>
-                    `;
+                        </div>`;
                     body.appendChild(occItem);
                 }
-                
                 stackContainer.appendChild(body);
             }
 
@@ -206,37 +238,58 @@ class ScheduleView extends AbstractView {
 
         container.appendChild(listGroup);
 
-        document.querySelectorAll('.btn-toggle-cancel').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const eventId = btn.getAttribute('data-event-id');
-                const date = btn.getAttribute('data-date');
-                await this.toggleCancelDate(eventId, date);
+        // Boutons annuler/rétablir
+        document.querySelectorAll('.btn-toggle-cancel')
+            .forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const eventId =
+                        btn.getAttribute('data-event-id');
+                    const date =
+                        btn.getAttribute('data-date');
+                    await this.toggleCancelDate(
+                        eventId, date
+                    );
+                });
             });
-        });
 
-        document.querySelectorAll('.btn-toggle-stack').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const header = e.target.closest('.event-stack-header');
-                const container = header.parentElement;
-                const body = container.querySelector('.event-stack-body');
-                const icon = btn.querySelector('i');
-                
-                if (body) {
-                    body.classList.toggle('show');
-                    if (body.classList.contains('show')) {
-                        icon.classList.replace('bi-chevron-down', 'bi-chevron-up');
-                        btn.title = t("collapse_stack");
-                    } else {
-                        icon.classList.replace('bi-chevron-up', 'bi-chevron-down');
-                        btn.title = t("expand_stack");
+        // Chevron dépliable (admin)
+        document.querySelectorAll('.btn-toggle-stack')
+            .forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const header = e.target.closest(
+                        '.event-stack-header'
+                    );
+                    const ctnr = header.parentElement;
+                    const body = ctnr.querySelector(
+                        '.event-stack-body'
+                    );
+                    const icon = btn.querySelector('i');
+                    if (body) {
+                        body.classList.toggle('show');
+                        if (body.classList
+                            .contains('show')) {
+                            icon.classList.replace(
+                                'bi-chevron-down',
+                                'bi-chevron-up'
+                            );
+                            btn.title =
+                                t("collapse_stack");
+                        } else {
+                            icon.classList.replace(
+                                'bi-chevron-up',
+                                'bi-chevron-down'
+                            );
+                            btn.title =
+                                t("expand_stack");
+                        }
                     }
-                }
+                });
             });
-        });
+
     }
 
     async toggleCancelDate(eventId, date) {

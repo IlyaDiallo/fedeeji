@@ -133,7 +133,14 @@ const translations = {
         "monthly_type_last": "Dernier jour du mois",
         "monthly_type_weekday": "Même jour de la semaine",
         "all_day": "Toute la journée",
-        "time_and_duration": "Heure et durée"
+        "time_and_duration": "Heure et durée",
+        "participation_schedule": "Planning de participation",
+        "back_to_schedule": "Retour au planning",
+        "apply_to_all": "Appliquer à tout",
+        "no_response": "Non répondu",
+        "no_upcoming_dates": "Aucune date à venir",
+        "all_dates": "Toutes les dates",
+        "plan_participations": "Planifier mes participations"
     },
     en: {
         "app_title":
@@ -268,7 +275,14 @@ const translations = {
         "monthly_type_last": "Last day of the month",
         "monthly_type_weekday": "Same weekday",
         "all_day": "All day",
-        "time_and_duration": "Time and duration"
+        "time_and_duration": "Time and duration",
+        "participation_schedule": "Participation schedule",
+        "back_to_schedule": "Back to schedule",
+        "apply_to_all": "Apply to all",
+        "no_response": "No response",
+        "no_upcoming_dates": "No upcoming dates",
+        "all_dates": "All dates",
+        "plan_participations": "Plan my participations"
     }
 };
 
