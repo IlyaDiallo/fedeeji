@@ -95,37 +95,59 @@ class EventsView extends AbstractView {
                                         id="event-date" required>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="time">
-                                        ${t("time")}</label>
-                                    <input type="time"
-                                        class="form-control"
-                                        id="event-time" required>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input"
+                                            type="radio" name="event-allDay"
+                                            id="event-allDay-yes" value="yes"
+                                            checked>
+                                        <label class="form-check-label"
+                                            for="event-allDay-yes">
+                                            ${t("all_day")}</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input"
+                                            type="radio" name="event-allDay"
+                                            id="event-allDay-no" value="no">
+                                        <label class="form-check-label"
+                                            for="event-allDay-no">
+                                            ${t("time_and_duration")}</label>
+                                    </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="duration">
-                                        ${t("duration")}</label>
-                                    <div class="input-group">
-                                        <input type="number"
+                                <div id="event-time-duration-container"
+                                    style="display:none;">
+                                    <div class="mb-3">
+                                        <label class="form-label"
+                                            data-i18n="time">
+                                            ${t("time")}</label>
+                                        <input type="time"
                                             class="form-control"
-                                            id="event-duration"
-                                            min="1" required>
-                                        <select
-                                            class="form-select"
-                                            id="event-durationUnit"
-                                            style="max-width:140px">
-                                            <option value="minutes">
-                                                ${t("minutes")}
-                                            </option>
-                                            <option value="hours"
-                                                selected>
-                                                ${t("hours")}
-                                            </option>
-                                            <option value="days">
-                                                ${t("days")}
-                                            </option>
-                                        </select>
+                                            id="event-time">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label"
+                                            data-i18n="duration">
+                                            ${t("duration")}</label>
+                                        <div class="input-group">
+                                            <input type="number"
+                                                class="form-control"
+                                                id="event-duration"
+                                                min="1">
+                                            <select
+                                                class="form-select"
+                                                id="event-durationUnit"
+                                                style="max-width:140px">
+                                                <option value="minutes">
+                                                    ${t("minutes")}
+                                                </option>
+                                                <option value="hours"
+                                                    selected>
+                                                    ${t("hours")}
+                                                </option>
+                                                <option value="days">
+                                                    ${t("days")}
+                                                </option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
@@ -227,6 +249,27 @@ class EventsView extends AbstractView {
         `;
     }
 
+    // Affiche ou masque les champs heure+durée selon le radio sélectionné
+    toggleAllDay() {
+        const isAllDay = document.getElementById(
+            'event-allDay-yes'
+        ).checked;
+        const container = document.getElementById(
+            'event-time-duration-container'
+        );
+        container.style.display = isAllDay
+            ? 'none' : 'block';
+        const timeInput = document.getElementById('event-time');
+        const durationInput = document.getElementById('event-duration');
+        if (isAllDay) {
+            timeInput.removeAttribute('required');
+            durationInput.removeAttribute('required');
+        } else {
+            timeInput.setAttribute('required', '');
+            durationInput.setAttribute('required', '');
+        }
+    }
+
     async loadEvents() {
         try {
             this.events = await api.get(
@@ -252,16 +295,24 @@ class EventsView extends AbstractView {
         );
 
         filtered.forEach(event => {
+            // Rétrocompatibilité : si allDay n'est pas défini, on regarde si time est renseigné
+            const isAllDay = event.allDay !== undefined
+                ? event.allDay : !event.time;
+            const timeDisplay = isAllDay
+                ? t("all_day")
+                : (event.time || '');
+            const durationDisplay = isAllDay
+                ? ''
+                : this.formatDuration(
+                    event.duration, event.durationUnit
+                );
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${event.name || ''}</td>
                 <td>${event.date || ''}</td>
-                <td>${event.time || ''}</td>
+                <td>${timeDisplay}</td>
                 <td class="d-none d-md-table-cell">
-                    ${this.formatDuration(
-                        event.duration,
-                        event.durationUnit
-                    )}</td>
+                    ${durationDisplay}</td>
                 <td class="d-none d-lg-table-cell">
                     ${event.description || ''}</td>
                 <td>
@@ -339,6 +390,15 @@ class EventsView extends AbstractView {
                 this.saveEvent();
             });
 
+        // Gestion du toggle "toute la journée" / "heure + durée"
+        document.querySelectorAll(
+            'input[name="event-allDay"]'
+        ).forEach(radio => {
+            radio.addEventListener('change', () => {
+                this.toggleAllDay();
+            });
+        });
+
         const recurrenceSelect = document.getElementById('event-recurrence');
         if (recurrenceSelect) {
             recurrenceSelect.addEventListener('change', (e) => {
@@ -379,6 +439,16 @@ class EventsView extends AbstractView {
                     .value = event.name || '';
                 document.getElementById('event-date')
                     .value = event.date || '';
+
+                // Rétrocompatibilité : si allDay n'est pas défini, on regarde si time est renseigné
+                const isAllDay = event.allDay !== undefined
+                    ? event.allDay : !event.time;
+                document.getElementById('event-allDay-yes')
+                    .checked = isAllDay;
+                document.getElementById('event-allDay-no')
+                    .checked = !isAllDay;
+                this.toggleAllDay();
+
                 document.getElementById('event-time')
                     .value = event.time || '';
                 document.getElementById('event-duration')
@@ -391,26 +461,54 @@ class EventsView extends AbstractView {
                     .value = event.recurrenceEndDate || '';
                 
                 document.querySelectorAll('.recurrence-day').forEach(cb => {
-                    cb.checked = event.recurrenceDays ? event.recurrenceDays.includes(parseInt(cb.value)) : false;
+                    cb.checked = event.recurrenceDays
+                        ? event.recurrenceDays.includes(
+                            parseInt(cb.value)
+                        ) : false;
                 });
                 
-                document.getElementById('event-monthlyType').value = event.monthlyType || 'date';
+                document.getElementById('event-monthlyType')
+                    .value = event.monthlyType || 'date';
                 
                 document.getElementById('event-description')
                     .value = event.description || '';
                     
                 const val = event.recurrence || 'none';
-                document.getElementById('event-recurrence-end-container').style.display = val !== 'none' ? 'block' : 'none';
-                document.getElementById('event-recurrence-days-container').style.display = (val === 'weekly' || val === 'biweekly') ? 'block' : 'none';
-                document.getElementById('event-recurrence-monthly-type-container').style.display = val === 'monthly' ? 'block' : 'none';
+                document.getElementById(
+                    'event-recurrence-end-container'
+                ).style.display =
+                    val !== 'none' ? 'block' : 'none';
+                document.getElementById(
+                    'event-recurrence-days-container'
+                ).style.display =
+                    (val === 'weekly' || val === 'biweekly')
+                        ? 'block' : 'none';
+                document.getElementById(
+                    'event-recurrence-monthly-type-container'
+                ).style.display =
+                    val === 'monthly' ? 'block' : 'none';
             }
         } else {
-            document.getElementById('event-recurrence').value = 'none';
-            document.getElementById('event-recurrence-end-container').style.display = 'none';
-            document.getElementById('event-recurrence-days-container').style.display = 'none';
-            document.getElementById('event-recurrence-monthly-type-container').style.display = 'none';
-            document.getElementById('event-monthlyType').value = 'date';
-            document.querySelectorAll('.recurrence-day').forEach(cb => cb.checked = false);
+            document.getElementById('event-allDay-yes')
+                .checked = true;
+            document.getElementById('event-allDay-no')
+                .checked = false;
+            this.toggleAllDay();
+            document.getElementById('event-recurrence')
+                .value = 'none';
+            document.getElementById(
+                'event-recurrence-end-container'
+            ).style.display = 'none';
+            document.getElementById(
+                'event-recurrence-days-container'
+            ).style.display = 'none';
+            document.getElementById(
+                'event-recurrence-monthly-type-container'
+            ).style.display = 'none';
+            document.getElementById('event-monthlyType')
+                .value = 'date';
+            document.querySelectorAll('.recurrence-day')
+                .forEach(cb => cb.checked = false);
         }
         this.modal.show();
     }
@@ -421,6 +519,9 @@ class EventsView extends AbstractView {
 
         const id =
             document.getElementById('event-id').value;
+        const isAllDay = document.getElementById(
+            'event-allDay-yes'
+        ).checked;
         const data = {
             name: document.getElementById(
                 'event-name'
@@ -428,22 +529,30 @@ class EventsView extends AbstractView {
             date: document.getElementById(
                 'event-date'
             ).value,
-            time: document.getElementById(
+            allDay: isAllDay,
+            time: isAllDay ? '' : document.getElementById(
                 'event-time'
             ).value,
-            duration: Number(document.getElementById(
-                'event-duration'
-            ).value),
-            durationUnit: document.getElementById(
-                'event-durationUnit'
-            ).value,
+            duration: isAllDay ? null : Number(
+                document.getElementById(
+                    'event-duration'
+                ).value
+            ),
+            durationUnit: isAllDay ? null :
+                document.getElementById(
+                    'event-durationUnit'
+                ).value,
             recurrence: document.getElementById(
                 'event-recurrence'
             ).value,
             recurrenceEndDate: document.getElementById(
                 'event-recurrenceEndDate'
             ).value || null,
-            recurrenceDays: Array.from(document.querySelectorAll('.recurrence-day:checked')).map(cb => parseInt(cb.value)),
+            recurrenceDays: Array.from(
+                document.querySelectorAll(
+                    '.recurrence-day:checked'
+                )
+            ).map(cb => parseInt(cb.value)),
             monthlyType: document.getElementById(
                 'event-monthlyType'
             ).value,

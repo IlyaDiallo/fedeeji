@@ -84,8 +84,17 @@ class ScheduleView extends AbstractView {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
             });
 
-            const timeStr = event.time ? ` ⏰ ${event.time}` : '';
-            const durationStr = event.duration ? ` ⏱️ ${event.duration} ${t(event.durationUnit || 'hours').toLowerCase()}` : '';
+            // Rétrocompatibilité : si allDay n'est pas défini, on regarde si time est renseigné
+            const isAllDay = event.allDay !== undefined
+                ? event.allDay : !event.time;
+            const timeStr = isAllDay
+                ? ` 📅 ${t("all_day")}`
+                : (event.time ? ` ⏰ ${event.time}` : '');
+            const durationStr = isAllDay
+                ? ''
+                : (event.duration
+                    ? ` ⏱️ ${event.duration} ${t(event.durationUnit || 'hours').toLowerCase()}`
+                    : '');
             
             let recurrenceStr = '';
             if (isRecurrent) {

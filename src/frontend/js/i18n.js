@@ -131,7 +131,9 @@ const translations = {
         "monthly_type_date": "Même jour du mois",
         "monthly_type_first": "1er jour du mois",
         "monthly_type_last": "Dernier jour du mois",
-        "monthly_type_weekday": "Même jour de la semaine"
+        "monthly_type_weekday": "Même jour de la semaine",
+        "all_day": "Toute la journée",
+        "time_and_duration": "Heure et durée"
     },
     en: {
         "app_title":
@@ -264,7 +266,9 @@ const translations = {
         "monthly_type_date": "Same day of the month",
         "monthly_type_first": "1st day of the month",
         "monthly_type_last": "Last day of the month",
-        "monthly_type_weekday": "Same weekday"
+        "monthly_type_weekday": "Same weekday",
+        "all_day": "All day",
+        "time_and_duration": "Time and duration"
     }
 };
 
