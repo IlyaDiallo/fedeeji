@@ -3,19 +3,23 @@ const path = require('path');
 
 class OrganizationService {
     constructor() {
-        this.filePath = path.join(__dirname, '../../../organizations.json');
+        const root = path.join(__dirname, '../../..');
+        // Priorité au fichier dans /data, fallback à la racine
+        this.filePath = path.join(root, 'data', 'organizations.json');
+        this.fallbackPath = path.join(root, 'organizations.json');
     }
 
     async getAll() {
-        try {
-            const data = await fs.readFile(this.filePath, 'utf8');
-            return JSON.parse(data);
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                return [];
+        // Chercher d'abord dans /data, puis à la racine
+        for (const filePath of [this.filePath, this.fallbackPath]) {
+            try {
+                const data = await fs.readFile(filePath, 'utf8');
+                return JSON.parse(data);
+            } catch (error) {
+                if (error.code !== 'ENOENT') throw error;
             }
-            throw error;
         }
+        return [];
     }
 
     async getById(id) {
