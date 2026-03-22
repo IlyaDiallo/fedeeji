@@ -20,6 +20,37 @@ const navigateTo = url => {
 };
 
 let currentOrgId = null;
+let currentOrgName = null;
+let currentOrgLabel = null;
+
+/**
+ * Récupère le nom et le label d'une organisation via l'API publique et les met en cache
+ */
+const fetchOrgName = async (orgId) => {
+    if (!orgId) {
+        currentOrgName = null;
+        currentOrgLabel = null;
+        return;
+    }
+    try {
+        const orgs = await api.getOrganizations();
+        const org = orgs.find(o => o.id === orgId);
+        currentOrgName = org?.name || null;
+        currentOrgLabel = org?.label || null;
+    } catch (e) {
+        currentOrgName = null;
+        currentOrgLabel = null;
+    }
+};
+
+/**
+ * Met à jour le texte du navbar brand selon le contexte
+ */
+const updateNavbarBrand = () => {
+    const brand = document.getElementById('navbar-brand');
+    if (!brand) return;
+    brand.textContent = currentOrgName || 'Feddeeji';
+};
 
 /**
  * Vérifie si la route est accessible pour le rôle actuel
@@ -128,7 +159,8 @@ const updateNav = () => {
     links += `
         <li class="nav-item">
             <a class="nav-link" href="/${orgId}"
-                data-link>${t("welcome")}</a>
+                data-link data-i18n="welcome">
+                ${t("welcome")}</a>
         </li>
     `;
 
@@ -282,12 +314,19 @@ const router = async () => {
         || match.route.path === '/:orgId/login'
         || match.route.path === '/:orgId/register';
 
+    // Récupérer le nom/label de l'org si l'orgId a changé (y compris pages login)
+    const newOrgId = params.orgId || null;
+    if (newOrgId !== currentOrgId || (newOrgId && !currentOrgName)) {
+        await fetchOrgName(newOrgId);
+    }
+
     // Mettre à jour l'orgId courant (sauf sur les pages login)
     if (!isLoginRoute) {
-        currentOrgId = params.orgId || null;
+        currentOrgId = newOrgId;
     }
 
     updateNav();
+    updateNavbarBrand();
 
     // Redirection si non authentifié (sauf pages login)
     if (!api.isAuthenticated() && !isLoginRoute) {
