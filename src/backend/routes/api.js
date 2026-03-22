@@ -173,13 +173,16 @@ function createApiRouter({ dataService, trashService, importService }) {
                             collection: 'events',
                             id: body.eventId
                         });
-                        if (evt && evt.date) {
-                            const today = new Date()
-                                .toISOString().slice(0, 10);
-                            if (evt.date < today) {
-                                return res.status(403).json({
-                                    error: 'past_event_locked'
-                                });
+                        if (evt) {
+                            const evtDate = body.occurrenceDate || evt.date;
+                            if (evtDate) {
+                                const today = new Date()
+                                    .toISOString().slice(0, 10);
+                                if (evtDate < today) {
+                                    return res.status(403).json({
+                                        error: 'past_event_locked'
+                                    });
+                                }
                             }
                         }
                     }
@@ -225,13 +228,16 @@ function createApiRouter({ dataService, trashService, importService }) {
                             collection: 'events',
                             id: eventId
                         });
-                        if (evt && evt.date) {
-                            const today = new Date()
-                                .toISOString().slice(0, 10);
-                            if (evt.date < today) {
-                                return res.status(403).json({
-                                    error: 'past_event_locked'
-                                });
+                        if (evt) {
+                            const evtDate = existing.occurrenceDate || req.body.occurrenceDate || evt.date;
+                            if (evtDate) {
+                                const today = new Date()
+                                    .toISOString().slice(0, 10);
+                                if (evtDate < today) {
+                                    return res.status(403).json({
+                                        error: 'past_event_locked'
+                                    });
+                                }
                             }
                         }
                     }
@@ -471,6 +477,73 @@ function createApiRouter({ dataService, trashService, importService }) {
                 res.json({ success: true });
             } catch (error) {
                 res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
+    // --- Événements : création/modification (admin) ---
+
+    router.post('/events',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                if (!req.body.date) {
+                    return res.status(400).json({
+                        error: 'La date est obligatoire'
+                    });
+                }
+                const data = await dataService.create({
+                    organisationId: req.organisationId,
+                    collection: 'events',
+                    data: req.body
+                });
+                res.status(201).json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.put('/events/:id',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                if (!req.body.date) {
+                    return res.status(400).json({
+                        error: 'La date est obligatoire'
+                    });
+                }
+                const data = await dataService.update({
+                    organisationId: req.organisationId,
+                    collection: 'events',
+                    id: req.params.id,
+                    data: req.body
+                });
+                res.json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.delete('/events/:id',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                await dataService.delete({
+                    organisationId: req.organisationId,
+                    collection: 'events',
+                    id: req.params.id
+                });
+                res.json({ success: true });
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
             }
         }
     );

@@ -69,7 +69,7 @@ class EventsView extends AbstractView {
                         <div class="modal-header">
                             <h5 class="modal-title"
                                 id="eventModalTitle">
-                                ${t("add_edit_member")}</h5>
+                                ${t("add_edit_event")}</h5>
                             <button type="button"
                                 class="btn-close"
                                 data-bs-dismiss="modal">
@@ -127,6 +127,77 @@ class EventsView extends AbstractView {
                                             </option>
                                         </select>
                                     </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label"
+                                        data-i18n="recurrence">
+                                        ${t("recurrence")}</label>
+                                    <select
+                                        class="form-select"
+                                        id="event-recurrence">
+                                        <option value="none">
+                                            ${t("recurrence_none")}
+                                        </option>
+                                        <option value="weekly">
+                                            ${t("recurrence_weekly")}
+                                        </option>
+                                        <option value="biweekly">
+                                            ${t("recurrence_biweekly")}
+                                        </option>
+                                        <option value="monthly">
+                                            ${t("recurrence_monthly")}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="event-recurrence-days-container" style="display:none;">
+                                    <label class="form-label" data-i18n="recurrence_days">${t("recurrence_days")}</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-1" value="1">
+                                            <label class="form-check-label" for="rec-day-1" data-i18n="day_1">${t("day_1")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-2" value="2">
+                                            <label class="form-check-label" for="rec-day-2" data-i18n="day_2">${t("day_2")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-3" value="3">
+                                            <label class="form-check-label" for="rec-day-3" data-i18n="day_3">${t("day_3")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-4" value="4">
+                                            <label class="form-check-label" for="rec-day-4" data-i18n="day_4">${t("day_4")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-5" value="5">
+                                            <label class="form-check-label" for="rec-day-5" data-i18n="day_5">${t("day_5")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-6" value="6">
+                                            <label class="form-check-label" for="rec-day-6" data-i18n="day_6">${t("day_6")}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input recurrence-day" type="checkbox" id="rec-day-0" value="0">
+                                            <label class="form-check-label" for="rec-day-0" data-i18n="day_0">${t("day_0")}</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3" id="event-recurrence-monthly-type-container" style="display:none;">
+                                    <label class="form-label" data-i18n="monthly_type">${t("monthly_type")}</label>
+                                    <select class="form-select" id="event-monthlyType">
+                                        <option value="date" data-i18n="monthly_type_date">${t("monthly_type_date")}</option>
+                                        <option value="first_day" data-i18n="monthly_type_first">${t("monthly_type_first")}</option>
+                                        <option value="last_day" data-i18n="monthly_type_last">${t("monthly_type_last")}</option>
+                                        <option value="nth_weekday" data-i18n="monthly_type_weekday">${t("monthly_type_weekday")}</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="event-recurrence-end-container" style="display:none;">
+                                    <label class="form-label"
+                                        data-i18n="recurrence_end_date">
+                                        ${t("recurrence_end_date")}</label>
+                                    <input type="date"
+                                        class="form-control"
+                                        id="event-recurrenceEndDate">
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">
@@ -194,7 +265,13 @@ class EventsView extends AbstractView {
                 <td class="d-none d-lg-table-cell">
                     ${event.description || ''}</td>
                 <td>
-                    ${this.isMember ? '' : `
+                    ${this.isMember ? `
+                    <div class="btn-group-actions">
+                        <a href="/${this.orgId}/participations?eventId=${event.id}" class="btn btn-sm btn-outline-success" data-link title="${t("participations")}">
+                            <i class="bi bi-calendar-plus"></i>
+                        </a>
+                    </div>
+                    ` : `
                     <div class="btn-group-actions">
                         <button class="btn btn-sm
                             btn-outline-primary btn-edit"
@@ -261,6 +338,30 @@ class EventsView extends AbstractView {
             .addEventListener('click', () => {
                 this.saveEvent();
             });
+
+        const recurrenceSelect = document.getElementById('event-recurrence');
+        if (recurrenceSelect) {
+            recurrenceSelect.addEventListener('change', (e) => {
+                const val = e.target.value;
+                document.getElementById('event-recurrence-end-container').style.display = val !== 'none' ? 'block' : 'none';
+                document.getElementById('event-recurrence-days-container').style.display = (val === 'weekly' || val === 'biweekly') ? 'block' : 'none';
+                document.getElementById('event-recurrence-monthly-type-container').style.display = val === 'monthly' ? 'block' : 'none';
+            });
+        }
+        
+        const dateInput = document.getElementById('event-date');
+        if (dateInput) {
+            dateInput.addEventListener('change', (e) => {
+                if (!e.target.value) return;
+                const dateObj = new Date(`${e.target.value}T12:00:00`);
+                const day = dateObj.getDay();
+                const anyChecked = Array.from(document.querySelectorAll('.recurrence-day')).some(cb => cb.checked);
+                if (!anyChecked) {
+                    const cb = document.getElementById(`rec-day-${day}`);
+                    if (cb) cb.checked = true;
+                }
+            });
+        }
     }
 
     openModal(id = null) {
@@ -284,14 +385,40 @@ class EventsView extends AbstractView {
                     .value = event.duration || '';
                 document.getElementById('event-durationUnit')
                     .value = event.durationUnit || 'hours';
+                document.getElementById('event-recurrence')
+                    .value = event.recurrence || 'none';
+                document.getElementById('event-recurrenceEndDate')
+                    .value = event.recurrenceEndDate || '';
+                
+                document.querySelectorAll('.recurrence-day').forEach(cb => {
+                    cb.checked = event.recurrenceDays ? event.recurrenceDays.includes(parseInt(cb.value)) : false;
+                });
+                
+                document.getElementById('event-monthlyType').value = event.monthlyType || 'date';
+                
                 document.getElementById('event-description')
                     .value = event.description || '';
+                    
+                const val = event.recurrence || 'none';
+                document.getElementById('event-recurrence-end-container').style.display = val !== 'none' ? 'block' : 'none';
+                document.getElementById('event-recurrence-days-container').style.display = (val === 'weekly' || val === 'biweekly') ? 'block' : 'none';
+                document.getElementById('event-recurrence-monthly-type-container').style.display = val === 'monthly' ? 'block' : 'none';
             }
+        } else {
+            document.getElementById('event-recurrence').value = 'none';
+            document.getElementById('event-recurrence-end-container').style.display = 'none';
+            document.getElementById('event-recurrence-days-container').style.display = 'none';
+            document.getElementById('event-recurrence-monthly-type-container').style.display = 'none';
+            document.getElementById('event-monthlyType').value = 'date';
+            document.querySelectorAll('.recurrence-day').forEach(cb => cb.checked = false);
         }
         this.modal.show();
     }
 
     async saveEvent() {
+        const form = document.getElementById('event-form');
+        if (!form.reportValidity()) return;
+
         const id =
             document.getElementById('event-id').value;
         const data = {
@@ -309,6 +436,16 @@ class EventsView extends AbstractView {
             ).value),
             durationUnit: document.getElementById(
                 'event-durationUnit'
+            ).value,
+            recurrence: document.getElementById(
+                'event-recurrence'
+            ).value,
+            recurrenceEndDate: document.getElementById(
+                'event-recurrenceEndDate'
+            ).value || null,
+            recurrenceDays: Array.from(document.querySelectorAll('.recurrence-day:checked')).map(cb => parseInt(cb.value)),
+            monthlyType: document.getElementById(
+                'event-monthlyType'
             ).value,
             description: document.getElementById(
                 'event-description'

@@ -23,19 +23,20 @@ class ParticipationsView extends AbstractView {
         return `<span class="badge ${cls}">${label}</span>`;
     }
 
-    /** Vérifie si un événement est passé */
-    isEventPast(eventId) {
+    /** Vérifie si un événement ou une occurrence est passé */
+    isEventPast(eventId, occurrenceDate) {
         const evt = this.events.find(
             e => e.id === eventId
         );
-        if (!evt || !evt.date) return false;
-        const today = new Date()
-            .toISOString().slice(0, 10);
-        return evt.date < today;
+        if (!evt) return false;
+        const dateToCheck = occurrenceDate || evt.date;
+        if (!dateToCheck) return false;
+        const today = window.RecurrenceUtils ? window.RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().slice(0, 10);
+        return dateToCheck < today;
     }
 
     async getHtml() {
-        const addBtn = this.isMember ? '' : `
+        const addBtn = `
             <button class="btn btn-primary"
                 id="btn-add-participation">
                 <i class="bi bi-plus-lg"></i>
@@ -88,7 +89,7 @@ class ParticipationsView extends AbstractView {
                         <div class="modal-header">
                             <h5 class="modal-title"
                                 id="participationModalTitle">
-                                ${t("add_edit_member")}
+                                ${t("add_edit_participation")}
                             </h5>
                             <button type="button"
                                 class="btn-close"
@@ -107,6 +108,15 @@ class ParticipationsView extends AbstractView {
                                         class="form-select"
                                         id="participation-eventId"
                                         required>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="participation-occurrence-container" style="display:none;">
+                                    <label class="form-label"
+                                        data-i18n="date">
+                                        ${t("date")}</label>
+                                    <select
+                                        class="form-select"
+                                        id="participation-occurrenceDate">
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -216,12 +226,18 @@ class ParticipationsView extends AbstractView {
             `<option value="">${t("select_event")}`
             + `</option>`;
 
-        const today = new Date()
-            .toISOString().slice(0, 10);
+        const today = window.RecurrenceUtils ? window.RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().slice(0, 10);
         this.events.forEach(e => {
-            // Membre : n'afficher que les événements futurs
-            if (this.isMember && e.date && e.date < today) {
-                return;
+            // Membre : n'afficher que les événements futurs ou récurrents actifs
+            if (this.isMember) {
+                const isRecurrent = e.recurrence
+                    && e.recurrence !== 'none';
+                if (isRecurrent) {
+                    if (e.recurrenceEndDate
+                        && e.recurrenceEndDate < today) return;
+                } else {
+                    if (e.date && e.date < today) return;
+                }
             }
             eventSelect.innerHTML +=
                 `<option value="${e.id}">` +
@@ -259,10 +275,14 @@ class ParticipationsView extends AbstractView {
 
             const event = this.events
                 .find(e => e.id === p.eventId);
-            const eventName = event
+            let eventName = event
                 ? event.name : 'Inconnu';
+                
+            if (p.occurrenceDate) {
+                eventName += ` (${p.occurrenceDate})`;
+            }
 
-            const isPast = this.isEventPast(p.eventId);
+            const isPast = this.isEventPast(p.eventId, p.occurrenceDate);
             const pastBadge = isPast
                 ? ` <span class="badge bg-secondary">`
                     + `${t("past_event")}</span>`
@@ -355,6 +375,62 @@ class ParticipationsView extends AbstractView {
                 this.renderTable(e.target.value);
             });
         }
+        
+        const eventSelect = document.getElementById('participation-eventId');
+        if (eventSelect) {
+            eventSelect.addEventListener('change', (e) => {
+                this.updateOccurrenceSelect(e.target.value);
+            });
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const eventIdParam = urlParams.get('eventId');
+        if (eventIdParam) {
+            this.openModal();
+            document.getElementById('participation-eventId').value = eventIdParam;
+            const dateParam = urlParams.get('date');
+            this.updateOccurrenceSelect(eventIdParam, dateParam);
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+    }
+    
+    updateOccurrenceSelect(eventId, selectedDate = null) {
+        const container = document.getElementById('participation-occurrence-container');
+        const select = document.getElementById('participation-occurrenceDate');
+        
+        if (!eventId) {
+            container.style.display = 'none';
+            select.innerHTML = '';
+            return;
+        }
+        
+        const event = this.events.find(e => e.id === eventId);
+        if (!event || event.recurrence === 'none') {
+            container.style.display = 'none';
+            select.innerHTML = '';
+            return;
+        }
+        
+        // Générer les occurrences
+        const occurrences = window.RecurrenceUtils ? window.RecurrenceUtils.generateOccurrences({ event }) : [];
+        if (occurrences.length === 0) {
+            container.style.display = 'none';
+            select.innerHTML = '';
+            return;
+        }
+        
+        container.style.display = 'block';
+        select.innerHTML = `<option value="" disabled selected>Sélectionner une date</option>`;
+        
+        const today = new Date().toISOString().slice(0, 10);
+        
+        occurrences.forEach(occ => {
+            if (this.isMember && occ.occurrenceDate < today) return;
+            if (occ.isCancelled) return;
+            
+            const selected = selectedDate === occ.occurrenceDate ? 'selected' : '';
+            select.innerHTML += `<option value="${occ.occurrenceDate}" ${selected}>${occ.occurrenceDate}</option>`;
+        });
     }
 
     openModal(id = null) {
@@ -374,6 +450,9 @@ class ParticipationsView extends AbstractView {
                 document.getElementById(
                     'participation-eventId'
                 ).value = p.eventId || '';
+                
+                this.updateOccurrenceSelect(p.eventId, p.occurrenceDate);
+                
                 document.getElementById(
                     'participation-memberId'
                 ).value = p.memberId || '';
@@ -381,6 +460,9 @@ class ParticipationsView extends AbstractView {
                     'participation-response'
                 ).value = p.response || 'yes';
             }
+        } else {
+            document.getElementById('participation-occurrence-container').style.display = 'none';
+            document.getElementById('participation-occurrenceDate').innerHTML = '';
         }
         this.modal.show();
     }
@@ -400,6 +482,14 @@ class ParticipationsView extends AbstractView {
                 'participation-response'
             ).value
         };
+        
+        const occSelect = document.getElementById('participation-occurrenceDate');
+        const occContainer = document.getElementById('participation-occurrence-container');
+        if (occContainer.style.display !== 'none' && occSelect.value) {
+            data.occurrenceDate = occSelect.value;
+        } else {
+            data.occurrenceDate = null;
+        }
 
         if (!data.eventId || !data.memberId) {
             alert(
