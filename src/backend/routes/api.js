@@ -583,11 +583,6 @@ function createApiRouter({ dataService, trashService, importService }) {
         requireRole('admin'),
         async (req, res) => {
             try {
-                if (!req.body.date) {
-                    return res.status(400).json({
-                        error: 'La date est obligatoire'
-                    });
-                }
                 const data = await dataService.update({
                     organisationId: req.organisationId,
                     collection: 'events',
