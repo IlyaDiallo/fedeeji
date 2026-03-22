@@ -27,7 +27,14 @@ class RecurrenceUtils {
         if (!event || !event.date) return [];
         
         const baseDate = new Date(`${event.date}T12:00:00`);
-        const limitDateStr = event.recurrenceEndDate || null;
+        // Horizon max : 1 an dans le futur
+        const maxHorizon = new Date(startDate);
+        maxHorizon.setFullYear(maxHorizon.getFullYear() + 1);
+        const maxHorizonStr = RecurrenceUtils.formatDateStr(maxHorizon);
+        const endDateStr = event.recurrenceEndDate || null;
+        const limitDateStr = endDateStr
+            ? (endDateStr < maxHorizonStr ? endDateStr : maxHorizonStr)
+            : maxHorizonStr;
         
         const targetStartDate = startDate > baseDate ? startDate : baseDate;
         const targetStart = new Date(targetStartDate);
