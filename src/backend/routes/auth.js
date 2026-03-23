@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const { requireRole } = require('../middleware/auth');
 
 /**
  * @param {Object} params
@@ -8,6 +9,25 @@ const multer = require('multer');
  */
 function createAuthRouter({ authService, organizationService, dataService }) {
     const router = express.Router();
+
+    // Middleware superadmin (inline pour éviter circular deps)
+    const requireSuperadmin = (req, res, next) => {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Token manquant' });
+        }
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = authService.verifyToken(token);
+            if (decoded.role !== 'superadmin') {
+                return res.status(403).json({ error: 'Accès interdit' });
+            }
+            req.user = decoded;
+            next();
+        } catch (error) {
+            return res.status(401).json({ error: 'Token invalide' });
+        }
+    };
 
     // Vérification du mot de passe d'enregistrement
     router.post('/verify-registration-password', async (req, res) => {
@@ -156,6 +176,46 @@ function createAuthRouter({ authService, organizationService, dataService }) {
                     req.file
                 );
                 res.json({ logo: logoUrl });
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
+    // Création d'une organisation (superadmin uniquement)
+    router.post(
+        '/organizations',
+        requireSuperadmin,
+        async (req, res) => {
+            try {
+                const { id, name, label, adminEmail, defaultLanguage,
+                    registrationPassword } = req.body;
+
+                if (!id || !name || !label) {
+                    return res.status(400).json({
+                        error: 'id, name et label sont obligatoires'
+                    });
+                }
+
+                const org = await organizationService.create({
+                    id, name, label, adminEmail,
+                    defaultLanguage, registrationPassword
+                });
+                res.status(201).json(org);
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
+    // Suppression d'une organisation (superadmin uniquement)
+    router.delete(
+        '/organizations/:id',
+        requireSuperadmin,
+        async (req, res) => {
+            try {
+                await organizationService.delete(req.params.id);
+                res.json({ success: true });
             } catch (error) {
                 res.status(400).json({ error: error.message });
             }

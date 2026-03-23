@@ -299,6 +299,25 @@ class Api {
         );
     }
 
+    /** Créer une organisation (superadmin) */
+    async createOrganization(data) {
+        return this.request(
+            '/auth/organizations',
+            {
+                method: 'POST',
+                body: JSON.stringify(data)
+            }
+        );
+    }
+
+    /** Supprimer une organisation (superadmin) */
+    async deleteOrganization(id) {
+        return this.request(
+            `/auth/organizations/${id}`,
+            { method: 'DELETE' }
+        );
+    }
+
     /** Upload le logo d'une organisation (superadmin) */
     async uploadOrgLogo(id, file) {
         const formData = new FormData();

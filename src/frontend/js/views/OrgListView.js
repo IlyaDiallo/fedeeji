@@ -8,9 +8,87 @@ class OrgListView extends AbstractView {
         return `
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 data-i18n="org_list_title">${t("org_list_title")}</h2>
+                <button class="btn btn-success" id="new-org-btn">
+                    <i class="bi bi-plus-lg"></i> Nouvelle organisation
+                </button>
             </div>
             <div class="row" id="orgs-container">
                 <!-- Rempli dynamiquement -->
+            </div>
+
+            <!-- Modal de création organisation -->
+            <div class="modal fade" id="newOrgModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Nouvelle organisation</h5>
+                            <button type="button" class="btn-close"
+                                data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="new-org-form">
+                                <div class="mb-3">
+                                    <label class="form-label">ID (slug) *</label>
+                                    <input type="text" class="form-control"
+                                        id="new-org-id"
+                                        pattern="[a-z0-9-]+"
+                                        placeholder="ex: mon-association" required>
+                                    <small class="text-muted">
+                                        Lettres minuscules, chiffres et tirets uniquement
+                                    </small>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Nom complet *</label>
+                                    <input type="text" class="form-control"
+                                        id="new-org-name" required
+                                        placeholder="ex: Association Sportive">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Label *</label>
+                                    <input type="text" class="form-control"
+                                        id="new-org-label" required
+                                        placeholder="ex: ASA">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Email admin</label>
+                                    <input type="email" class="form-control"
+                                        id="new-org-adminEmail"
+                                        placeholder="admin@exemple.com">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Langue par défaut</label>
+                                    <select class="form-select"
+                                        id="new-org-defaultLanguage">
+                                        <option value="fr">Français</option>
+                                        <option value="en">English</option>
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        Mot de passe inscription
+                                    </label>
+                                    <input type="text" class="form-control"
+                                        id="new-org-registrationPassword"
+                                        placeholder="Laissé vide = inscriptions closes">
+                                </div>
+
+                                <div class="text-end">
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit"
+                                        class="btn btn-primary">
+                                        Créer
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Modal d'édition organisation -->
@@ -90,18 +168,64 @@ class OrgListView extends AbstractView {
                     </div>
                 </div>
             </div>
+
+            <!-- Modal confirmation suppression -->
+            <div class="modal fade" id="deleteOrgModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">Supprimer l'organisation</h5>
+                            <button type="button" class="btn-close btn-close-white"
+                                data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Êtes-vous sûr de vouloir supprimer l'organisation
+                                <strong id="delete-org-label"></strong> ?</p>
+                            <p class="text-danger">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                Cette action est irréversible. Toutes les données
+                                (membres, événements, cotisations) seront supprimées.
+                            </p>
+                            <input type="hidden" id="delete-org-id">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                data-bs-dismiss="modal">Annuler</button>
+                            <button type="button" class="btn btn-danger"
+                                id="confirm-delete-org-btn">
+                                Supprimer définitivement
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
     async init() {
         await this.loadOrgs();
 
+        // Bouton nouvelle organisation
+        document.getElementById('new-org-btn')
+            .addEventListener('click', () => {
+                this.openNewOrgModal();
+            });
+
+        // Formulaire nouvelle org
+        document.getElementById('new-org-form')
+            .addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await this.createOrg();
+            });
+
+        // Formulaire édition org
         document.getElementById('edit-org-form')
             .addEventListener('submit', async (e) => {
                 e.preventDefault();
                 await this.saveOrg();
             });
 
+        // Upload logo dans modal édition
         document.getElementById('edit-org-logo')
             .addEventListener('change', async (e) => {
                 const file = e.target.files[0];
@@ -109,6 +233,46 @@ class OrgListView extends AbstractView {
                     await this.uploadLogo(file);
                 }
             });
+
+        // Confirmation suppression
+        document.getElementById('confirm-delete-org-btn')
+            .addEventListener('click', async () => {
+                await this.deleteOrg();
+            });
+    }
+
+    async openNewOrgModal() {
+        // Reset le formulaire
+        document.getElementById('new-org-form').reset();
+        const modal = new bootstrap.Modal(
+            document.getElementById('newOrgModal')
+        );
+        modal.show();
+    }
+
+    async createOrg() {
+        const data = {
+            id: document.getElementById('new-org-id').value.trim(),
+            name: document.getElementById('new-org-name').value.trim(),
+            label: document.getElementById('new-org-label').value.trim(),
+            adminEmail: document.getElementById('new-org-adminEmail').value.trim(),
+            defaultLanguage: document.getElementById(
+                'new-org-defaultLanguage'
+            ).value,
+            registrationPassword: document.getElementById(
+                'new-org-registrationPassword'
+            ).value.trim()
+        };
+
+        try {
+            await api.createOrganization(data);
+            bootstrap.Modal.getInstance(
+                document.getElementById('newOrgModal')
+            ).hide();
+            await this.loadOrgs();
+        } catch (error) {
+            alert('Erreur: ' + error.message);
+        }
     }
 
     async loadOrgs() {
@@ -135,10 +299,15 @@ class OrgListView extends AbstractView {
                                 class="mb-3" style="max-height: 80px;">
                             <h5 class="card-title">${org.label}</h5>
                             <p class="card-text text-muted">${org.id}</p>
-                            <div class="mt-auto d-flex gap-2">
+                            <div class="mt-auto d-flex flex-wrap gap-2 justify-content-center">
                                 <button class="btn btn-sm btn-outline-primary
                                     edit-org-btn" data-org-id="${org.id}">
                                     Modifier
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger
+                                    delete-org-btn" data-org-id="${org.id}"
+                                    data-org-label="${org.label}">
+                                    Supprimer
                                 </button>
                                 <a href="/${org.id}" class="btn btn-sm btn-primary"
                                     data-link>Accéder</a>
@@ -149,10 +318,21 @@ class OrgListView extends AbstractView {
                 container.appendChild(col);
             });
 
+            // Event listeners pour les boutons
             document.querySelectorAll('.edit-org-btn')
                 .forEach(btn => {
                     btn.addEventListener('click', () => {
                         this.openEditModal(btn.dataset.orgId);
+                    });
+                });
+
+            document.querySelectorAll('.delete-org-btn')
+                .forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.openDeleteModal(
+                            btn.dataset.orgId,
+                            btn.dataset.orgLabel
+                        );
                     });
                 });
         } catch (error) {
@@ -182,6 +362,28 @@ class OrgListView extends AbstractView {
                 document.getElementById('editOrgModal')
             );
             modal.show();
+        } catch (error) {
+            alert('Erreur: ' + error.message);
+        }
+    }
+
+    async openDeleteModal(orgId, orgLabel) {
+        document.getElementById('delete-org-id').value = orgId;
+        document.getElementById('delete-org-label').textContent = orgLabel;
+        const modal = new bootstrap.Modal(
+            document.getElementById('deleteOrgModal')
+        );
+        modal.show();
+    }
+
+    async deleteOrg() {
+        const orgId = document.getElementById('delete-org-id').value;
+        try {
+            await api.deleteOrganization(orgId);
+            bootstrap.Modal.getInstance(
+                document.getElementById('deleteOrgModal')
+            ).hide();
+            await this.loadOrgs();
         } catch (error) {
             alert('Erreur: ' + error.message);
         }
