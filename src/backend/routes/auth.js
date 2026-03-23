@@ -1,4 +1,5 @@
 const express = require('express');
+const multer = require('multer');
 
 /**
  * @param {Object} params
@@ -106,6 +107,60 @@ function createAuthRouter({ authService, organizationService, dataService }) {
             res.status(500).json({ error: error.message });
         }
     });
+
+    // Modification d'une organisation (superadmin)
+    router.put(
+        '/organizations/:id',
+        async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { id: _id, ...data } = req.body;
+                const updated = await organizationService.update(id, data);
+                res.json(updated);
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
+    // Upload du logo (superadmin, 1 Mo max)
+    const logoUpload = multer({
+        storage: multer.memoryStorage(),
+        limits: { fileSize: 1 * 1024 * 1024 },
+        fileFilter: (req, file, cb) => {
+            const ext = (file.originalname || '')
+                .split('.').pop().toLowerCase();
+            if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp']
+                .includes(ext)) {
+                cb(null, true);
+            } else {
+                cb(new Error(
+                    'Format non supporté. Utilisez PNG, JPG, GIF, SVG ou WEBP'
+                ));
+            }
+        }
+    });
+
+    router.post(
+        '/organizations/:id/logo',
+        logoUpload.single('file'),
+        async (req, res) => {
+            try {
+                if (!req.file) {
+                    return res.status(400).json({
+                        error: 'Aucun fichier fourni'
+                    });
+                }
+                const logoUrl = await organizationService.uploadLogo(
+                    req.params.id,
+                    req.file
+                );
+                res.json({ logo: logoUrl });
+            } catch (error) {
+                res.status(400).json({ error: error.message });
+            }
+        }
+    );
 
     return router;
 }

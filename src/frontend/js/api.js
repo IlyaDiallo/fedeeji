@@ -287,6 +287,49 @@ class Api {
 
         return response.json();
     }
+
+    /** Modifier une organisation (superadmin) */
+    async updateOrganization(id, data) {
+        return this.request(
+            `/auth/organizations/${id}`,
+            {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            }
+        );
+    }
+
+    /** Upload le logo d'une organisation (superadmin) */
+    async uploadOrgLogo(id, file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const headers = {};
+        if (this.token) {
+            headers['Authorization'] =
+                `Bearer ${this.token}`;
+        }
+
+        const response = await fetch(
+            `/auth/organizations/${id}/logo`,
+            {
+                method: 'POST',
+                headers,
+                body: formData
+            }
+        );
+
+        if (!response.ok) {
+            const error = await response.json()
+                .catch(() => ({}));
+            throw new Error(
+                error.error
+                || `Erreur HTTP: ${response.status}`
+            );
+        }
+
+        return response.json();
+    }
 }
 
 const api = new Api();
