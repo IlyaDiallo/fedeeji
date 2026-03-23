@@ -1,4 +1,4 @@
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 
 class ImportService {
     /**
@@ -17,10 +17,10 @@ class ImportService {
      * @returns {Promise<Object>} Résultat de l'import
      */
     async importSubscriptions({ organisationId, fileBuffer }) {
-        const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(fileBuffer);
+        const worksheet = workbook.getWorksheet(1);
+        const rows = this._toRowObjects(worksheet);
 
         const members = await this.dataService.list({
             organisationId,
@@ -114,6 +114,24 @@ class ImportService {
         }
 
         return results;
+    }
+
+    /**
+     * Convertit les valeurs de la worksheet en objets avec en-têtes
+     * @param {Worksheet} worksheet
+     * @returns {Object[]} Tableau d'objets
+     */
+    _toRowObjects(worksheet) {
+        const rows = worksheet.getSheetValues();
+        if (rows.length < 2) return [];
+        const headers = rows[0];
+        return rows.slice(1).map(row => {
+            const obj = {};
+            headers.forEach((header, index) => {
+                if (header) obj[header] = row[index] ?? '';
+            });
+            return obj;
+        });
     }
 
     /**
