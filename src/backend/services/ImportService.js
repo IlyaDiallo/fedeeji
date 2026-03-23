@@ -122,16 +122,40 @@ class ImportService {
      * @returns {Object[]} Tableau d'objets
      */
     _toRowObjects(worksheet) {
-        const rows = worksheet.getSheetValues();
-        if (rows.length < 2) return [];
-        const headers = rows[0];
-        return rows.slice(1).map(row => {
+        const sheetValues = worksheet.getSheetValues();
+        if (!sheetValues || !Array.isArray(sheetValues)) return [];
+        const headers = sheetValues[1];
+        if (!headers) return [];
+        const result = [];
+        for (let i = 2; i < sheetValues.length; i++) {
+            const row = sheetValues[i];
+            if (!row) continue;
             const obj = {};
-            headers.forEach((header, index) => {
-                if (header) obj[header] = row[index] ?? '';
+            let hasData = false;
+            headers.forEach((header, colIndex) => {
+                if (header) {
+                    let value = row[colIndex];
+                    if (value === undefined || value === null) {
+                        value = '';
+                    } else if (typeof value === 'object') {
+                        // Extraire le résultat des formules Excel
+                        if (value instanceof Date) {
+                            value = value.toISOString().split('T')[0];
+                        } else if (value.result !== undefined) {
+                            value = String(value.result);
+                        } else {
+                            value = String(value);
+                        }
+                    } else {
+                        value = String(value);
+                    }
+                    obj[header] = value;
+                    if (value) hasData = true;
+                }
             });
-            return obj;
-        });
+            if (hasData) result.push(obj);
+        }
+        return result;
     }
 
     /**
