@@ -22,7 +22,7 @@ class HomeView extends AbstractView {
         return `
             <div class="p-5 mb-4 bg-light rounded-3 text-center">
                 <div class="container-fluid py-5">
-                    <img src="${logo}" alt="Logo" class="mb-4" style="max-height: 120px; max-width: 100%;">
+                    <img src="${logo}" alt="Logo" class="mb-4" style="max-height: 180px; max-width: 100%;">
                     <h1 class="display-5 fw-bold">${title}</h1>
                     <p class="col-md-8 fs-4" data-i18n="welcome_desc">${t("welcome_desc")}</p>
                 </div>
