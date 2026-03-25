@@ -77,11 +77,9 @@ class ImportService {
                     results.membersCreated++;
                 }
 
-                // Vérifier si la cotisation existe déjà (même membre, même année, même montant)
+                // Vérifier si la cotisation existe déjà (par référence commande)
                 const duplicate = existingSubscriptions.find(
-                    s => s.memberId === member.id
-                        && s.year === parsed.year
-                        && Number(s.amount) === parsed.amount
+                    s => s.orderRef && parsed.orderRef && s.orderRef === parsed.orderRef
                 );
 
                 if (duplicate) {
