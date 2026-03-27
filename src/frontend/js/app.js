@@ -22,6 +22,7 @@ const navigateTo = url => {
 let currentOrgId = null;
 let currentOrgName = null;
 let currentOrgLabel = null;
+let currentOrgSubscriptionsEnabled = true;
 
 /**
  * Récupère le nom et le label d'une organisation via l'API publique et les met en cache
@@ -30,6 +31,7 @@ const fetchOrgName = async (orgId) => {
     if (!orgId) {
         currentOrgName = null;
         currentOrgLabel = null;
+        currentOrgSubscriptionsEnabled = true;
         return;
     }
     try {
@@ -37,9 +39,11 @@ const fetchOrgName = async (orgId) => {
         const org = orgs.find(o => o.id === orgId);
         currentOrgName = org?.name || null;
         currentOrgLabel = org?.label || null;
+        currentOrgSubscriptionsEnabled = org?.subscriptionsEnabled !== false;
     } catch (e) {
         currentOrgName = null;
         currentOrgLabel = null;
+        currentOrgSubscriptionsEnabled = true;
     }
 };
 
@@ -80,9 +84,11 @@ const canAccessRoute = (path) => {
             '/:orgId/participations',
             '/:orgId/events/:eventId/participation-schedule',
             '/:orgId/schedule',
-            '/:orgId/profile',
-            '/:orgId/subscriptions'
+            '/:orgId/profile'
         ];
+        if (currentOrgSubscriptionsEnabled) {
+            memberRoutes.push('/:orgId/subscriptions');
+        }
         return memberRoutes.includes(path);
     }
 
@@ -202,14 +208,18 @@ const updateNav = () => {
                     data-link data-i18n="my_profile">
                     ${t("my_profile")}</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link"
-                    href="/${orgId}/subscriptions"
-                    data-link
-                    data-i18n="my_subscriptions">
-                    ${t("my_subscriptions")}</a>
-            </li>
         `;
+        if (currentOrgSubscriptionsEnabled) {
+            links += `
+                <li class="nav-item">
+                    <a class="nav-link"
+                        href="/${orgId}/subscriptions"
+                        data-link
+                        data-i18n="my_subscriptions">
+                        ${t("my_subscriptions")}</a>
+                </li>
+            `;
+        }
     }
 
     // Admin + superadmin seulement
@@ -221,18 +231,18 @@ const updateNav = () => {
                     data-link data-i18n="members">
                     ${t("members")}</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link"
-                    href="/${orgId}/users"
-                    data-link data-i18n="users">
-                    ${t("users")}</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link"
-                    href="/${orgId}/subscriptions"
-                    data-link data-i18n="subscriptions">
-                    ${t("subscriptions")}</a>
-            </li>
+        `;
+        if (currentOrgSubscriptionsEnabled) {
+            links += `
+                <li class="nav-item">
+                    <a class="nav-link"
+                        href="/${orgId}/subscriptions"
+                        data-link data-i18n="subscriptions">
+                        ${t("subscriptions")}</a>
+                </li>
+            `;
+        }
+        links += `
             <li class="nav-item">
                 <a class="nav-link"
                     href="/${orgId}/trash"
@@ -267,7 +277,6 @@ const router = async () => {
         { path: "/:orgId/register", view: RegisterView },
         { path: "/", view: OrgListView },
         { path: "/:orgId", view: HomeView },
-        { path: "/:orgId/users", view: UsersView },
         { path: "/:orgId/members", view: MembersView },
         {
             path: "/:orgId/subscriptions",

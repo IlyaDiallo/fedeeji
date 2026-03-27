@@ -170,6 +170,10 @@ class Api {
         return this.request('/auth/organizations');
     }
 
+    async getSuperadminEmail() {
+        return this.request('/auth/superadmin-email');
+    }
+
     // --- Profil membre ---
 
     async getMyProfile(orgId) {

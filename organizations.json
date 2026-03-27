@@ -6,6 +6,7 @@
     "adminEmail": "admin@default.com",
     "defaultLanguage": "fr",
     "logo": "/favicon.svg",
-    "registrationPassword": "test"
+    "registrationPassword": "test",
+    "subscriptionsEnabled": true
   }
 ]

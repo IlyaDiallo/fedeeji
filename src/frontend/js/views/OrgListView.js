@@ -6,6 +6,14 @@ class OrgListView extends AbstractView {
 
     async getHtml() {
         return `
+            <div class="alert alert-info d-flex align-items-center mb-3"
+                id="superadmin-email-banner" style="display: none !important;">
+                <i class="bi bi-envelope me-2"></i>
+                <span>
+                    Contact superadmin :
+                    <a id="superadmin-email-link" href="#"></a>
+                </span>
+            </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 data-i18n="org_list_title">${t("org_list_title")}</h2>
                 <button class="btn btn-success" id="new-org-btn">
@@ -75,6 +83,18 @@ class OrgListView extends AbstractView {
                                     <input type="text" class="form-control"
                                         id="new-org-registrationPassword"
                                         placeholder="Laissé vide = inscriptions closes">
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                            class="form-check-input"
+                                            id="new-org-subscriptionsEnabled"
+                                            checked>
+                                        <label class="form-check-label">
+                                            Activer les cotisations
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="text-end">
@@ -155,6 +175,17 @@ class OrgListView extends AbstractView {
                                         id="edit-org-registrationPassword">
                                 </div>
 
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input type="checkbox"
+                                            class="form-check-input"
+                                            id="edit-org-subscriptionsEnabled">
+                                        <label class="form-check-label">
+                                            Activer les cotisations
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div class="text-end">
                                     <button type="button" class="btn btn-secondary"
                                         data-bs-dismiss="modal">Annuler</button>
@@ -203,6 +234,24 @@ class OrgListView extends AbstractView {
     }
 
     async init() {
+        // Charger l'email du superadmin
+        try {
+            const { email } = await api.getSuperadminEmail();
+            if (email) {
+                const banner = document.getElementById(
+                    'superadmin-email-banner'
+                );
+                const link = document.getElementById(
+                    'superadmin-email-link'
+                );
+                link.textContent = email;
+                link.href = `mailto:${email}`;
+                banner.style.display = 'flex';
+            }
+        } catch (e) {
+            // Ignorer si pas disponible
+        }
+
         await this.loadOrgs();
 
         // Bouton nouvelle organisation
@@ -261,7 +310,10 @@ class OrgListView extends AbstractView {
             ).value,
             registrationPassword: document.getElementById(
                 'new-org-registrationPassword'
-            ).value.trim()
+            ).value.trim(),
+            subscriptionsEnabled: document.getElementById(
+                'new-org-subscriptionsEnabled'
+            ).checked
         };
 
         try {
@@ -355,6 +407,8 @@ class OrgListView extends AbstractView {
                 org.defaultLanguage || 'fr';
             document.getElementById('edit-org-registrationPassword').value =
                 org.registrationPassword || '';
+            document.getElementById('edit-org-subscriptionsEnabled').checked =
+                org.subscriptionsEnabled !== false;
             document.getElementById('edit-org-logo-preview').src =
                 org.logo || '/favicon.svg';
 
@@ -413,7 +467,10 @@ class OrgListView extends AbstractView {
             defaultLanguage:
                 document.getElementById('edit-org-defaultLanguage').value,
             registrationPassword:
-                document.getElementById('edit-org-registrationPassword').value
+                document.getElementById('edit-org-registrationPassword').value,
+            subscriptionsEnabled: document.getElementById(
+                'edit-org-subscriptionsEnabled'
+            ).checked
         };
 
         try {

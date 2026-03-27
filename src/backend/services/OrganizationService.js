@@ -90,8 +90,12 @@ class OrganizationService {
      * @param {string} [params.adminEmail] - Email admin
      * @param {string} [params.defaultLanguage] - Langue par défaut
      * @param {string} [params.registrationPassword] - Mot de passe inscription
+     * @param {boolean} [params.subscriptionsEnabled] - Activation des cotisations
      */
-    async create({ id, name, label, adminEmail, defaultLanguage, registrationPassword }) {
+    async create({
+        id, name, label, adminEmail, defaultLanguage,
+        registrationPassword, subscriptionsEnabled
+    }) {
         const root = path.join(__dirname, '../../..');
         const filePath = path.join(root, 'data', 'organizations.json');
         const dataDir = path.join(root, 'data', id);
@@ -142,6 +146,7 @@ class OrganizationService {
             adminEmail: adminEmail || '',
             defaultLanguage: defaultLanguage || 'fr',
             registrationPassword: registrationPassword || '',
+            subscriptionsEnabled: subscriptionsEnabled !== false,
             createdAt: new Date().toISOString()
         };
 

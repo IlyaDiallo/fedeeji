@@ -2,6 +2,8 @@ const express = require('express');
 const multer = require('multer');
 const { requireRole } = require('../middleware/auth');
 
+const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
+
 /**
  * @param {Object} params
  * @param {import('../services/AuthService')} params.authService
@@ -126,6 +128,11 @@ function createAuthRouter({ authService, organizationService, dataService }) {
         } catch (error) {
             res.status(500).json({ error: error.message });
         }
+    });
+
+    // Email de contact du superadmin (publique)
+    router.get('/superadmin-email', (req, res) => {
+        res.json({ email: SUPERADMIN_EMAIL || '' });
     });
 
     // Modification d'une organisation (superadmin)
