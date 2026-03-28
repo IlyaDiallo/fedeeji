@@ -84,6 +84,26 @@ class ProgrammeView extends AbstractView {
                                         id="action-description">
                                     </textarea>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label"
+                                            data-i18n="start_date">
+                                            ${t("start_date")}
+                                        </label>
+                                        <input type="date"
+                                            class="form-control"
+                                            id="action-startDate"
+                                            required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">
+                                            ${t("recurrence_end_date")}
+                                        </label>
+                                        <input type="date"
+                                            class="form-control"
+                                            id="action-recurrenceEndDate">
+                                    </div>
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label"
                                         data-i18n="schedule_mode">
@@ -170,32 +190,12 @@ class ProgrammeView extends AbstractView {
                                             </span>
                                         </div>
                                     </div>
-                                    <div class="mb-3">
-                                        <label
-                                            class="form-label"
-                                            data-i18n="start_date">
-                                            ${t("start_date")}
-                                        </label>
-                                        <input type="date"
-                                            class="form-control"
-                                            id="action-startDate"
-                                            required>
-                                    </div>
                                 </div>
 
                                 <!-- Champs planning précis -->
+                                <!-- Champs planning précis -->
                                 <div id="scheduled-fields"
                                     style="display:none;">
-                                    <div class="mb-3">
-                                        <label
-                                            class="form-label"
-                                            data-i18n="date">
-                                            ${t("date")}
-                                        </label>
-                                        <input type="date"
-                                            class="form-control"
-                                            id="action-date">
-                                    </div>
                                     <div class="mb-3">
                                         <div class="form-check
                                             form-check-inline">
@@ -339,17 +339,6 @@ class ProgrammeView extends AbstractView {
                                                 ${t("monthly_type_weekday")}
                                             </option>
                                         </select>
-                                    </div>
-                                    <div class="mb-3"
-                                        id="action-recurrence-end-container"
-                                        style="display:none;">
-                                        <label
-                                            class="form-label">
-                                            ${t("recurrence_end_date")}
-                                        </label>
-                                        <input type="date"
-                                            class="form-control"
-                                            id="action-recurrenceEndDate">
                                     </div>
                                 </div>
                             </form>
@@ -614,12 +603,14 @@ class ProgrammeView extends AbstractView {
                         this.computeFrequencyStatus(
                             action
                         );
-                    items.push({
-                        type: 'action-frequency',
-                        data: action,
-                        nextDate: info.deadlineStr,
-                        freqInfo: info
-                    });
+                    if (!action.recurrenceEndDate || info.deadlineStr <= action.recurrenceEndDate) {
+                        items.push({
+                            type: 'action-frequency',
+                            data: action,
+                            nextDate: info.deadlineStr,
+                            freqInfo: info
+                        });
+                    }
                 }
             });
         }
@@ -1038,9 +1029,6 @@ class ProgrammeView extends AbstractView {
         document.getElementById(
             'action-monthly-type-container'
         ).style.display = 'none';
-        document.getElementById(
-            'action-recurrence-end-container'
-        ).style.display = 'none';
         document.querySelectorAll(
             '.action-recurrence-day'
         ).forEach(cb => cb.checked = false);
@@ -1071,10 +1059,16 @@ class ProgrammeView extends AbstractView {
             ).checked = isScheduled;
             this.toggleScheduleMode();
 
+            document.getElementById(
+                'action-startDate'
+            ).value = action.scheduleMode === 'scheduled'
+                ? (action.date || '')
+                : (action.startDate || '');
+            document.getElementById(
+                'action-recurrenceEndDate'
+            ).value = action.recurrenceEndDate || '';
+
             if (isScheduled) {
-                document.getElementById(
-                    'action-date'
-                ).value = action.date || '';
                 const isAllDay =
                     action.allDay !== undefined
                         ? action.allDay : !action.time;
@@ -1098,9 +1092,6 @@ class ProgrammeView extends AbstractView {
                     'action-recurrence'
                 ).value = action.recurrence || 'none';
                 document.getElementById(
-                    'action-recurrenceEndDate'
-                ).value = action.recurrenceEndDate || '';
-                document.getElementById(
                     'action-monthlyType'
                 ).value = action.monthlyType || 'date';
                 document.querySelectorAll(
@@ -1116,10 +1107,6 @@ class ProgrammeView extends AbstractView {
                 });
                 const rec =
                     action.recurrence || 'none';
-                document.getElementById(
-                    'action-recurrence-end-container'
-                ).style.display =
-                    rec !== 'none' ? 'block' : 'none';
                 document.getElementById(
                     'action-recurrence-days-container'
                 ).style.display =
@@ -1142,9 +1129,6 @@ class ProgrammeView extends AbstractView {
                 document.getElementById(
                     'action-windowDays'
                 ).value = action.windowDays || 0;
-                document.getElementById(
-                    'action-startDate'
-                ).value = action.startDate || '';
             }
         }
 
@@ -1171,7 +1155,10 @@ class ProgrammeView extends AbstractView {
                 'action-description'
             ).value,
             scheduleMode: isScheduled
-                ? 'scheduled' : 'frequency'
+                ? 'scheduled' : 'frequency',
+            recurrenceEndDate: document.getElementById(
+                'action-recurrenceEndDate'
+            ).value || null
         };
 
         if (isScheduled) {
@@ -1180,7 +1167,7 @@ class ProgrammeView extends AbstractView {
             ).checked;
             Object.assign(data, {
                 date: document.getElementById(
-                    'action-date'
+                    'action-startDate'
                 ).value,
                 allDay: isAllDay,
                 time: isAllDay ? '' :
@@ -1199,10 +1186,6 @@ class ProgrammeView extends AbstractView {
                 recurrence: document.getElementById(
                     'action-recurrence'
                 ).value,
-                recurrenceEndDate:
-                    document.getElementById(
-                        'action-recurrenceEndDate'
-                    ).value || null,
                 recurrenceDays: Array.from(
                     document.querySelectorAll(
                         '.action-recurrence-day:checked'
@@ -1241,7 +1224,6 @@ class ProgrammeView extends AbstractView {
                 allDay: null, duration: null,
                 durationUnit: null,
                 recurrence: null,
-                recurrenceEndDate: null,
                 recurrenceDays: null,
                 monthlyType: null,
                 cancelledDates: null
@@ -1438,11 +1420,6 @@ class ProgrammeView extends AbstractView {
                 recSel.addEventListener(
                     'change', (e) => {
                         const val = e.target.value;
-                        document.getElementById(
-                            'action-recurrence-end-container'
-                        ).style.display =
-                            val !== 'none'
-                                ? 'block' : 'none';
                         document.getElementById(
                             'action-recurrence-days-container'
                         ).style.display =
