@@ -107,51 +107,51 @@ body {
     opacity: 0.6;
 }
 
-/* --- Planning de participation (ParticipationScheduleView) --- */
+/* --- Planning d inscription (InscriptionScheduleView) --- */
 
-.participation-calendar {
+.inscription-calendar {
     table-layout: fixed;
 }
 
-.participation-calendar th {
+.inscription-calendar th {
     background-color: #f0f0f0;
     font-weight: 600;
     font-size: 0.85rem;
 }
 
-.participation-calendar td {
+.inscription-calendar td {
     height: 60px;
     vertical-align: middle;
     padding: 4px;
     transition: background-color 0.15s, transform 0.1s;
 }
 
-.participation-cell {
+.inscription-cell {
     cursor: pointer;
     border-radius: 4px;
 }
 
-.participation-cell:hover {
+.inscription-cell:hover {
     transform: scale(1.05);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
     z-index: 1;
 }
 
-.participation-cell .day-number {
+.inscription-cell .day-number {
     font-weight: 600;
     font-size: 0.9rem;
 }
 
-.participation-cell .day-badge {
+.inscription-cell .day-badge {
     font-size: 1.1rem;
     font-weight: bold;
 }
 
-.participation-cell-empty {
+.inscription-cell-empty {
     opacity: 0.4;
 }
 
-.participation-cell-empty .day-number {
+.inscription-cell-empty .day-number {
     font-size: 0.8rem;
 }
 
@@ -194,7 +194,7 @@ body {
 }
 
 /* Bouton annuler/rétablir dans la grille calendrier */
-.participation-cell {
+.inscription-cell {
     position: relative;
 }
 
@@ -227,52 +227,52 @@ body {
 }
 
 /* Liste mensuelle */
-.participation-list-item {
+.inscription-list-item {
     cursor: pointer;
     transition: background-color 0.15s, transform 0.1s;
 }
 
-.participation-list-item:hover {
+.inscription-list-item:hover {
     transform: translateX(4px);
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Barre pinceau */
-.participation-brush .brush-btn {
+.inscription-brush .brush-btn {
     min-width: 70px;
 }
 
-.participation-brush .brush-btn.active {
+.inscription-brush .brush-btn.active {
     box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Légende */
-.participation-legend small {
+.inscription-legend small {
     display: flex;
     align-items: center;
     gap: 4px;
 }
 
 @media (max-width: 767.98px) {
-    .participation-calendar td {
+    .inscription-calendar td {
         height: 45px;
         padding: 2px;
     }
 
-    .participation-cell .day-number {
+    .inscription-cell .day-number {
         font-size: 0.75rem;
     }
 
-    .participation-cell .day-badge {
+    .inscription-cell .day-badge {
         font-size: 0.9rem;
     }
 
-    .participation-brush {
+    .inscription-brush {
         flex-direction: column;
         align-items: stretch !important;
     }
 
-    .participation-brush .ms-auto {
+    .inscription-brush .ms-auto {
         margin-left: 0 !important;
         margin-top: 0.5rem;
     }

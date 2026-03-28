@@ -1,15 +1,15 @@
-class ParticipationScheduleView extends AbstractView {
+class InscriptionScheduleView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(
-            t("participation_schedule") + " - " + t("brand")
+            t("inscription_schedule") + " - " + t("brand")
         );
         this.orgId = params.orgId;
         this.eventId = params.eventId;
         this.isMember = api.getRole() === 'member';
         this.event = null;
         this.members = [];
-        this.participations = [];
+        this.inscriptions = [];
         this.occurrences = [];
         // Réponse active pour le "pinceau"
         this.activeBrush = 'yes';
@@ -41,8 +41,8 @@ class ParticipationScheduleView extends AbstractView {
             <div class="d-flex justify-content-between
                 align-items-center mb-3">
                 <h2 id="schedule-title">
-                    ${t("participation_schedule")}</h2>
-                <a href="/${this.orgId}/schedule"
+                    ${t("inscription_schedule")}</h2>
+                <a href="/${this.orgId}/programme"
                     class="btn btn-outline-secondary"
                     data-link>
                     <i class="bi bi-arrow-left"></i>
@@ -55,7 +55,7 @@ class ParticipationScheduleView extends AbstractView {
             <div id="schedule-content"
                 class="d-none">
                 <!-- Sélecteur de réponse (pinceau) -->
-                <div class="participation-brush mb-3
+                <div class="inscription-brush mb-3
                     d-flex flex-wrap align-items-center
                     gap-2">
                     <span class="fw-bold me-2">
@@ -114,7 +114,7 @@ class ParticipationScheduleView extends AbstractView {
                 api.getById(
                     this.orgId, 'events', this.eventId
                 ),
-                api.get(this.orgId, 'participations')
+                api.get(this.orgId, 'inscriptions')
             ];
             if (!this.isMember) {
                 promises.push(
@@ -123,7 +123,7 @@ class ParticipationScheduleView extends AbstractView {
             }
             const results = await Promise.all(promises);
             this.event = results[0];
-            this.participations = results[1];
+            this.inscriptions = results[1];
             if (!this.isMember) {
                 this.members = results[2];
             }
@@ -145,7 +145,7 @@ class ParticipationScheduleView extends AbstractView {
             }
 
             document.getElementById('schedule-title')
-                .textContent = `${t("participation_schedule")} — ${this.event.name}`;
+                .textContent = `${t("inscription_schedule")} — ${this.event.name}`;
 
             if (!this.isMember) {
                 this.renderMemberSelect();
@@ -181,7 +181,7 @@ class ParticipationScheduleView extends AbstractView {
     loadLocalResponses() {
         this.localResponses = {};
         if (!this.selectedMemberId) return;
-        const relevant = this.participations.filter(
+        const relevant = this.inscriptions.filter(
             p => p.eventId === this.eventId
                 && p.memberId === this.selectedMemberId
         );
@@ -253,7 +253,7 @@ class ParticipationScheduleView extends AbstractView {
         ];
 
         let html = `<table class="table table-bordered
-            participation-calendar">
+            inscription-calendar">
             <thead><tr>`;
         dayHeaders.forEach(d => {
             html += `<th class="text-center">${d}</th>`;
@@ -306,7 +306,7 @@ class ParticipationScheduleView extends AbstractView {
 
                     if (isCancelled) {
                         html += `<td class="text-center
-                            participation-cell
+                            inscription-cell
                             cell-cancelled"
                             data-date="${dateStr}">
                             <div class="day-number">
@@ -325,7 +325,7 @@ class ParticipationScheduleView extends AbstractView {
                                 response
                             );
                         html += `<td class="text-center
-                            participation-cell ${cls}"
+                            inscription-cell ${cls}"
                             data-date="${dateStr}"
                             role="button">
                             <div class="day-number">
@@ -341,7 +341,7 @@ class ParticipationScheduleView extends AbstractView {
                 } else {
                     html += `<td class="text-center
                         text-muted
-                        participation-cell-empty">
+                        inscription-cell-empty">
                         <div class="day-number">
                             ${dayNum}</div>
                     </td>`;
@@ -420,7 +420,7 @@ class ParticipationScheduleView extends AbstractView {
                     <div class="list-group-item
                         d-flex justify-content-between
                         align-items-center
-                        participation-list-item
+                        inscription-list-item
                         cell-cancelled"
                         data-date="${occ.occurrenceDate}">
                         <span class="
@@ -443,7 +443,7 @@ class ParticipationScheduleView extends AbstractView {
                     <div class="list-group-item
                         d-flex justify-content-between
                         align-items-center
-                        participation-list-item ${cls}"
+                        inscription-list-item ${cls}"
                         data-date="${occ.occurrenceDate}"
                         role="button">
                         <span>${dateLabel}</span>
@@ -475,7 +475,7 @@ class ParticipationScheduleView extends AbstractView {
     renderLegend() {
         return `
             <div class="mt-3 d-flex flex-wrap gap-3
-                participation-legend">
+                inscription-legend">
                 <small>
                     <span class="badge bg-success">
                         ${t("yes")}</span>
@@ -535,7 +535,7 @@ class ParticipationScheduleView extends AbstractView {
     bindCellClicks() {
         // Cellules du calendrier (exclure les annulées)
         document.querySelectorAll(
-            '.participation-cell[data-date]'
+            '.inscription-cell[data-date]'
             + ':not(.cell-cancelled)'
         ).forEach(cell => {
             cell.addEventListener('click', (e) => {
@@ -547,7 +547,7 @@ class ParticipationScheduleView extends AbstractView {
         });
         // Items de la liste (exclure les annulés)
         document.querySelectorAll(
-            '.participation-list-item[data-date]'
+            '.inscription-list-item[data-date]'
             + ':not(.cell-cancelled)'
         ).forEach(item => {
             item.addEventListener('click', (e) => {
@@ -702,7 +702,7 @@ class ParticipationScheduleView extends AbstractView {
 
         try {
             await api.request(
-                `/api/${this.orgId}/participations/bulk`,
+                `/api/${this.orgId}/inscriptions/bulk`,
                 {
                     method: 'POST',
                     body: JSON.stringify({
@@ -715,9 +715,9 @@ class ParticipationScheduleView extends AbstractView {
             this.dirty = false;
             document.getElementById('btn-save-schedule')
                 .disabled = true;
-            // Recharger les participations pour être à jour
-            this.participations = await api.get(
-                this.orgId, 'participations'
+            // Recharger les inscriptions pour être à jour
+            this.inscriptions = await api.get(
+                this.orgId, 'inscriptions'
             );
             this.loadLocalResponses();
             this.renderMonth();

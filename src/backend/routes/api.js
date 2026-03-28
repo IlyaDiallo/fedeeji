@@ -105,11 +105,11 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    // --- Participations : membres peuvent gérer les leurs ---
+    // --- Inscriptions : membres peuvent gérer les leurs ---
 
-    // --- Participations bulk (upsert) ---
+    // --- Inscriptions bulk (upsert) ---
 
-    router.post('/participations/bulk',
+    router.post('/inscriptions/bulk',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
@@ -125,7 +125,7 @@ function createApiRouter({ dataService, trashService, importService }) {
 
                 const existing = await dataService.list({
                     organisationId: req.organisationId,
-                    collection: 'participations'
+                    collection: 'inscriptions'
                 });
 
                 const results = [];
@@ -133,7 +133,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     const { occurrenceDate, response } = entry;
                     if (!occurrenceDate) continue;
 
-                    // Chercher une participation existante
+                    // Chercher une inscription existante
                     const found = existing.find(
                         p => p.eventId === eventId
                             && p.memberId === effectiveMemberId
@@ -141,11 +141,11 @@ function createApiRouter({ dataService, trashService, importService }) {
                     );
 
                     if (response === null) {
-                        // Suppression si la participation existe
+                        // Suppression si  l inscription existe
                         if (found) {
                             await dataService.delete({
                                 organisationId: req.organisationId,
-                                collection: 'participations',
+                                collection: 'inscriptions',
                                 id: found.id
                             });
                         }
@@ -153,7 +153,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                         // Mise à jour
                         const updated = await dataService.update({
                             organisationId: req.organisationId,
-                            collection: 'participations',
+                            collection: 'inscriptions',
                             id: found.id,
                             data: { response }
                         });
@@ -162,7 +162,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                         // Création
                         const created = await dataService.create({
                             organisationId: req.organisationId,
-                            collection: 'participations',
+                            collection: 'inscriptions',
                             data: {
                                 eventId,
                                 memberId: effectiveMemberId,
@@ -180,15 +180,15 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.get('/participations',
+    router.get('/inscriptions',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
                 let data = await dataService.list({
                     organisationId: req.organisationId,
-                    collection: 'participations'
+                    collection: 'inscriptions'
                 });
-                // Membre : ne voir que ses propres participations
+                // Membre : ne voir que ses propres inscriptions
                 if (req.user.role === 'member') {
                     data = data.filter(
                         p => p.memberId === req.user.memberId
@@ -201,13 +201,13 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.get('/participations/:id',
+    router.get('/inscriptions/:id',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
                 const data = await dataService.get({
                     organisationId: req.organisationId,
-                    collection: 'participations',
+                    collection: 'inscriptions',
                     id: req.params.id
                 });
                 if (!data) {
@@ -215,7 +215,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                         error: 'Non trouvé'
                     });
                 }
-                // Membre : vérifier que c'est sa participation
+                // Membre : vérifier que c'est  son inscription
                 if (
                     req.user.role === 'member'
                     && data.memberId !== req.user.memberId
@@ -231,7 +231,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.post('/participations',
+    router.post('/inscriptions',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
@@ -262,7 +262,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 }
                 const data = await dataService.create({
                     organisationId: req.organisationId,
-                    collection: 'participations',
+                    collection: 'inscriptions',
                     data: body
                 });
                 res.status(201).json(data);
@@ -272,15 +272,15 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.put('/participations/:id',
+    router.put('/inscriptions/:id',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
-                // Membre : vérifier que c'est sa participation
+                // Membre : vérifier que c'est  son inscription
                 if (req.user.role === 'member') {
                     const existing = await dataService.get({
                         organisationId: req.organisationId,
-                        collection: 'participations',
+                        collection: 'inscriptions',
                         id: req.params.id
                     });
                     if (
@@ -318,7 +318,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 }
                 const data = await dataService.update({
                     organisationId: req.organisationId,
-                    collection: 'participations',
+                    collection: 'inscriptions',
                     id: req.params.id,
                     data: req.body
                 });
@@ -329,18 +329,175 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.delete('/participations/:id',
+    router.delete('/inscriptions/:id',
         requireRole('admin'),
         async (req, res) => {
             try {
                 await dataService.delete({
                     organisationId: req.organisationId,
-                    collection: 'participations',
+                    collection: 'inscriptions',
                     id: req.params.id
                 });
                 res.json({ success: true });
             } catch (error) {
                 res.status(400).json({ error: error.message });
+            }
+        }
+    );
+
+    // --- Actions : membres en lecture, admin CRUD ---
+
+    router.get('/actions',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                const data = await dataService.list({
+                    organisationId: req.organisationId,
+                    collection: 'actions'
+                });
+                res.json(data);
+            } catch (error) {
+                res.status(500).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.get('/actions/:id',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                const data = await dataService.get({
+                    organisationId: req.organisationId,
+                    collection: 'actions',
+                    id: req.params.id
+                });
+                if (!data) {
+                    return res.status(404).json({
+                        error: 'Non trouvé'
+                    });
+                }
+                res.json(data);
+            } catch (error) {
+                res.status(500).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.post('/actions',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                const data = await dataService.create({
+                    organisationId: req.organisationId,
+                    collection: 'actions',
+                    data: req.body
+                });
+                res.status(201).json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.put('/actions/:id',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                const data = await dataService.update({
+                    organisationId: req.organisationId,
+                    collection: 'actions',
+                    id: req.params.id,
+                    data: req.body
+                });
+                res.json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.delete('/actions/:id',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                await dataService.delete({
+                    organisationId: req.organisationId,
+                    collection: 'actions',
+                    id: req.params.id
+                });
+                res.json({ success: true });
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    // --- Action-logs : membres peuvent lire/créer ---
+
+    router.get('/action-logs',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                const data = await dataService.list({
+                    organisationId: req.organisationId,
+                    collection: 'action-logs'
+                });
+                res.json(data);
+            } catch (error) {
+                res.status(500).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.post('/action-logs',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                const body = { ...req.body };
+                // Membre : forcer son propre memberId
+                if (req.user.role === 'member') {
+                    body.memberId = req.user.memberId;
+                }
+                const data = await dataService.create({
+                    organisationId: req.organisationId,
+                    collection: 'action-logs',
+                    data: body
+                });
+                res.status(201).json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.delete('/action-logs/:id',
+        requireRole('admin'),
+        async (req, res) => {
+            try {
+                await dataService.delete({
+                    organisationId: req.organisationId,
+                    collection: 'action-logs',
+                    id: req.params.id
+                });
+                res.json({ success: true });
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
             }
         }
     );

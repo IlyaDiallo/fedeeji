@@ -81,9 +81,9 @@ const canAccessRoute = (path) => {
         const memberRoutes = [
             '/:orgId',
             '/:orgId/events',
-            '/:orgId/participations',
-            '/:orgId/events/:eventId/participation-schedule',
-            '/:orgId/schedule',
+            '/:orgId/inscriptions',
+            '/:orgId/events/:eventId/inscription-schedule',
+            '/:orgId/programme',
             '/:orgId/profile'
         ];
         if (currentOrgSubscriptionsEnabled) {
@@ -179,23 +179,23 @@ const updateNav = () => {
         </li>
     `;
 
-    // Participations (tous les rôles)
+    // Inscriptions (tous les rôles)
     links += `
         <li class="nav-item">
             <a class="nav-link"
-                href="/${orgId}/participations"
-                data-link data-i18n="participations">
-                ${t("participations")}</a>
+                href="/${orgId}/inscriptions"
+                data-link data-i18n="inscriptions">
+                ${t("inscriptions")}</a>
         </li>
     `;
 
-    // Planning (tous les rôles)
+    // Programme (tous les rôles)
     links += `
         <li class="nav-item">
             <a class="nav-link"
-                href="/${orgId}/schedule"
-                data-link data-i18n="schedule">
-                ${t("schedule")}</a>
+                href="/${orgId}/programme"
+                data-link data-i18n="programme">
+                ${t("programme")}</a>
         </li>
     `;
 
@@ -284,14 +284,14 @@ const router = async () => {
         },
         { path: "/:orgId/events", view: EventsView },
         {
-            path: "/:orgId/participations",
-            view: ParticipationsView
+            path: "/:orgId/inscriptions",
+            view: InscriptionsView
         },
         {
-            path: "/:orgId/events/:eventId/participation-schedule",
-            view: ParticipationScheduleView
+            path: "/:orgId/events/:eventId/inscription-schedule",
+            view: InscriptionScheduleView
         },
-        { path: "/:orgId/schedule", view: ScheduleView },
+        { path: "/:orgId/programme", view: ProgrammeView },
         { path: "/:orgId/profile", view: ProfileView },
         { path: "/:orgId/trash", view: TrashView },
     ];

@@ -1,10 +1,10 @@
-class ParticipationsView extends AbstractView {
+class InscriptionsView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(
-            t("participations") + " - " + t("brand")
+            t("inscriptions") + " - " + t("brand")
         );
-        this.participations = [];
+        this.inscriptions = [];
         this.members = [];
         this.events = [];
         this.orgId = params.orgId;
@@ -38,7 +38,7 @@ class ParticipationsView extends AbstractView {
     async getHtml() {
         const addBtn = `
             <button class="btn btn-primary"
-                id="btn-add-participation">
+                id="btn-add-inscription">
                 <i class="bi bi-plus-lg"></i>
                 <span class="d-none d-md-inline"
                     data-i18n="add">
@@ -48,7 +48,7 @@ class ParticipationsView extends AbstractView {
         const searchBar = this.isMember ? '' : `
             <div class="mb-3">
                 <input type="text"
-                    id="search-participation"
+                    id="search-inscription"
                     class="form-control"
                     placeholder="${t("search_member")}">
             </div>`;
@@ -56,8 +56,8 @@ class ParticipationsView extends AbstractView {
         return `
             <div class="d-flex justify-content-between
                 align-items-center mb-3">
-                <h2 data-i18n="participations">
-                    ${t("participations")}</h2>
+                <h2 data-i18n="inscriptions">
+                    ${t("inscriptions")}</h2>
                 ${addBtn}
             </div>
             ${searchBar}
@@ -76,20 +76,20 @@ class ParticipationsView extends AbstractView {
                                 ${t("actions")}</th>
                         </tr>
                     </thead>
-                    <tbody id="participations-table-body">
+                    <tbody id="inscriptions-table-body">
                     </tbody>
                 </table>
             </div>
 
             <!-- Modal -->
             <div class="modal fade"
-                id="participationModal" tabindex="-1">
+                id="inscriptionModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"
-                                id="participationModalTitle">
-                                ${t("add_edit_participation")}
+                                id="inscriptionModalTitle">
+                                ${t("add_edit_inscription")}
                             </h5>
                             <button type="button"
                                 class="btn-close"
@@ -97,26 +97,26 @@ class ParticipationsView extends AbstractView {
                             </button>
                         </div>
                         <div class="modal-body">
-                            <form id="participation-form">
+                            <form id="inscription-form">
                                 <input type="hidden"
-                                    id="participation-id">
+                                    id="inscription-id">
                                 <div class="mb-3">
                                     <label class="form-label"
                                         data-i18n="event">
                                         ${t("event")}</label>
                                     <select
                                         class="form-select"
-                                        id="participation-eventId"
+                                        id="inscription-eventId"
                                         required>
                                     </select>
                                 </div>
-                                <div class="mb-3" id="participation-occurrence-container" style="display:none;">
+                                <div class="mb-3" id="inscription-occurrence-container" style="display:none;">
                                     <label class="form-label"
                                         data-i18n="date">
                                         ${t("date")}</label>
                                     <select
                                         class="form-select"
-                                        id="participation-occurrenceDate">
+                                        id="inscription-occurrenceDate">
                                     </select>
                                 </div>
                                 <div class="mb-3">
@@ -125,7 +125,7 @@ class ParticipationsView extends AbstractView {
                                         ${t("member")}</label>
                                     <select
                                         class="form-select"
-                                        id="participation-memberId"
+                                        id="inscription-memberId"
                                         required>
                                     </select>
                                 </div>
@@ -136,7 +136,7 @@ class ParticipationsView extends AbstractView {
                                     </label>
                                     <select
                                         class="form-select"
-                                        id="participation-response"
+                                        id="inscription-response"
                                         required>
                                         <option value="yes">
                                             ${t("yes")}
@@ -159,7 +159,7 @@ class ParticipationsView extends AbstractView {
                                 ${t("cancel")}</button>
                             <button type="button"
                                 class="btn btn-primary"
-                                id="btn-save-participation"
+                                id="btn-save-inscription"
                                 data-i18n="save">
                                 ${t("save")}</button>
                         </div>
@@ -172,7 +172,7 @@ class ParticipationsView extends AbstractView {
     async loadData() {
         try {
             const promises = [
-                api.get(this.orgId, 'participations'),
+                api.get(this.orgId, 'inscriptions'),
                 api.get(this.orgId, 'events')
             ];
             // Membre : pas d'accès à la liste des membres
@@ -182,7 +182,7 @@ class ParticipationsView extends AbstractView {
                 );
             }
             const results = await Promise.all(promises);
-            this.participations = results[0];
+            this.inscriptions = results[0];
             this.events = results[1];
             this.members = this.isMember
                 ? [] : results[2];
@@ -195,7 +195,7 @@ class ParticipationsView extends AbstractView {
 
     renderSelects() {
         const memberSelect = document.getElementById(
-            'participation-memberId'
+            'inscription-memberId'
         );
         const memberGroup = memberSelect
             .closest('.mb-3');
@@ -220,7 +220,7 @@ class ParticipationsView extends AbstractView {
         }
 
         const eventSelect = document.getElementById(
-            'participation-eventId'
+            'inscription-eventId'
         );
         eventSelect.innerHTML =
             `<option value="">${t("select_event")}`
@@ -247,11 +247,11 @@ class ParticipationsView extends AbstractView {
 
     renderTable(searchTerm = '') {
         const tbody = document.getElementById(
-            'participations-table-body'
+            'inscriptions-table-body'
         );
         tbody.innerHTML = '';
 
-        const filtered = this.participations.filter(p => {
+        const filtered = this.inscriptions.filter(p => {
             const member = this.members
                 .find(m => m.id === p.memberId);
             const event = this.events
@@ -345,7 +345,7 @@ class ParticipationsView extends AbstractView {
                 btn.addEventListener('click', (e) => {
                     const id =
                         e.target.closest('button').dataset.id;
-                    this.deleteParticipation(id);
+                    this.deleteInscription(id);
                 });
             });
     }
@@ -354,21 +354,21 @@ class ParticipationsView extends AbstractView {
         await this.loadData();
 
         this.modal = new bootstrap.Modal(
-            document.getElementById('participationModal')
+            document.getElementById('inscriptionModal')
         );
 
-        document.getElementById('btn-add-participation')
+        document.getElementById('btn-add-inscription')
             .addEventListener('click', () => {
                 this.openModal();
             });
 
-        document.getElementById('btn-save-participation')
+        document.getElementById('btn-save-inscription')
             .addEventListener('click', () => {
-                this.saveParticipation();
+                this.saveInscription();
             });
 
         const searchInput = document.getElementById(
-            'search-participation'
+            'search-inscription'
         );
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -376,7 +376,7 @@ class ParticipationsView extends AbstractView {
             });
         }
         
-        const eventSelect = document.getElementById('participation-eventId');
+        const eventSelect = document.getElementById('inscription-eventId');
         if (eventSelect) {
             eventSelect.addEventListener('change', (e) => {
                 this.updateOccurrenceSelect(e.target.value);
@@ -387,7 +387,7 @@ class ParticipationsView extends AbstractView {
         const eventIdParam = urlParams.get('eventId');
         if (eventIdParam) {
             this.openModal();
-            document.getElementById('participation-eventId').value = eventIdParam;
+            document.getElementById('inscription-eventId').value = eventIdParam;
             const dateParam = urlParams.get('date');
             this.updateOccurrenceSelect(eventIdParam, dateParam);
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -395,8 +395,8 @@ class ParticipationsView extends AbstractView {
     }
     
     updateOccurrenceSelect(eventId, selectedDate = null) {
-        const container = document.getElementById('participation-occurrence-container');
-        const select = document.getElementById('participation-occurrenceDate');
+        const container = document.getElementById('inscription-occurrence-container');
+        const select = document.getElementById('inscription-occurrenceDate');
         
         if (!eventId) {
             container.style.display = 'none';
@@ -435,56 +435,56 @@ class ParticipationsView extends AbstractView {
 
     openModal(id = null) {
         const form = document.getElementById(
-            'participation-form'
+            'inscription-form'
         );
         form.reset();
-        document.getElementById('participation-id')
+        document.getElementById('inscription-id')
             .value = '';
 
         if (id) {
-            const p = this.participations
+            const p = this.inscriptions
                 .find(x => x.id === id);
             if (p) {
-                document.getElementById('participation-id')
+                document.getElementById('inscription-id')
                     .value = p.id;
                 document.getElementById(
-                    'participation-eventId'
+                    'inscription-eventId'
                 ).value = p.eventId || '';
                 
                 this.updateOccurrenceSelect(p.eventId, p.occurrenceDate);
                 
                 document.getElementById(
-                    'participation-memberId'
+                    'inscription-memberId'
                 ).value = p.memberId || '';
                 document.getElementById(
-                    'participation-response'
+                    'inscription-response'
                 ).value = p.response || 'yes';
             }
         } else {
-            document.getElementById('participation-occurrence-container').style.display = 'none';
-            document.getElementById('participation-occurrenceDate').innerHTML = '';
+            document.getElementById('inscription-occurrence-container').style.display = 'none';
+            document.getElementById('inscription-occurrenceDate').innerHTML = '';
         }
         this.modal.show();
     }
 
-    async saveParticipation() {
+    async saveInscription() {
         const id = document.getElementById(
-            'participation-id'
+            'inscription-id'
         ).value;
         const data = {
             eventId: document.getElementById(
-                'participation-eventId'
+                'inscription-eventId'
             ).value,
             memberId: document.getElementById(
-                'participation-memberId'
+                'inscription-memberId'
             ).value,
             response: document.getElementById(
-                'participation-response'
+                'inscription-response'
             ).value
         };
         
-        const occSelect = document.getElementById('participation-occurrenceDate');
-        const occContainer = document.getElementById('participation-occurrence-container');
+        const occSelect = document.getElementById('inscription-occurrenceDate');
+        const occContainer = document.getElementById('inscription-occurrence-container');
         if (occContainer.style.display !== 'none' && occSelect.value) {
             data.occurrenceDate = occSelect.value;
         } else {
@@ -501,11 +501,11 @@ class ParticipationsView extends AbstractView {
         try {
             if (id) {
                 await api.update(
-                    this.orgId, 'participations', id, data
+                    this.orgId, 'inscriptions', id, data
                 );
             } else {
                 await api.create(
-                    this.orgId, 'participations', data
+                    this.orgId, 'inscriptions', data
                 );
             }
             this.modal.hide();
@@ -516,11 +516,11 @@ class ParticipationsView extends AbstractView {
         }
     }
 
-    async deleteParticipation(id) {
+    async deleteInscription(id) {
         if (confirm(t("confirm_delete"))) {
             try {
                 await api.delete(
-                    this.orgId, 'participations', id
+                    this.orgId, 'inscriptions', id
                 );
                 await this.loadData();
             } catch (error) {

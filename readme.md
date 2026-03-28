@@ -18,7 +18,7 @@ Fonctionnalités:
 - gestion des membres (ajout, modification, suppression, recherche)
 - gestion des cotisations (ajout, modification, suppression, recherche)
 - gestion des événements (ajout, modification, suppression, recherche)
-- gestion des participations aux événements (ajout, modification, suppression, recherche)
+- gestion des inscriptions aux événements (ajout, modification, suppression, recherche)
 - planning interactif des événenements
 
 Fonctionnalités futures:

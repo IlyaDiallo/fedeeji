@@ -120,7 +120,7 @@ class OrganizationService {
         // Initialiser les fichiers de données
         const collections = [
             'members.json', 'events.json', 'subscriptions.json',
-            'participations.json'
+            'inscriptions.json'
         ];
         for (const col of collections) {
             await fs.writeFile(
