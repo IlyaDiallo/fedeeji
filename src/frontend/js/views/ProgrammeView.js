@@ -8,6 +8,8 @@ class ProgrammeView extends AbstractView {
         this.actions = [];
         this.actionLogs = [];
         this.members = [];
+        this.viewMode = 'list';
+        this.currentDate = new Date();
     }
 
     async getHtml() {
@@ -26,19 +28,41 @@ class ProgrammeView extends AbstractView {
                 ${addBtn}
             </div>
 
-            <ul class="nav nav-tabs mb-3" id="programme-tabs">
-                <li class="nav-item">
-                    <a class="nav-link active" href="#" data-tab="all">${t("all")}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-tab="events">${t("events")}</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="#" data-tab="actions">${t("actions_label")}</a>
-                </li>
-            </ul>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <ul class="nav nav-tabs mb-0 border-bottom-0" id="programme-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-tab="all">${t("all")}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="events">${t("events")}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-tab="actions">${t("actions_label")}</a>
+                    </li>
+                </ul>
+                
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="view-mode" id="view-list" value="list" autocomplete="off" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="view-list" title="Liste"><i class="bi bi-list-ul"></i></label>
+
+                    <input type="radio" class="btn-check" name="view-mode" id="view-week" value="week" autocomplete="off">
+                    <label class="btn btn-outline-secondary btn-sm" for="view-week" title="Semaine"><i class="bi bi-calendar-week"></i></label>
+
+                    <input type="radio" class="btn-check" name="view-mode" id="view-month" value="month" autocomplete="off">
+                    <label class="btn btn-outline-secondary btn-sm" for="view-month" title="Mois"><i class="bi bi-calendar-month"></i></label>
+                </div>
+            </div>
+
+            <div id="calendar-nav" class="d-flex justify-content-between align-items-center mb-3 d-none">
+                <button class="btn btn-outline-secondary btn-sm" id="btn-prev-cal"><i class="bi bi-chevron-left"></i></button>
+                <h5 id="calendar-label" class="mb-0"></h5>
+                <button class="btn btn-outline-secondary btn-sm" id="btn-next-cal"><i class="bi bi-chevron-right"></i></button>
+            </div>
 
             <div id="programme-list" class="list-group border-0">
+            </div>
+
+            <div id="programme-calendar" class="d-none">
             </div>
 
             <!-- Modal action -->
@@ -160,6 +184,9 @@ class ProgrammeView extends AbstractView {
                             <form id="log-form">
                                 <input type="hidden" id="log-actionId">
                                 <input type="hidden" id="log-type" value="done">
+                                <div id="log-existing-notes" class="mb-3 d-none">
+                                    <!-- Container pour afficher les notes existantes -->
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">${t("date")}</label>
                                     <input type="date" class="form-control" id="log-date" required>
@@ -234,10 +261,27 @@ class ProgrammeView extends AbstractView {
             this.actionLogs = [];
             this.members = [];
         }
-        this.renderList();
+        this.renderContent();
     }
 
     // --- Rendu de la liste unifiée ---
+
+    renderContent(filter = 'all') {
+        const activeTab = document.querySelector('#programme-tabs a.active');
+        const currentFilter = activeTab ? activeTab.dataset.tab : filter;
+        
+        if (this.viewMode === 'list') {
+            document.getElementById('programme-list').classList.remove('d-none');
+            document.getElementById('programme-calendar').classList.add('d-none');
+            document.getElementById('calendar-nav').classList.add('d-none');
+            this.renderList(currentFilter);
+        } else {
+            document.getElementById('programme-list').classList.add('d-none');
+            document.getElementById('programme-calendar').classList.remove('d-none');
+            document.getElementById('calendar-nav').classList.remove('d-none');
+            this.renderCalendar(currentFilter);
+        }
+    }
 
     renderList(filter = 'all') {
         const container = document.getElementById('programme-list');
@@ -312,6 +356,10 @@ class ProgrammeView extends AbstractView {
 
                 if (targetOccurrence) {
                     const occDateStr = targetOccurrence.occurrenceDate;
+                    
+                    // Trouver s'il y a des notes pour cette occurrence spécifique
+                    const targetNotes = logs.filter(l => l.type === 'note' && l.date === occDateStr);
+
                     const occDateObj = new Date(`${occDateStr}T12:00:00`);
                     const windowStartObj = new Date(occDateObj);
                     windowStartObj.setDate(windowStartObj.getDate() - (action.windowDays || 0));
@@ -332,7 +380,8 @@ class ProgrammeView extends AbstractView {
                         nextDate: occDateStr,
                         occurrence: targetOccurrence,
                         status: status,
-                        lastLog: lastLog
+                        lastLog: lastLog,
+                        targetNotes: targetNotes
                     });
                 }
             });
@@ -340,6 +389,8 @@ class ProgrammeView extends AbstractView {
 
         // Tri par prochaine date
         items.sort((a, b) => a.nextDate.localeCompare(b.nextDate));
+
+        this.lastRenderedItems = items;
 
         if (items.length === 0) {
             container.innerHTML = `<p class="text-muted">${t("no_programme_items")}</p>`;
@@ -404,6 +455,7 @@ class ProgrammeView extends AbstractView {
         const occ = item.occurrence;
         const status = item.status;
         const lastLog = item.lastLog;
+        const targetNotes = item.targetNotes || [];
         
         const dateStr = new Date(occ.occurrenceDate).toLocaleDateString(locale, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -424,6 +476,10 @@ class ProgrammeView extends AbstractView {
         const lastLogStr = lastLog
             ? `✅ ${t("last_done")} ${lastLog.date} ${this.getMemberName(lastLog.memberId)}`
             : `⚠️ ${t("never_done")}`;
+            
+        const notesStr = targetNotes.length > 0
+            ? `<span class="badge bg-info text-dark ms-2"><i class="bi bi-card-text"></i> ${targetNotes.length} ${t("note")}</span>`
+            : '';
 
         const canDo = status === 'due' || status === 'overdue';
         const doneBtn = canDo
@@ -460,6 +516,7 @@ class ProgrammeView extends AbstractView {
                         <span class="badge bg-warning text-dark me-2">🔧 ${t("action_label")}</span>
                         ${action.name}${cancelledLabel}
                         ${statusBadge}
+                        ${notesStr}
                     </div>
                     <div class="text-muted mt-1">
                         <small>
@@ -484,6 +541,220 @@ class ProgrammeView extends AbstractView {
             </div>`;
     }
 
+    renderCalendar(filter = 'all') {
+        const container = document.getElementById('programme-calendar');
+        container.innerHTML = '';
+        
+        // Calculate dates
+        let startCal, endCal;
+        const year = this.currentDate.getFullYear();
+        const month = this.currentDate.getMonth();
+        const date = this.currentDate.getDate();
+        
+        if (this.viewMode === 'month') {
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            startCal = new Date(firstDay);
+            let dayOfWeek = startCal.getDay();
+            let diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            startCal.setDate(startCal.getDate() - diff);
+            
+            endCal = new Date(lastDay);
+            dayOfWeek = endCal.getDay();
+            diff = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+            endCal.setDate(endCal.getDate() + diff);
+            
+            const monthName = firstDay.toLocaleDateString(i18n.lang === 'en' ? 'en-US' : 'fr-FR', { month: 'long', year: 'numeric' });
+            document.getElementById('calendar-label').textContent = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+        } else {
+            startCal = new Date(year, month, date);
+            let dayOfWeek = startCal.getDay();
+            let diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            startCal.setDate(startCal.getDate() - diff);
+            
+            endCal = new Date(startCal);
+            endCal.setDate(endCal.getDate() + 6);
+            
+            const startStr = startCal.toLocaleDateString(i18n.lang === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'short' });
+            const endStr = endCal.toLocaleDateString(i18n.lang === 'en' ? 'en-US' : 'fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+            document.getElementById('calendar-label').textContent = `${startStr} - ${endStr}`;
+        }
+        
+        const items = [];
+        const startStr = RecurrenceUtils.formatDateStr(startCal);
+        const endStr = RecurrenceUtils.formatDateStr(endCal);
+        
+        // Evènements
+        if (filter === 'all' || filter === 'events') {
+            this.events.forEach(event => {
+                const occurrences = window.RecurrenceUtils 
+                    ? RecurrenceUtils.generateOccurrences({ event, startDate: new Date(`${event.date || startStr}T12:00:00`), maxOccurrences: 200 }) 
+                    : [event];
+                
+                occurrences.forEach(occ => {
+                    if (occ.occurrenceDate >= startStr && occ.occurrenceDate <= endStr) {
+                        items.push({
+                            type: 'event',
+                            data: event,
+                            date: occ.occurrenceDate,
+                            occurrence: occ
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Actions
+        if (filter === 'all' || filter === 'actions') {
+            this.actions.forEach(rawAction => {
+                const action = { ...rawAction };
+                if (action.scheduleMode === 'frequency') {
+                    if (action.frequencyUnit === 'days') {
+                        action.recurrence = 'daily';
+                        action.recurrenceInterval = action.frequencyValue || 1;
+                    } else {
+                        action.recurrence = 'monthly';
+                        action.recurrenceInterval = action.frequencyValue || 1;
+                    }
+                    action.date = action.startDate || action.date || startStr;
+                } else if (action.recurrence === 'biweekly') {
+                    action.recurrence = 'weekly';
+                    action.recurrenceInterval = 2;
+                }
+
+                const logs = this.actionLogs
+                    .filter(l => l.programmeId === action.id)
+                    .sort((a, b) => b.date.localeCompare(a.date));
+                const doneLogs = logs.filter(l => !l.type || l.type === 'done');
+                const lastLog = doneLogs.length > 0 ? doneLogs[0] : null;
+
+                let generateFrom = action.date || startStr;
+                if (lastLog) {
+                    generateFrom = lastLog.date;
+                }
+                
+                const occurrences = window.RecurrenceUtils 
+                    ? RecurrenceUtils.generateOccurrences({
+                        event: action,
+                        startDate: new Date(`${generateFrom}T12:00:00`),
+                        maxOccurrences: 200
+                    }) : [action];
+
+                occurrences.forEach(occ => {
+                    if (occ.occurrenceDate >= startStr && occ.occurrenceDate <= endStr) {
+                        const targetNotes = logs.filter(l => l.type === 'note' && l.date === occ.occurrenceDate);
+                        items.push({
+                            type: 'action',
+                            data: action,
+                            date: occ.occurrenceDate,
+                            occurrence: occ,
+                            lastLog: lastLog,
+                            targetNotes: targetNotes
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Build map date -> items
+        const map = {};
+        items.forEach(it => {
+            if (!map[it.date]) map[it.date] = [];
+            map[it.date].push(it);
+        });
+        
+        // Generate grid HTML
+        const dayHeaders = [
+            t("day_1"), t("day_2"), t("day_3"), 
+            t("day_4"), t("day_5"), t("day_6"), 
+            t("day_0")
+        ];
+        
+        let html = `<table class="table table-bordered table-fixed calendar-grid">
+            <thead>
+                <tr>${dayHeaders.map(d => `<th class="text-center w-14">${d}</th>`).join('')}</tr>
+            </thead>
+            <tbody>`;
+            
+        let curr = new Date(startCal);
+        const todayStr = RecurrenceUtils.formatDateStr(new Date());
+        
+        while (curr <= endCal) {
+            html += `<tr>`;
+            for (let i=0; i<7; i++) {
+                const dateStr = RecurrenceUtils.formatDateStr(curr);
+                const dayNum = curr.getDate();
+                const isToday = dateStr === todayStr;
+                const isCurrentMonth = curr.getMonth() === month;
+                
+                let cellClass = "calendar-cell p-1";
+                if (!isCurrentMonth && this.viewMode === 'month') cellClass += " bg-light text-muted";
+                if (isToday) cellClass += " bg-warning-subtle";
+                
+                html += `<td class="${cellClass}" style="vertical-align: top; height: ${this.viewMode === 'month' ? '120px' : '300px'};">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="fw-bold ${isToday ? 'text-danger' : ''}">${dayNum}</span>
+                    </div>
+                    <div class="calendar-items overflow-auto" style="max-height: ${this.viewMode === 'month' ? '90px' : '270px'};">`;
+                
+                const dayItems = map[dateStr] || [];
+                // Sort by time
+                dayItems.sort((a,b) => {
+                    const ta = a.data.time || '';
+                    const tb = b.data.time || '';
+                    return ta.localeCompare(tb);
+                });
+                
+                dayItems.forEach(it => {
+                    if (it.type === 'event') {
+                        const isCancelled = it.occurrence.isCancelled;
+                        html += `<div class="p-1 mb-1 rounded small border bg-info-subtle ${isCancelled ? 'text-decoration-line-through text-muted' : ''}" title="${it.data.name}">
+                            <strong>${it.data.time || ''}</strong> ${it.data.name}
+                        </div>`;
+                    } else {
+                        const hasNotes = it.targetNotes && it.targetNotes.length > 0;
+                        const notesIcon = hasNotes ? `<i class="bi bi-card-text text-info ms-1" title="${it.targetNotes.length} notes"></i>` : '';
+                        
+                        html += `<div class="p-1 mb-1 rounded small border bg-warning-subtle action-item-cal" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
+                            <strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}
+                        </div>`;
+                    }
+                });
+                
+                html += `</div></td>`;
+                curr.setDate(curr.getDate() + 1);
+            }
+            html += `</tr>`;
+        }
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+        
+        // Add CSS
+        if (!document.getElementById('calendar-grid-style')) {
+            const style = document.createElement('style');
+            style.id = 'calendar-grid-style';
+            style.innerHTML = `
+                .w-14 { width: 14.28%; }
+                .calendar-grid { table-layout: fixed; }
+                .action-item-cal:hover { filter: brightness(0.95); cursor: pointer; }
+                .calendar-items::-webkit-scrollbar { width: 4px; }
+                .calendar-items::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Bind events on calendar items
+        container.querySelectorAll('.action-item-cal').forEach(el => {
+            el.addEventListener('click', () => {
+                const actionId = el.dataset.id;
+                const date = el.dataset.date;
+                this.openLogModal(actionId, 'done', date);
+            });
+        });
+    }
+
     getMemberName(memberId) {
         if (!memberId) return '';
         const m = this.members.find(m => m.id === memberId);
@@ -495,11 +766,21 @@ class ProgrammeView extends AbstractView {
 
     bindItemEvents() {
         document.querySelectorAll('.btn-mark-done').forEach(btn => {
-            btn.addEventListener('click', () => this.openLogModal(btn.dataset.id, 'done'));
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.id;
+                const itemData = this.lastRenderedItems?.find(i => i.data.id === actionId);
+                const defaultDate = itemData ? itemData.nextDate : null;
+                this.openLogModal(actionId, 'done', defaultDate);
+            });
         });
 
         document.querySelectorAll('.btn-add-note').forEach(btn => {
-            btn.addEventListener('click', () => this.openLogModal(btn.dataset.id, 'note'));
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.id;
+                const itemData = this.lastRenderedItems?.find(i => i.data.id === actionId);
+                const defaultDate = itemData ? itemData.nextDate : null;
+                this.openLogModal(actionId, 'note', defaultDate);
+            });
         });
 
         document.querySelectorAll('.btn-history').forEach(btn => {
@@ -523,7 +804,7 @@ class ProgrammeView extends AbstractView {
                 e.preventDefault();
                 document.querySelectorAll('#programme-tabs a').forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                this.renderList(tab.dataset.tab);
+                this.renderContent(tab.dataset.tab);
             });
         });
     }
@@ -657,11 +938,13 @@ class ProgrammeView extends AbstractView {
 
     // --- Modal log (Fait !) ---
 
-    openLogModal(actionId, type = 'done') {
+    openLogModal(actionId, type = 'done', defaultDate = null) {
         const action = this.actions.find(a => a.id === actionId);
         document.getElementById('log-actionId').value = actionId;
         document.getElementById('log-type').value = type;
-        document.getElementById('log-date').value = RecurrenceUtils.formatDateStr(new Date());
+        
+        const dateToUse = defaultDate || RecurrenceUtils.formatDateStr(new Date());
+        document.getElementById('log-date').value = dateToUse;
         document.getElementById('log-time').value = '';
         document.getElementById('log-notes').value = '';
 
@@ -678,7 +961,39 @@ class ProgrammeView extends AbstractView {
         const title = document.getElementById('logModalTitle');
         title.textContent = type === 'note' ? t("add_note") : t("mark_done");
 
+        this.refreshExistingNotesInLogModal();
+
         this.logModal.show();
+    }
+
+    refreshExistingNotesInLogModal() {
+        const actionId = document.getElementById('log-actionId').value;
+        const type = document.getElementById('log-type').value;
+        const date = document.getElementById('log-date').value;
+        const notesContainer = document.getElementById('log-existing-notes');
+        
+        if (type !== 'done') {
+            notesContainer.classList.add('d-none');
+            return;
+        }
+
+        const notes = this.actionLogs.filter(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
+        
+        if (notes.length > 0) {
+            let html = `<label class="form-label text-info fw-bold"><i class="bi bi-card-text"></i> ${t("existing_notes") || "Notes"} :</label>`;
+            notes.forEach(note => {
+                const memberName = this.getMemberName(note.memberId);
+                html += `<div class="alert alert-info py-2 mb-1">
+                    <small class="fw-bold">${memberName}</small><br>
+                    ${note.notes}
+                </div>`;
+            });
+            notesContainer.innerHTML = html;
+            notesContainer.classList.remove('d-none');
+        } else {
+            notesContainer.innerHTML = '';
+            notesContainer.classList.add('d-none');
+        }
     }
 
     async saveLog() {
@@ -767,6 +1082,33 @@ class ProgrammeView extends AbstractView {
     async init() {
         this.initTabs();
 
+        // Bind view mode buttons
+        document.querySelectorAll('input[name="view-mode"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                this.viewMode = e.target.value;
+                this.renderContent();
+            });
+        });
+
+        // Bind calendar navigation
+        document.getElementById('btn-prev-cal').addEventListener('click', () => {
+            if (this.viewMode === 'month') {
+                this.currentDate.setMonth(this.currentDate.getMonth() - 1);
+            } else {
+                this.currentDate.setDate(this.currentDate.getDate() - 7);
+            }
+            this.renderContent();
+        });
+
+        document.getElementById('btn-next-cal').addEventListener('click', () => {
+            if (this.viewMode === 'month') {
+                this.currentDate.setMonth(this.currentDate.getMonth() + 1);
+            } else {
+                this.currentDate.setDate(this.currentDate.getDate() + 7);
+            }
+            this.renderContent();
+        });
+
         if (!this.isMember) {
             this.actionModal = new bootstrap.Modal(document.getElementById('actionModal'));
 
@@ -809,6 +1151,10 @@ class ProgrammeView extends AbstractView {
 
         document.getElementById('btn-save-log').addEventListener('click', () => {
             this.saveLog();
+        });
+
+        document.getElementById('log-date').addEventListener('change', () => {
+            this.refreshExistingNotesInLogModal();
         });
 
         await this.loadData();
