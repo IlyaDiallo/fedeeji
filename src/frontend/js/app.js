@@ -197,6 +197,12 @@ const updateNav = () => {
                 data-link data-i18n="programme">
                 ${t("programme")}</a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link"
+                href="/${orgId}/action-history"
+                data-link data-i18n="action_history">
+                ${t("action_history")}</a>
+        </li>
     `;
 
     // Membre : accès profil et cotisations
@@ -292,6 +298,7 @@ const router = async () => {
             view: InscriptionScheduleView
         },
         { path: "/:orgId/programme", view: ProgrammeView },
+        { path: "/:orgId/action-history", view: ActionHistoryView },
         { path: "/:orgId/profile", view: ProfileView },
         { path: "/:orgId/trash", view: TrashView },
     ];

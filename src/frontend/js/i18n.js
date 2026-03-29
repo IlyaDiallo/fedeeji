@@ -73,6 +73,7 @@ const translations = {
         "minutes": "Minutes",
         "hours": "Heures",
         "days": "Jours",
+        "weeks": "Semaines",
         "response": "Réponse",
         "yes": "Oui",
         "no": "Non",
@@ -170,7 +171,13 @@ const translations = {
         "no_programme_items": "Aucun élément dans le programme.",
         "notes": "Notes",
         "all": "Tout",
-        "error": "Erreur"
+        "error": "Erreur",
+        "add_note": "Ajouter une note",
+        "note": "Note",
+        "done": "Fait",
+        "action_history": "Historique des actions",
+        "type": "Type",
+        "unknown_action": "Action inconnue"
     },
     en: {
         "app_title":
@@ -247,6 +254,7 @@ const translations = {
         "minutes": "Minutes",
         "hours": "Hours",
         "days": "Days",
+        "weeks": "Weeks",
         "response": "Response",
         "yes": "Yes",
         "no": "No",
@@ -342,7 +350,13 @@ const translations = {
         "no_programme_items": "No items in the programme.",
         "notes": "Notes",
         "all": "All",
-        "error": "Error"
+        "error": "Error",
+        "add_note": "Add note",
+        "note": "Note",
+        "done": "Done",
+        "action_history": "Action history",
+        "type": "Type",
+        "unknown_action": "Unknown action"
     }
 };
 

@@ -23,7 +23,7 @@ class RecurrenceUtils {
         return `${y}-${m}-${d}`;
     }
 
-    static generateOccurrences({ event, maxOccurrences = 50, startDate = new Date() }) {
+    static generateOccurrences({ event, maxOccurrences = 1000, startDate = new Date() }) {
         if (!event || !event.date) return [];
         
         const baseDate = new Date(`${event.date}T12:00:00`);
@@ -45,6 +45,8 @@ class RecurrenceUtils {
 
         const isRecurrent = event.recurrence && event.recurrence !== 'none';
         const recType = event.recurrence;
+        let interval = parseInt(event.recurrenceInterval) || 1;
+        if (recType === 'biweekly') interval = 2;
         
         const addOccurrence = (dateStr) => {
             if (limitDateStr && dateStr > limitDateStr) return false;
@@ -64,7 +66,43 @@ class RecurrenceUtils {
             return occurrences;
         }
 
-        if (recType === 'weekly' || recType === 'biweekly') {
+        if (recType === 'daily') {
+            let currentDate = new Date(baseDate);
+            let daysElapsed = 0;
+
+            if (targetStart > baseDate) {
+                const diffTime = targetStart.getTime() - currentDate.getTime();
+                let diffDays = Math.floor(diffTime / (24 * 60 * 60 * 1000));
+                diffDays = Math.max(0, diffDays - 1);
+                diffDays = diffDays - (diffDays % interval);
+
+                if (diffDays > 0) {
+                    currentDate.setDate(currentDate.getDate() + diffDays);
+                    daysElapsed += diffDays;
+                }
+            }
+
+            let keepGoing = true;
+            let maxIterations = 5000;
+
+            while (keepGoing && maxIterations > 0) {
+                maxIterations--;
+
+                if (daysElapsed % interval !== 0) {
+                    currentDate.setDate(currentDate.getDate() + 1);
+                    daysElapsed++;
+                    continue;
+                }
+
+                const dateStr = RecurrenceUtils.formatDateStr(currentDate);
+                if (dateStr >= event.date) {
+                    keepGoing = addOccurrence(dateStr);
+                }
+
+                currentDate.setDate(currentDate.getDate() + 1);
+                daysElapsed++;
+            }
+        } else if (recType === 'weekly' || recType === 'biweekly') {
             const recDays = event.recurrenceDays && event.recurrenceDays.length > 0 ? event.recurrenceDays : [baseDate.getDay()];
             let currentDate = new Date(baseDate);
             currentDate.setDate(currentDate.getDate() - currentDate.getDay());
@@ -76,9 +114,8 @@ class RecurrenceUtils {
                 let diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000));
                 diffWeeks = Math.max(0, diffWeeks - 1);
                 
-                if (recType === 'biweekly' && diffWeeks % 2 !== 0) {
-                    diffWeeks--;
-                }
+                diffWeeks = diffWeeks - (diffWeeks % interval);
+                
                 if (diffWeeks > 0) {
                     currentDate.setDate(currentDate.getDate() + (diffWeeks * 7));
                     weeksElapsed += diffWeeks;
@@ -86,12 +123,12 @@ class RecurrenceUtils {
             }
             
             let keepGoing = true;
-            let maxIterations = 1000;
+            let maxIterations = 2000;
             
             while (keepGoing && maxIterations > 0) {
                 maxIterations--;
                 
-                if (recType === 'biweekly' && weeksElapsed % 2 !== 0) {
+                if (weeksElapsed % interval !== 0) {
                     currentDate.setDate(currentDate.getDate() + 7);
                     weeksElapsed++;
                     continue;
@@ -119,13 +156,21 @@ class RecurrenceUtils {
             const baseDayOfWeek = baseDate.getDay();
             const baseNth = Math.ceil(baseDate.getDate() / 7);
 
+            let monthsElapsed = 0;
+
             if (targetStart > baseDate) {
-                currentYear = targetStart.getFullYear();
-                currentMonth = targetStart.getMonth();
-                currentMonth--;
-                if (currentMonth < 0) {
-                    currentMonth = 11;
-                    currentYear--;
+                let yDiff = targetStart.getFullYear() - baseDate.getFullYear();
+                let mDiff = targetStart.getMonth() - baseDate.getMonth();
+                monthsElapsed = yDiff * 12 + mDiff;
+                monthsElapsed = Math.max(0, monthsElapsed - 1);
+                
+                monthsElapsed = monthsElapsed - (monthsElapsed % interval);
+                
+                currentYear = baseDate.getFullYear() + Math.floor(monthsElapsed / 12);
+                currentMonth = baseDate.getMonth() + (monthsElapsed % 12);
+                if (currentMonth > 11) {
+                    currentMonth -= 12;
+                    currentYear++;
                 }
             }
 
@@ -134,6 +179,14 @@ class RecurrenceUtils {
 
             while (keepGoing && maxIterations > 0) {
                 maxIterations--;
+                
+                if (monthsElapsed % interval !== 0) {
+                    currentMonth++;
+                    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+                    monthsElapsed++;
+                    continue;
+                }
+
                 let targetDate = null;
 
                 if (monthlyType === 'date') {
@@ -162,6 +215,7 @@ class RecurrenceUtils {
                     currentMonth = 0;
                     currentYear++;
                 }
+                monthsElapsed++;
             }
         }
 
