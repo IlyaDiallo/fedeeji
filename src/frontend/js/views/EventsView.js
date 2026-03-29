@@ -10,7 +10,7 @@ class EventsView extends AbstractView {
     // Formate la durée avec son unité pour l'affichage
     formatDuration(duration, durationUnit) {
         if (!duration) return '';
-        const unitLabel = t(durationUnit || 'hours');
+        const unitLabel = t(durationUnit || 'hours', duration);
         return `${duration} ${unitLabel.toLowerCase()}`;
     }
 

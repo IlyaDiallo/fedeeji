@@ -71,9 +71,19 @@ const translations = {
         "duration": "Durée",
         "duration_unit": "Unité",
         "minutes": "Minutes",
+        "minutes_singular": "Minute",
         "hours": "Heures",
+        "hours_singular": "Heure",
         "days": "Jours",
+        "days_singular": "Jour",
         "weeks": "Semaines",
+        "weeks_singular": "Semaine",
+        "months_unit_singular": "Mois",
+        "every_day": "Tous les jours",
+        "every_week": "Toutes les semaines",
+        "every_month": "Tous les mois",
+        "every_singular": "Chaque",
+        "every_fem": "Toutes les",
         "response": "Réponse",
         "yes": "Oui",
         "no": "Non",
@@ -252,9 +262,19 @@ const translations = {
         "duration": "Duration",
         "duration_unit": "Unit",
         "minutes": "Minutes",
+        "minutes_singular": "Minute",
         "hours": "Hours",
+        "hours_singular": "Hour",
         "days": "Days",
+        "days_singular": "Day",
         "weeks": "Weeks",
+        "weeks_singular": "Week",
+        "months_unit_singular": "Month",
+        "every_day": "Every day",
+        "every_week": "Every week",
+        "every_month": "Every month",
+        "every_singular": "Every",
+        "every_fem": "Every",
         "response": "Response",
         "yes": "Yes",
         "no": "No",
@@ -375,13 +395,20 @@ class I18n {
         }
     }
 
-    t(key) {
-        return translations[this.lang][key] || key;
+    t(key, count = undefined) {
+        let text;
+        if (count !== undefined && count <= 1) {
+            text = translations[this.lang][key + '_singular'];
+        }
+        if (!text) {
+            text = translations[this.lang][key];
+        }
+        return text || key;
     }
 }
 
 const i18n = new I18n();
 
-function t(key) {
-    return i18n.t(key);
+function t(key, count = undefined) {
+    return i18n.t(key, count);
 }

@@ -443,8 +443,14 @@ class ProgrammeView extends AbstractView {
         let recurrenceStr = '';
         if (action.recurrence && action.recurrence !== 'none') {
             const interval = action.recurrenceInterval || 1;
-            const unitMap = { 'daily': 'days', 'weekly': 'weeks', 'monthly': 'months_unit' };
-            recurrenceStr = `🔄 ${t("every")} ${interval} ${t(unitMap[action.recurrence] || 'days').toLowerCase()} &nbsp;|&nbsp; `;
+            if (interval === 1) {
+                const everyMap = { 'daily': 'every_day', 'weekly': 'every_week', 'monthly': 'every_month' };
+                recurrenceStr = `🔄 ${t(everyMap[action.recurrence] || 'every_day')} &nbsp;|&nbsp; `;
+            } else {
+                const unitMap = { 'daily': 'days', 'weekly': 'weeks', 'monthly': 'months_unit' };
+                const everyKey = action.recurrence === 'weekly' ? 'every_fem' : 'every';
+                recurrenceStr = `🔄 ${t(everyKey)} ${interval} ${t(unitMap[action.recurrence] || 'days', interval).toLowerCase()} &nbsp;|&nbsp; `;
+            }
         }
 
         return `
@@ -733,7 +739,7 @@ class ProgrammeView extends AbstractView {
                         const memberName = this.getMemberName(log.memberId);
                         const timeStr = log.time ? ` ⏰ ${log.time}` : '';
                         const durationStr = log.duration
-                            ? ` ⏱️ ${log.duration} ${t(log.durationUnit === 'hours' ? 'hours' : 'minutes')}`
+                            ? ` ⏱️ ${log.duration} ${t(log.durationUnit === 'hours' ? 'hours' : 'minutes', log.duration).toLowerCase()}`
                             : '';
                         const typeBadge = log.type === 'note'
                             ? `<span class="badge bg-info">${t("note")}</span>`

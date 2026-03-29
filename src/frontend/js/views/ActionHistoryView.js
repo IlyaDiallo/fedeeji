@@ -139,7 +139,7 @@ class ActionHistoryView extends AbstractView {
 
         const timeStr = log.time ? ` ⏰ ${log.time}` : '';
         const durationStr = log.duration
-            ? ` ⏱️ ${log.duration} ${t(log.durationUnit === 'hours' ? 'hours' : 'minutes')}`
+            ? ` ⏱️ ${log.duration} ${t(log.durationUnit === 'hours' ? 'hours' : 'minutes', log.duration).toLowerCase()}`
             : '';
 
         const typeBadge = log.type === 'note'
