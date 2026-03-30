@@ -188,6 +188,9 @@ const translations = {
         "action_history": "Historique des actions",
         "type": "Type",
         "unknown_action": "Action inconnue",
+        "intermediate_states": "États intermédiaires (séparés par des virgules)",
+        "target_state": "État cible",
+        "action_already_done": "Cette action a déjà été marquée pour cet état et cette date.",
         "instructions": "Instructions"
     },
     en: {
@@ -378,6 +381,9 @@ const translations = {
         "action_history": "Action history",
         "type": "Type",
         "unknown_action": "Unknown action",
+        "intermediate_states": "Intermediate states (comma-separated)",
+        "target_state": "Target state",
+        "action_already_done": "This action has already been marked for this state and date.",
         "instructions": "Instructions"
     }
 };

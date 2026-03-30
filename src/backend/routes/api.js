@@ -491,16 +491,19 @@ function createApiRouter({ dataService, trashService, importService }) {
                         return res.status(200).json(data);
                     }
                 } else if (body.type === 'done') {
-                    // Pour "Fait !", vérifier si une entrée identique existe déjà pour cette action et date
+                    // Pour "Fait !", vérifier si une entrée identique existe déjà pour cette action, date et état
                     const existingLogs = await dataService.list({
                         organisationId: req.organisationId,
                         collection: 'action-logs'
                     });
-                    const existingDone = existingLogs.find(l => 
-                        l.programmeId === body.programmeId && 
-                        l.type === 'done' && 
-                        l.date === body.date
-                    );
+                    const bodyState = body.state !== undefined ? body.state : 1;
+                    const existingDone = existingLogs.find(l => {
+                        const lState = l.state !== undefined ? l.state : 1;
+                        return l.programmeId === body.programmeId && 
+                               l.type === 'done' && 
+                               l.date === body.date &&
+                               lState === bodyState;
+                    });
                     if (existingDone) {
                         return res.status(409).json({ error: 'Action already marked as done' });
                     }

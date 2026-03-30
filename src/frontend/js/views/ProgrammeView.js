@@ -81,6 +81,10 @@ class ProgrammeView extends AbstractView {
                                     <input type="text" class="form-control" id="action-name" required>
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label" data-i18n="intermediate_states">${t("intermediate_states") || "États intermédiaires (séparés par des virgules)"}</label>
+                                    <input type="text" class="form-control" id="action-states" placeholder="ex: En cours, Vérifié">
+                                </div>
+                                <div class="mb-3">
                                     <label class="form-label">Description</label>
                                     <textarea class="form-control" id="action-description"></textarea>
                                 </div>
@@ -185,6 +189,10 @@ class ProgrammeView extends AbstractView {
                                 <input type="hidden" id="log-id">
                                 <input type="hidden" id="log-actionId">
                                 <input type="hidden" id="log-type" value="done">
+                                <div class="mb-3" id="log-state-container" style="display:none;">
+                                    <label class="form-label" data-i18n="target_state">${t("target_state") || "État cible"}</label>
+                                    <select class="form-select" id="log-state"></select>
+                                </div>
                                 <div id="log-existing-notes" class="mb-3 d-none">
                                     <!-- Container pour afficher les notes existantes -->
                                 </div>
@@ -334,9 +342,14 @@ class ProgrammeView extends AbstractView {
                     .filter(l => l.programmeId === action.id)
                     .sort((a, b) => b.date.localeCompare(a.date));
                 
-                // Pour le calcul des récurrences, on ne considère que les "done"
-                const doneLogs = logs.filter(l => !l.type || l.type === 'done');
-                const lastLog = doneLogs.length > 0 ? doneLogs[0] : null;
+                // Pour le calcul des récurrences, on ne considère que les "done" terminés
+                const allDoneLogs = logs.filter(l => !l.type || l.type === 'done');
+                const maxState = (action.states && action.states.length > 0) ? action.states.length + 1 : 1;
+                const fullDoneLogs = allDoneLogs.filter(l => {
+                    const st = l.state !== undefined ? l.state : 1;
+                    return st === maxState;
+                });
+                const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
                 let generateFrom = action.date || todayStr;
                 if (lastLog) {
@@ -376,6 +389,10 @@ class ProgrammeView extends AbstractView {
                         status = 'ok';
                     }
 
+                    const occDoneLogs = allDoneLogs.filter(l => l.date === occDateStr).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                    const latestStateLog = occDoneLogs.length > 0 ? occDoneLogs[0] : null;
+                    const currentState = latestStateLog && latestStateLog.state !== undefined ? latestStateLog.state : 0;
+
                     items.push({
                         type: 'action',
                         data: action,
@@ -383,7 +400,8 @@ class ProgrammeView extends AbstractView {
                         occurrence: targetOccurrence,
                         status: status,
                         lastLog: lastLog,
-                        targetNotes: targetNotes
+                        targetNotes: targetNotes,
+                        currentState: currentState
                     });
                 }
             });
@@ -458,6 +476,9 @@ class ProgrammeView extends AbstractView {
         const status = item.status;
         const lastLog = item.lastLog;
         const targetNotes = item.targetNotes || [];
+        const currentState = item.currentState || 0;
+        const states = action.states || [];
+        const maxState = states.length > 0 ? states.length + 1 : 1;
         
         const dateStr = new Date(occ.occurrenceDate).toLocaleDateString(locale, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
@@ -475,6 +496,17 @@ class ProgrammeView extends AbstractView {
             statusBadge = `<span class="badge bg-success ms-2">🟢 ${t("status_ok")}</span>`;
         }
 
+        let stateBadge = '';
+        if (states.length > 0) {
+            let stateName = "À faire";
+            if (currentState > 0 && currentState < maxState) {
+                stateName = states[currentState - 1];
+            } else if (currentState === maxState) {
+                stateName = t("done") || "Fait";
+            }
+            stateBadge = `<span class="badge bg-secondary ms-2">${stateName}</span>`;
+        }
+
         const lastLogStr = lastLog
             ? `✅ ${t("last_done")} ${lastLog.date} ${this.getMemberName(lastLog.memberId)}`
             : `⚠️ ${t("never_done")}`;
@@ -484,9 +516,17 @@ class ProgrammeView extends AbstractView {
             : '';
 
         const canDo = status === 'due' || status === 'overdue';
+        const nextState = currentState + 1;
+        let nextStateName = "✅";
+        if (states.length > 0 && nextState <= states.length) {
+            nextStateName = states[nextState - 1];
+        } else if (states.length > 0) {
+            nextStateName = t("done") || "Fait";
+        }
+
         const doneBtn = canDo
-            ? `<button class="btn btn-sm btn-success btn-mark-done ms-1" data-id="${action.id}" title="${t("mark_done")}">✅</button>`
-            : `<button class="btn btn-sm btn-outline-secondary ms-1" disabled title="${t("not_yet_due")}">✅</button>`;
+            ? `<button class="btn btn-sm btn-success btn-mark-done ms-1" data-id="${action.id}" title="${t("mark_done")}">${nextStateName}</button>`
+            : `<button class="btn btn-sm btn-outline-secondary ms-1" disabled title="${t("not_yet_due")}">${nextStateName}</button>`;
 
         const noteBtn = `<button class="btn btn-sm btn-outline-info btn-add-note ms-1" data-id="${action.id}" title="${t("add_note")}">📝</button>`;
 
@@ -518,6 +558,7 @@ class ProgrammeView extends AbstractView {
                         <span class="badge bg-warning text-dark me-2">🔧 ${t("action_label")}</span>
                         ${action.name}${cancelledLabel}
                         ${statusBadge}
+                        ${stateBadge}
                         ${notesStr}
                     </div>
                     <div class="text-muted mt-1">
@@ -628,8 +669,13 @@ class ProgrammeView extends AbstractView {
                 const logs = this.actionLogs
                     .filter(l => l.programmeId === action.id)
                     .sort((a, b) => b.date.localeCompare(a.date));
-                const doneLogs = logs.filter(l => !l.type || l.type === 'done');
-                const lastLog = doneLogs.length > 0 ? doneLogs[0] : null;
+                const allDoneLogs = logs.filter(l => !l.type || l.type === 'done');
+                const maxState = (action.states && action.states.length > 0) ? action.states.length + 1 : 1;
+                const fullDoneLogs = allDoneLogs.filter(l => {
+                    const st = l.state !== undefined ? l.state : 1;
+                    return st === maxState;
+                });
+                const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
                 let generateFrom = action.date || startStr;
                 if (lastLog) {
@@ -646,13 +692,21 @@ class ProgrammeView extends AbstractView {
                 occurrences.forEach(occ => {
                     if (occ.occurrenceDate >= startStr && occ.occurrenceDate <= endStr) {
                         const targetNotes = logs.filter(l => l.type === 'note' && l.date === occ.occurrenceDate);
+                        
+                        const occDoneLogs = allDoneLogs.filter(l => l.date === occ.occurrenceDate).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                        const latestStateLog = occDoneLogs.length > 0 ? occDoneLogs[0] : null;
+                        const currentState = latestStateLog && latestStateLog.state !== undefined ? latestStateLog.state : 0;
+                        const isDone = currentState === maxState;
+
                         items.push({
                             type: 'action',
                             data: action,
                             date: occ.occurrenceDate,
                             occurrence: occ,
                             lastLog: lastLog,
-                            targetNotes: targetNotes
+                            targetNotes: targetNotes,
+                            currentState: currentState,
+                            isDone: isDone
                         });
                     }
                 });
@@ -718,12 +772,19 @@ class ProgrammeView extends AbstractView {
                     } else {
                         const hasNotes = it.targetNotes && it.targetNotes.length > 0;
                         const notesIcon = hasNotes ? `<i class="bi bi-card-text text-info ms-1" title="${it.targetNotes.length} ${t("instructions").toLowerCase()}"></i>` : '';
-                        const isDone = !!it.lastLog;
-                        const bgClass = isDone ? 'bg-success-subtle' : 'bg-warning-subtle';
+                        const isDone = it.isDone;
+                        const bgClass = isDone ? 'bg-success-subtle' : (it.currentState > 0 ? 'bg-info-subtle' : 'bg-warning-subtle');
+                        
+                        let stateIndicator = '';
+                        if (isDone) {
+                            stateIndicator = '<i class="bi bi-check-circle-fill text-success"></i> ';
+                        } else if (it.currentState > 0) {
+                            stateIndicator = '<i class="bi bi-arrow-right-circle text-info"></i> ';
+                        }
                         
                         html += `<div class="p-1 mb-1 rounded small border ${bgClass} action-item-cal d-flex justify-content-between align-items-center" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
                             <div>
-                                ${isDone ? '<i class="bi bi-check-circle-fill text-success"></i> ' : ''}
+                                ${stateIndicator}
                                 <strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}
                             </div>
                             <button class="btn btn-sm btn-link ${isDone ? 'text-success' : 'text-info'} p-0 ms-1 btn-add-note-cal" data-id="${it.data.id}" data-date="${dateStr}" title="${t("add_note")}"><i class="bi bi-pencil-square"></i></button>
@@ -864,6 +925,7 @@ class ProgrammeView extends AbstractView {
 
             document.getElementById('action-id').value = action.id;
             document.getElementById('action-name').value = action.name || '';
+            document.getElementById('action-states').value = (action.states || []).join(', ');
             document.getElementById('action-description').value = action.description || '';
             document.getElementById('action-date').value = action.date || action.startDate || '';
             document.getElementById('action-recurrenceEndDate').value = action.recurrenceEndDate || '';
@@ -920,6 +982,7 @@ class ProgrammeView extends AbstractView {
 
         const data = {
             name: document.getElementById('action-name').value,
+            states: document.getElementById('action-states').value.split(',').map(s => s.trim()).filter(s => s !== ''),
             description: document.getElementById('action-description').value,
             date: document.getElementById('action-date').value,
             recurrenceEndDate: document.getElementById('action-recurrenceEndDate').value || null,
@@ -980,6 +1043,24 @@ class ProgrammeView extends AbstractView {
         
         document.getElementById('log-time').value = '';
         document.getElementById('log-notes').value = '';
+
+        const states = action?.states || [];
+        const stateSelect = document.getElementById('log-state');
+        const stateContainer = document.getElementById('log-state-container');
+
+        if (states.length > 0 && type === 'done') {
+            stateContainer.style.display = 'block';
+            stateSelect.innerHTML = states.map((s, i) => `<option value="${i+1}">${s}</option>`).join('') + `<option value="${states.length + 1}">Fait</option>`;
+            
+            // Calculer l'état actuel pour cette date
+            const allDoneLogs = this.actionLogs.filter(l => l.programmeId === actionId && (!l.type || l.type === 'done'));
+            const occDoneLogs = allDoneLogs.filter(l => l.date === dateToUse).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            const currentState = occDoneLogs.length > 0 && occDoneLogs[0].state !== undefined ? occDoneLogs[0].state : 0;
+            const nextState = Math.min(currentState + 1, states.length + 1);
+            stateSelect.value = nextState;
+        } else {
+            stateContainer.style.display = 'none';
+        }
 
         // Pré-remplir la durée depuis l'action
         if (action && action.duration) {
@@ -1052,6 +1133,11 @@ class ProgrammeView extends AbstractView {
         const durationUnit = document.getElementById('log-durationUnit').value;
         const notes = document.getElementById('log-notes').value;
         const logId = document.getElementById('log-id').value;
+        
+        const stateSelect = document.getElementById('log-state');
+        const stateContainer = document.getElementById('log-state-container');
+        const state = (type === 'done' && stateContainer.style.display !== 'none') ? parseInt(stateSelect.value) : 1;
+
         if (!date) return;
 
         try {
@@ -1063,7 +1149,8 @@ class ProgrammeView extends AbstractView {
                 duration: duration ? Number(duration) : null,
                 durationUnit: duration ? durationUnit : null,
                 notes,
-                type
+                type,
+                state
             };
 
             if (type === 'note') {
@@ -1135,9 +1222,20 @@ class ProgrammeView extends AbstractView {
                         const durationStr = log.duration
                             ? ` ⏱️ ${log.duration} ${t(log.durationUnit === 'hours' ? 'hours' : 'minutes', log.duration).toLowerCase()}`
                             : '';
-                        const typeBadge = log.type === 'note'
-                            ? `<span class="badge bg-info">${t("note")}</span>`
-                            : `<span class="badge bg-success">${t("done")}</span>`;
+                        let typeBadgeStr = t("done") || "Fait";
+                        let badgeClass = "bg-success";
+                        if (log.type === 'note') {
+                            typeBadgeStr = t("note");
+                            badgeClass = "bg-info";
+                        } else if (action && action.states && action.states.length > 0 && log.state !== undefined) {
+                            const maxState = action.states.length + 1;
+                            if (log.state < maxState && log.state > 0) {
+                                typeBadgeStr = action.states[log.state - 1];
+                                badgeClass = "bg-secondary";
+                            }
+                        }
+                        
+                        const typeBadge = `<span class="badge ${badgeClass}">${typeBadgeStr}</span>`;
                         return `
                         <div class="list-group-item">
                             <div class="d-flex justify-content-between align-items-center">
