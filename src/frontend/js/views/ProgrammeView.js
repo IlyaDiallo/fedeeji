@@ -693,7 +693,8 @@ class ProgrammeView extends AbstractView {
                 if (isToday) cellClass += " bg-warning-subtle";
                 
                 html += `<td class="${cellClass}" style="vertical-align: top; height: ${this.viewMode === 'month' ? '120px' : '300px'};">
-                    <div class="d-flex justify-content-between mb-1">
+                    <div class="d-flex justify-content-start mb-1 align-items-baseline">
+                        <span class="calendar-cell-day-label small text-muted me-1 fw-bold">${dayHeaders[i]}</span>
                         <span class="fw-bold ${isToday ? 'text-danger' : ''}">${dayNum}</span>
                     </div>
                     <div class="calendar-items overflow-auto" style="max-height: ${this.viewMode === 'month' ? '90px' : '270px'};">`;
@@ -716,8 +717,9 @@ class ProgrammeView extends AbstractView {
                         const hasNotes = it.targetNotes && it.targetNotes.length > 0;
                         const notesIcon = hasNotes ? `<i class="bi bi-card-text text-info ms-1" title="${it.targetNotes.length} notes"></i>` : '';
                         
-                        html += `<div class="p-1 mb-1 rounded small border bg-warning-subtle action-item-cal" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
-                            <strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}
+                        html += `<div class="p-1 mb-1 rounded small border bg-warning-subtle action-item-cal d-flex justify-content-between align-items-center" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
+                            <div><strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}</div>
+                            <button class="btn btn-sm btn-link text-info p-0 ms-1 btn-add-note-cal" data-id="${it.data.id}" data-date="${dateStr}" title="${t("add_note")}"><i class="bi bi-pencil-square"></i></button>
                         </div>`;
                     }
                 });
@@ -737,20 +739,40 @@ class ProgrammeView extends AbstractView {
             style.id = 'calendar-grid-style';
             style.innerHTML = `
                 .w-14 { width: 14.28%; }
-                .calendar-grid { table-layout: fixed; }
+                .calendar-grid { table-layout: fixed; width: 100%; }
                 .action-item-cal:hover { filter: brightness(0.95); cursor: pointer; }
                 .calendar-items::-webkit-scrollbar { width: 4px; }
                 .calendar-items::-webkit-scrollbar-thumb { background: #ccc; border-radius: 2px; }
+                @media (max-width: 767.98px) {
+                    .calendar-grid thead { display: none; }
+                    .calendar-grid, .calendar-grid tbody, .calendar-grid tr, .calendar-grid td { display: block; width: 100%; }
+                    .calendar-grid td { height: auto !important; min-height: 100px; border-bottom: 1px solid #dee2e6; }
+                    .calendar-items { max-height: none !important; }
+                    .calendar-cell-day-label { display: inline-block !important; text-transform: capitalize; }
+                }
+                @media (min-width: 768px) {
+                    .calendar-cell-day-label { display: none !important; }
+                }
             `;
             document.head.appendChild(style);
         }
         
         // Bind events on calendar items
         container.querySelectorAll('.action-item-cal').forEach(el => {
-            el.addEventListener('click', () => {
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-add-note-cal')) return;
                 const actionId = el.dataset.id;
                 const date = el.dataset.date;
                 this.openLogModal(actionId, 'done', date);
+            });
+        });
+
+        container.querySelectorAll('.btn-add-note-cal').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const actionId = btn.dataset.id;
+                const date = btn.dataset.date;
+                this.openLogModal(actionId, 'note', date);
             });
         });
     }
