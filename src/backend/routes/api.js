@@ -470,6 +470,42 @@ function createApiRouter({ dataService, trashService, importService }) {
                 if (req.user.role === 'member') {
                     body.memberId = req.user.memberId;
                 }
+
+                if (body.type === 'note') {
+                    const existingLogs = await dataService.list({
+                        organisationId: req.organisationId,
+                        collection: 'action-logs'
+                    });
+                    const existingNote = existingLogs.find(l => 
+                        l.programmeId === body.programmeId && 
+                        l.type === 'note' && 
+                        l.date === body.date
+                    );
+                    if (existingNote) {
+                        const data = await dataService.update({
+                            organisationId: req.organisationId,
+                            collection: 'action-logs',
+                            id: existingNote.id,
+                            data: body
+                        });
+                        return res.status(200).json(data);
+                    }
+                } else if (body.type === 'done') {
+                    // Pour "Fait !", vérifier si une entrée identique existe déjà pour cette action et date
+                    const existingLogs = await dataService.list({
+                        organisationId: req.organisationId,
+                        collection: 'action-logs'
+                    });
+                    const existingDone = existingLogs.find(l => 
+                        l.programmeId === body.programmeId && 
+                        l.type === 'done' && 
+                        l.date === body.date
+                    );
+                    if (existingDone) {
+                        return res.status(409).json({ error: 'Action already marked as done' });
+                    }
+                }
+
                 const data = await dataService.create({
                     organisationId: req.organisationId,
                     collection: 'action-logs',
@@ -484,10 +520,58 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    router.delete('/action-logs/:id',
-        requireRole('admin'),
+    router.put('/action-logs/:id',
+        requireRole('admin', 'member'),
         async (req, res) => {
             try {
+                if (req.user.role === 'member') {
+                    const existing = await dataService.get({
+                        organisationId: req.organisationId,
+                        collection: 'action-logs',
+                        id: req.params.id
+                    });
+                    if (!existing) {
+                        return res.status(404).json({ error: 'Non trouvé' });
+                    }
+                    // Un membre peut modifier ses propres logs, ou n'importe quelle note (car elle est unique par jour)
+                    if (existing.memberId !== req.user.memberId && existing.type !== 'note') {
+                        return res.status(403).json({ error: 'Accès interdit' });
+                    }
+                    req.body.memberId = req.user.memberId;
+                }
+                const data = await dataService.update({
+                    organisationId: req.organisationId,
+                    collection: 'action-logs',
+                    id: req.params.id,
+                    data: req.body
+                });
+                res.json(data);
+            } catch (error) {
+                res.status(400).json({
+                    error: error.message
+                });
+            }
+        }
+    );
+
+    router.delete('/action-logs/:id',
+        requireRole('admin', 'member'),
+        async (req, res) => {
+            try {
+                if (req.user.role === 'member') {
+                    const existing = await dataService.get({
+                        organisationId: req.organisationId,
+                        collection: 'action-logs',
+                        id: req.params.id
+                    });
+                    if (!existing) {
+                        return res.status(404).json({ error: 'Non trouvé' });
+                    }
+                    // Un membre peut supprimer ses propres logs, ou n'importe quelle note
+                    if (existing.memberId !== req.user.memberId && existing.type !== 'note') {
+                        return res.status(403).json({ error: 'Accès interdit' });
+                    }
+                }
                 await dataService.delete({
                     organisationId: req.organisationId,
                     collection: 'action-logs',

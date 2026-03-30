@@ -182,6 +182,7 @@ class ProgrammeView extends AbstractView {
                         </div>
                         <div class="modal-body">
                             <form id="log-form">
+                                <input type="hidden" id="log-id">
                                 <input type="hidden" id="log-actionId">
                                 <input type="hidden" id="log-type" value="done">
                                 <div id="log-existing-notes" class="mb-3 d-none">
@@ -214,6 +215,7 @@ class ProgrammeView extends AbstractView {
                             </form>
                         </div>
                         <div class="modal-footer">
+                            <button type="button" class="btn btn-danger d-none" id="btn-delete-log">${t("delete")}</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${t("cancel")}</button>
                             <button type="button" class="btn btn-success" id="btn-save-log">${t("save")}</button>
                         </div>
@@ -715,11 +717,16 @@ class ProgrammeView extends AbstractView {
                         </div>`;
                     } else {
                         const hasNotes = it.targetNotes && it.targetNotes.length > 0;
-                        const notesIcon = hasNotes ? `<i class="bi bi-card-text text-info ms-1" title="${it.targetNotes.length} notes"></i>` : '';
+                        const notesIcon = hasNotes ? `<i class="bi bi-card-text text-info ms-1" title="${it.targetNotes.length} ${t("instructions").toLowerCase()}"></i>` : '';
+                        const isDone = !!it.lastLog;
+                        const bgClass = isDone ? 'bg-success-subtle' : 'bg-warning-subtle';
                         
-                        html += `<div class="p-1 mb-1 rounded small border bg-warning-subtle action-item-cal d-flex justify-content-between align-items-center" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
-                            <div><strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}</div>
-                            <button class="btn btn-sm btn-link text-info p-0 ms-1 btn-add-note-cal" data-id="${it.data.id}" data-date="${dateStr}" title="${t("add_note")}"><i class="bi bi-pencil-square"></i></button>
+                        html += `<div class="p-1 mb-1 rounded small border ${bgClass} action-item-cal d-flex justify-content-between align-items-center" data-id="${it.data.id}" data-date="${dateStr}" role="button" title="${it.data.name}">
+                            <div>
+                                ${isDone ? '<i class="bi bi-check-circle-fill text-success"></i> ' : ''}
+                                <strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}
+                            </div>
+                            <button class="btn btn-sm btn-link ${isDone ? 'text-success' : 'text-info'} p-0 ms-1 btn-add-note-cal" data-id="${it.data.id}" data-date="${dateStr}" title="${t("add_note")}"><i class="bi bi-pencil-square"></i></button>
                         </div>`;
                     }
                 });
@@ -964,9 +971,13 @@ class ProgrammeView extends AbstractView {
         const action = this.actions.find(a => a.id === actionId);
         document.getElementById('log-actionId').value = actionId;
         document.getElementById('log-type').value = type;
+        document.getElementById('log-id').value = '';
         
         const dateToUse = defaultDate || RecurrenceUtils.formatDateStr(new Date());
-        document.getElementById('log-date').value = dateToUse;
+        const dateInput = document.getElementById('log-date');
+        dateInput.value = dateToUse;
+        dateInput.disabled = (type === 'note');
+        
         document.getElementById('log-time').value = '';
         document.getElementById('log-notes').value = '';
 
@@ -977,6 +988,20 @@ class ProgrammeView extends AbstractView {
         } else {
             document.getElementById('log-duration').value = '';
             document.getElementById('log-durationUnit').value = 'hours';
+        }
+
+        if (type === 'note') {
+            const existingNote = this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === dateToUse);
+            if (existingNote) {
+                document.getElementById('log-id').value = existingNote.id;
+                document.getElementById('log-notes').value = existingNote.notes || '';
+                if (existingNote.time) document.getElementById('log-time').value = existingNote.time;
+                document.getElementById('btn-delete-log').classList.remove('d-none');
+            } else {
+                document.getElementById('btn-delete-log').classList.add('d-none');
+            }
+        } else {
+            document.getElementById('btn-delete-log').classList.add('d-none');
         }
 
         // Mettre à jour le titre selon le type
@@ -1002,7 +1027,7 @@ class ProgrammeView extends AbstractView {
         const notes = this.actionLogs.filter(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
         
         if (notes.length > 0) {
-            let html = `<label class="form-label text-info fw-bold"><i class="bi bi-card-text"></i> ${t("existing_notes") || "Notes"} :</label>`;
+            let html = `<label class="form-label text-info fw-bold"><i class="bi bi-card-text"></i> ${t("instructions") || "Instructions"} :</label>`;
             notes.forEach(note => {
                 const memberName = this.getMemberName(note.memberId);
                 html += `<div class="alert alert-info py-2 mb-1">
@@ -1026,10 +1051,11 @@ class ProgrammeView extends AbstractView {
         const duration = document.getElementById('log-duration').value;
         const durationUnit = document.getElementById('log-durationUnit').value;
         const notes = document.getElementById('log-notes').value;
+        const logId = document.getElementById('log-id').value;
         if (!date) return;
 
         try {
-            await api.create(this.orgId, 'action-logs', {
+            const data = {
                 programmeId: actionId,
                 memberId: api.getMemberId(),
                 date,
@@ -1038,7 +1064,38 @@ class ProgrammeView extends AbstractView {
                 durationUnit: duration ? durationUnit : null,
                 notes,
                 type
-            });
+            };
+
+            if (type === 'note') {
+                const existing = logId ? this.actionLogs.find(l => l.id === logId) : this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
+                if (existing) {
+                    await api.update(this.orgId, 'action-logs', existing.id, data);
+                } else {
+                    await api.create(this.orgId, 'action-logs', data);
+                }
+            } else {
+                await api.create(this.orgId, 'action-logs', data);
+            }
+
+            this.logModal.hide();
+            await this.loadData();
+        } catch (error) {
+            if (error.message.includes('Action already marked as done')) {
+                alert(t("action_already_done"));
+                this.logModal.hide();
+            } else {
+                alert(t("error") + ': ' + error.message);
+            }
+        }
+    }
+
+    async deleteLog() {
+        const logId = document.getElementById('log-id').value;
+        if (!logId) return;
+        if (!confirm(t("confirm_delete"))) return;
+
+        try {
+            await api.delete(this.orgId, 'action-logs', logId);
             this.logModal.hide();
             await this.loadData();
         } catch (error) {
@@ -1175,8 +1232,29 @@ class ProgrammeView extends AbstractView {
             this.saveLog();
         });
 
-        document.getElementById('log-date').addEventListener('change', () => {
+        document.getElementById('btn-delete-log').addEventListener('click', () => {
+            this.deleteLog();
+        });
+
+        document.getElementById('log-date').addEventListener('change', (e) => {
             this.refreshExistingNotesInLogModal();
+            const type = document.getElementById('log-type').value;
+            if (type === 'note') {
+                const actionId = document.getElementById('log-actionId').value;
+                const date = e.target.value;
+                const existingNote = this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
+                if (existingNote) {
+                    document.getElementById('log-id').value = existingNote.id;
+                    document.getElementById('log-notes').value = existingNote.notes || '';
+                    if (existingNote.time) document.getElementById('log-time').value = existingNote.time;
+                    document.getElementById('btn-delete-log').classList.remove('d-none');
+                } else {
+                    document.getElementById('log-id').value = '';
+                    document.getElementById('log-notes').value = '';
+                    document.getElementById('log-time').value = '';
+                    document.getElementById('btn-delete-log').classList.add('d-none');
+                }
+            }
         });
 
         await this.loadData();

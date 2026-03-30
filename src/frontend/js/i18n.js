@@ -182,12 +182,13 @@ const translations = {
         "notes": "Notes",
         "all": "Tout",
         "error": "Erreur",
-        "add_note": "Ajouter une note",
-        "note": "Note",
+        "add_note": "Ajouter une instruction",
+        "note": "Instruction",
         "done": "Fait",
         "action_history": "Historique des actions",
         "type": "Type",
-        "unknown_action": "Action inconnue"
+        "unknown_action": "Action inconnue",
+        "instructions": "Instructions"
     },
     en: {
         "app_title":
@@ -371,12 +372,13 @@ const translations = {
         "notes": "Notes",
         "all": "All",
         "error": "Error",
-        "add_note": "Add note",
-        "note": "Note",
+        "add_note": "Add instruction",
+        "note": "Instruction",
         "done": "Done",
         "action_history": "Action history",
         "type": "Type",
-        "unknown_action": "Unknown action"
+        "unknown_action": "Unknown action",
+        "instructions": "Instructions"
     }
 };
 
