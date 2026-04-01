@@ -191,7 +191,8 @@ const translations = {
         "intermediate_states": "États intermédiaires (séparés par des virgules)",
         "target_state": "État cible",
         "action_already_done": "Cette action a déjà été marquée pour cet état et cette date.",
-        "instructions": "Instructions"
+        "instructions": "Instructions",
+        "from_date": "À partir du"
     },
     en: {
         "app_title":
@@ -384,7 +385,8 @@ const translations = {
         "intermediate_states": "Intermediate states (comma-separated)",
         "target_state": "Target state",
         "action_already_done": "This action has already been marked for this state and date.",
-        "instructions": "Instructions"
+        "instructions": "Instructions",
+        "from_date": "Starting from"
     }
 };
 

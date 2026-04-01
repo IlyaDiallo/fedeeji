@@ -189,10 +189,12 @@ class ProgrammeView extends AbstractView {
                                 <input type="hidden" id="log-id">
                                 <input type="hidden" id="log-actionId">
                                 <input type="hidden" id="log-type" value="done">
+                                <input type="hidden" id="log-occurrence-date">
                                 <div class="mb-3" id="log-state-container" style="display:none;">
                                     <label class="form-label" data-i18n="target_state">${t("target_state") || "État cible"}</label>
                                     <select class="form-select" id="log-state"></select>
                                 </div>
+                                <div id="log-window-info" class="d-none"></div>
                                 <div id="log-existing-notes" class="mb-3 d-none">
                                     <!-- Container pour afficher les notes existantes -->
                                 </div>
@@ -346,8 +348,9 @@ class ProgrammeView extends AbstractView {
                 const allDoneLogs = logs.filter(l => !l.type || l.type === 'done');
                 const maxState = (action.states && action.states.length > 0) ? action.states.length + 1 : 1;
                 const fullDoneLogs = allDoneLogs.filter(l => {
-                    const st = l.state !== undefined ? l.state : 1;
-                    return st === maxState;
+                    // Ancien log sans état : considéré comme complètement fait
+                    if (l.state == null) return true;
+                    return l.state === maxState;
                 });
                 const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
@@ -389,9 +392,17 @@ class ProgrammeView extends AbstractView {
                         status = 'ok';
                     }
 
-                    const occDoneLogs = allDoneLogs.filter(l => l.date === occDateStr).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                    const latestStateLog = occDoneLogs.length > 0 ? occDoneLogs[0] : null;
-                    const currentState = latestStateLog && latestStateLog.state !== undefined ? latestStateLog.state : 0;
+                    const occDoneLogs = allDoneLogs
+                        .filter(l => l.date === occDateStr)
+                        .sort((a, b) =>
+                            (b.timestamp || 0) - (a.timestamp || 0)
+                            || (b.state || 0) - (a.state || 0)
+                        );
+                    const latestStateLog = occDoneLogs.length > 0
+                        ? occDoneLogs[0] : null;
+                    const currentState = latestStateLog
+                        ? (latestStateLog.state == null ? maxState : latestStateLog.state)
+                        : 0;
 
                     items.push({
                         type: 'action',
@@ -401,7 +412,8 @@ class ProgrammeView extends AbstractView {
                         status: status,
                         lastLog: lastLog,
                         targetNotes: targetNotes,
-                        currentState: currentState
+                        currentState: currentState,
+                        windowStartStr: windowStartStr
                     });
                 }
             });
@@ -516,6 +528,7 @@ class ProgrammeView extends AbstractView {
             : '';
 
         const canDo = status === 'due' || status === 'overdue';
+        const isDone = currentState >= maxState;
         const nextState = currentState + 1;
         let nextStateName = "✅";
         if (states.length > 0 && nextState <= states.length) {
@@ -524,11 +537,28 @@ class ProgrammeView extends AbstractView {
             nextStateName = t("done") || "Fait";
         }
 
-        const doneBtn = canDo
-            ? `<button class="btn btn-sm btn-success btn-mark-done ms-1" data-id="${action.id}" title="${t("mark_done")}">${nextStateName}</button>`
-            : `<button class="btn btn-sm btn-outline-secondary ms-1" disabled title="${t("not_yet_due")}">${nextStateName}</button>`;
+        let doneBtn;
+        if (isDone) {
+            // Déjà fait → consulter/éditer le log existant
+            doneBtn = `<button class="btn btn-sm btn-outline-success btn-edit-log ms-1"
+                data-id="${action.id}" title="${t("edit")}">
+                <i class="bi bi-check-circle-fill"></i></button>`;
+        } else if (canDo) {
+            // Dans la fenêtre, pas encore fait → marquer comme fait
+            doneBtn = `<button class="btn btn-sm btn-success btn-mark-done ms-1"
+                data-id="${action.id}" title="${t("mark_done")}">
+                ${nextStateName}</button>`;
+        } else {
+            // Hors fenêtre → éditer instructions et heure/durée
+            doneBtn = `<button class="btn btn-sm btn-outline-secondary btn-edit-future ms-1"
+                data-id="${action.id}" title="${t("edit")}">
+                <i class="bi bi-pencil-square"></i></button>`;
+        }
 
-        const noteBtn = `<button class="btn btn-sm btn-outline-info btn-add-note ms-1" data-id="${action.id}" title="${t("add_note")}">📝</button>`;
+        const noteBtn = canDo
+            ? `<button class="btn btn-sm btn-outline-info btn-add-note ms-1"
+                data-id="${action.id}" title="${t("add_note")}">📝</button>`
+            : '';
 
         const adminBtns = this.isMember ? '' : `
             <button class="btn btn-sm btn-outline-primary btn-edit-action ms-1" data-id="${action.id}" title="${t("edit")}">
@@ -569,6 +599,11 @@ class ProgrammeView extends AbstractView {
                         </small>
                     </div>
                     ${action.description ? `<div class="mt-1 text-dark small">${action.description}</div>` : ''}
+                    ${targetNotes.length > 0 ? `<div class="mt-1 small text-info">
+                        ${targetNotes.map(n =>
+                            `<div><i class="bi bi-card-text"></i> ${n.notes}</div>`
+                        ).join('')}
+                    </div>` : ''}
                     <div class="mt-1 small ${lastLog ? 'text-success' : 'text-muted'}">
                         ${lastLogStr}
                     </div>
@@ -672,8 +707,9 @@ class ProgrammeView extends AbstractView {
                 const allDoneLogs = logs.filter(l => !l.type || l.type === 'done');
                 const maxState = (action.states && action.states.length > 0) ? action.states.length + 1 : 1;
                 const fullDoneLogs = allDoneLogs.filter(l => {
-                    const st = l.state !== undefined ? l.state : 1;
-                    return st === maxState;
+                    // Ancien log sans état : considéré comme complètement fait
+                    if (l.state == null) return true;
+                    return l.state === maxState;
                 });
                 const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
@@ -693,9 +729,17 @@ class ProgrammeView extends AbstractView {
                     if (occ.occurrenceDate >= startStr && occ.occurrenceDate <= endStr) {
                         const targetNotes = logs.filter(l => l.type === 'note' && l.date === occ.occurrenceDate);
                         
-                        const occDoneLogs = allDoneLogs.filter(l => l.date === occ.occurrenceDate).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-                        const latestStateLog = occDoneLogs.length > 0 ? occDoneLogs[0] : null;
-                        const currentState = latestStateLog && latestStateLog.state !== undefined ? latestStateLog.state : 0;
+                        const occDoneLogs = allDoneLogs
+                            .filter(l => l.date === occ.occurrenceDate)
+                            .sort((a, b) =>
+                                (b.timestamp || 0) - (a.timestamp || 0)
+                                || (b.state || 0) - (a.state || 0)
+                            );
+                        const latestStateLog = occDoneLogs.length > 0
+                            ? occDoneLogs[0] : null;
+                        const currentState = latestStateLog
+                            ? (latestStateLog.state == null ? maxState : latestStateLog.state)
+                            : 0;
                         const isDone = currentState === maxState;
 
                         items.push({
@@ -861,6 +905,26 @@ class ProgrammeView extends AbstractView {
                 const itemData = this.lastRenderedItems?.find(i => i.data.id === actionId);
                 const defaultDate = itemData ? itemData.nextDate : null;
                 this.openLogModal(actionId, 'done', defaultDate);
+            });
+        });
+
+        // Déjà fait → éditer le log existant
+        document.querySelectorAll('.btn-edit-log').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.id;
+                const itemData = this.lastRenderedItems?.find(i => i.data.id === actionId);
+                const defaultDate = itemData ? itemData.nextDate : null;
+                this.openLogModal(actionId, 'done', defaultDate);
+            });
+        });
+
+        // Hors fenêtre → éditer instructions et heure/durée
+        document.querySelectorAll('.btn-edit-future').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const actionId = btn.dataset.id;
+                const itemData = this.lastRenderedItems?.find(i => i.data.id === actionId);
+                const defaultDate = itemData ? itemData.nextDate : null;
+                this.openLogModal(actionId, 'note', defaultDate);
             });
         });
 
@@ -1030,74 +1094,286 @@ class ProgrammeView extends AbstractView {
 
     // --- Modal log (Fait !) ---
 
+    // Génère le HTML d'information sur la date/heure/durée d'une action
+    buildActionInfoHtml({ action, occDateStr }) {
+        const locale = i18n.lang === 'en' ? 'en-US' : 'fr-FR';
+        const occDateObj = new Date(`${occDateStr}T12:00:00`);
+        const dateStr = occDateObj.toLocaleDateString(locale, {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+        });
+        const isAllDay = action?.allDay !== undefined
+            ? action.allDay : !action?.time;
+        const timeStr = (!isAllDay && action?.time)
+            ? `<br>⏰ ${t("time")} : ${action.time}` : '';
+        const durationStr = action?.duration
+            ? `<br>⏱️ ${t("duration")} : ${action.duration} `
+                + `${t(action.durationUnit === 'hours' ? 'hours' : 'minutes')}`
+            : '';
+        return `📅 ${dateStr}${timeStr}${durationStr}`;
+    }
+
+    // Réinitialise la visibilité de tous les champs du modal log
+    resetLogModalVisibility() {
+        const notesEl = document.getElementById('log-notes');
+        const dateRow = document.getElementById('log-date').closest('.mb-3');
+        const timeDurRow = document.getElementById('log-time')
+            .closest('.col-md-6').parentElement;
+        const saveBtn = document.getElementById('btn-save-log');
+
+        notesEl.disabled = false;
+        notesEl.parentElement.style.display = '';
+        dateRow.style.display = '';
+        timeDurRow.style.display = '';
+        saveBtn.style.display = '';
+    }
+
     openLogModal(actionId, type = 'done', defaultDate = null) {
         const action = this.actions.find(a => a.id === actionId);
         document.getElementById('log-actionId').value = actionId;
-        document.getElementById('log-type').value = type;
         document.getElementById('log-id').value = '';
-        
-        const dateToUse = defaultDate || RecurrenceUtils.formatDateStr(new Date());
-        const dateInput = document.getElementById('log-date');
-        dateInput.value = dateToUse;
-        dateInput.disabled = (type === 'note');
-        
-        document.getElementById('log-time').value = '';
-        document.getElementById('log-notes').value = '';
+        this.resetLogModalVisibility();
 
+        const todayStr = RecurrenceUtils.formatDateStr(new Date());
+        const dateInput = document.getElementById('log-date');
+        const saveBtn = document.getElementById('btn-save-log');
+        const notesTextarea = document.getElementById('log-notes');
+        const title = document.getElementById('logModalTitle');
+        const windowInfoEl = document.getElementById('log-window-info');
+        const locale = i18n.lang === 'en' ? 'en-US' : 'fr-FR';
+
+        // Déterminer si aujourd'hui est dans la fenêtre d'exécution
+        let canMarkDone = false;
+        const occDateStr = defaultDate || todayStr;
+
+        if (type === 'done') {
+            const occDateObj = new Date(`${occDateStr}T12:00:00`);
+            const windowStart = new Date(occDateObj);
+            windowStart.setDate(
+                windowStart.getDate() - (action?.windowDays || 0)
+            );
+            const windowStartStr = RecurrenceUtils.formatDateStr(windowStart);
+            canMarkDone = todayStr >= windowStartStr;
+        }
+
+        document.getElementById('log-type').value = type;
+        document.getElementById('log-occurrence-date').value = occDateStr;
+
+        // ========== HORS FENÊTRE — Mode consultation seule ==========
+        if (type === 'done' && !canMarkDone) {
+            title.textContent = action?.name || t("action_label");
+
+            // Infos date/heure/durée de l'action
+            const actionInfo = this.buildActionInfoHtml({
+                action, occDateStr
+            });
+            const occDateObj = new Date(`${occDateStr}T12:00:00`);
+            const wsObj = new Date(occDateObj);
+            wsObj.setDate(
+                wsObj.getDate() - (action?.windowDays || 0)
+            );
+            const wsFormatted = wsObj.toLocaleDateString(locale, {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+            windowInfoEl.innerHTML = `
+                <div class="alert alert-info py-2 mb-2">
+                    ${actionInfo}
+                </div>
+                ${action?.description
+                    ? `<div class="mb-2 text-dark">${action.description}</div>`
+                    : ''}
+                <div class="alert alert-warning py-2 mb-3">
+                    <i class="bi bi-calendar-event"></i>
+                    ${t("from_date")} ${wsFormatted}
+                </div>`;
+            windowInfoEl.classList.remove('d-none');
+
+            // Masquer tous les champs de saisie
+            dateInput.closest('.mb-3').style.display = 'none';
+            document.getElementById('log-time')
+                .closest('.col-md-6').parentElement.style.display = 'none';
+            notesTextarea.parentElement.style.display = 'none';
+            document.getElementById('log-state-container')
+                .style.display = 'none';
+            saveBtn.style.display = 'none';
+            document.getElementById('btn-delete-log').classList.add('d-none');
+
+            // Afficher les instructions existantes
+            this.refreshExistingNotesInLogModal();
+            this.logModal.show();
+            return;
+        }
+
+        // ========== Mode instruction (note) ==========
+        if (type === 'note') {
+            const dateToUse = defaultDate || todayStr;
+            dateInput.value = dateToUse;
+            dateInput.disabled = true;
+            saveBtn.textContent = t("save");
+            saveBtn.className = 'btn btn-primary';
+            title.textContent = t("instructions");
+
+            // Afficher date/heure/durée de l'action
+            const actionInfo = this.buildActionInfoHtml({
+                action, occDateStr
+            });
+            windowInfoEl.innerHTML = `
+                <div class="alert alert-info py-2 mb-2">
+                    ${actionInfo}
+                </div>`;
+            windowInfoEl.classList.remove('d-none');
+
+            document.getElementById('log-state-container')
+                .style.display = 'none';
+            document.getElementById('log-time').value =
+                action?.time || '';
+            notesTextarea.value = '';
+
+            // Pré-remplir durée depuis l'action
+            if (action?.duration) {
+                document.getElementById('log-duration').value =
+                    action.duration;
+                document.getElementById('log-durationUnit').value =
+                    action.durationUnit || 'hours';
+            } else {
+                document.getElementById('log-duration').value = '';
+                document.getElementById('log-durationUnit').value = 'hours';
+            }
+
+            // Charger note existante
+            const existingNote = this.actionLogs.find(
+                l => l.programmeId === actionId
+                    && l.type === 'note'
+                    && l.date === occDateStr
+            );
+            if (existingNote) {
+                document.getElementById('log-id').value = existingNote.id;
+                notesTextarea.value = existingNote.notes || '';
+                if (existingNote.time) {
+                    document.getElementById('log-time').value =
+                        existingNote.time;
+                }
+                document.getElementById('btn-delete-log')
+                    .classList.remove('d-none');
+            } else {
+                document.getElementById('btn-delete-log')
+                    .classList.add('d-none');
+            }
+
+            this.refreshExistingNotesInLogModal();
+            this.logModal.show();
+            return;
+        }
+
+        // ========== Mode "Fait" (done) dans la fenêtre ==========
+        dateInput.value = occDateStr;
+        dateInput.disabled = true;
+        dateInput.min = '';
+        dateInput.max = '';
+
+        const logId = (() => {
+            const occDoneLogs = this.actionLogs
+                .filter(l => l.programmeId === actionId
+                    && (!l.type || l.type === 'done')
+                    && l.date === occDateStr)
+                .sort((a, b) =>
+                    (b.timestamp || 0) - (a.timestamp || 0)
+                    || (b.state || 0) - (a.state || 0)
+                );
+            return occDoneLogs.length > 0 ? occDoneLogs[0] : null;
+        })();
+
+        if (logId) {
+            document.getElementById('log-id').value = logId.id;
+            notesTextarea.value = logId.notes || '';
+            if (logId.time) {
+                document.getElementById('log-time').value = logId.time;
+            } else {
+                document.getElementById('log-time').value = '';
+            }
+            if (logId.duration) {
+                document.getElementById('log-duration').value =
+                    logId.duration;
+                document.getElementById('log-durationUnit').value =
+                    logId.durationUnit || 'hours';
+            } else if (action?.duration) {
+                document.getElementById('log-duration').value =
+                    action.duration;
+                document.getElementById('log-durationUnit').value =
+                    action.durationUnit || 'hours';
+            } else {
+                document.getElementById('log-duration').value = '';
+                document.getElementById('log-durationUnit').value = 'hours';
+            }
+            document.getElementById('btn-delete-log')
+                .classList.remove('d-none');
+            title.textContent = t("edit") + ' — '
+                + (action?.name || t("mark_done"));
+            saveBtn.textContent = t("save");
+            saveBtn.className = 'btn btn-primary';
+        } else {
+            document.getElementById('log-time').value = '';
+            notesTextarea.value = '';
+            if (action?.duration) {
+                document.getElementById('log-duration').value =
+                    action.duration;
+                document.getElementById('log-durationUnit').value =
+                    action.durationUnit || 'hours';
+            } else {
+                document.getElementById('log-duration').value = '';
+                document.getElementById('log-durationUnit').value = 'hours';
+            }
+            document.getElementById('btn-delete-log')
+                .classList.add('d-none');
+            title.textContent = t("mark_done");
+            saveBtn.textContent = t("mark_done");
+            saveBtn.className = 'btn btn-success';
+        }
+
+        windowInfoEl.innerHTML = '';
+        windowInfoEl.classList.add('d-none');
+
+        // Gestion des états intermédiaires
         const states = action?.states || [];
         const stateSelect = document.getElementById('log-state');
         const stateContainer = document.getElementById('log-state-container');
 
-        if (states.length > 0 && type === 'done') {
+        if (states.length > 0) {
             stateContainer.style.display = 'block';
-            stateSelect.innerHTML = states.map((s, i) => `<option value="${i+1}">${s}</option>`).join('') + `<option value="${states.length + 1}">Fait</option>`;
-            
-            // Calculer l'état actuel pour cette date
-            const allDoneLogs = this.actionLogs.filter(l => l.programmeId === actionId && (!l.type || l.type === 'done'));
-            const occDoneLogs = allDoneLogs.filter(l => l.date === dateToUse).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-            const currentState = occDoneLogs.length > 0 && occDoneLogs[0].state !== undefined ? occDoneLogs[0].state : 0;
-            const nextState = Math.min(currentState + 1, states.length + 1);
+            stateSelect.innerHTML = states
+                .map((s, i) => `<option value="${i+1}">${s}</option>`)
+                .join('')
+                + `<option value="${states.length + 1}">Fait</option>`;
+
+            const allDoneLogs = this.actionLogs
+                .filter(l => l.programmeId === actionId
+                    && (!l.type || l.type === 'done'));
+            const occDoneLogs = allDoneLogs
+                .filter(l => l.date === occDateStr)
+                .sort((a, b) =>
+                    (b.timestamp || 0) - (a.timestamp || 0)
+                    || (b.state || 0) - (a.state || 0)
+                );
+            const currentState = occDoneLogs.length > 0
+                && occDoneLogs[0].state !== undefined
+                ? occDoneLogs[0].state : 0;
+            const nextState = Math.min(
+                currentState + 1, states.length + 1
+            );
             stateSelect.value = nextState;
         } else {
             stateContainer.style.display = 'none';
         }
 
-        // Pré-remplir la durée depuis l'action
-        if (action && action.duration) {
-            document.getElementById('log-duration').value = action.duration;
-            document.getElementById('log-durationUnit').value = action.durationUnit || 'hours';
-        } else {
-            document.getElementById('log-duration').value = '';
-            document.getElementById('log-durationUnit').value = 'hours';
-        }
-
-        if (type === 'note') {
-            const existingNote = this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === dateToUse);
-            if (existingNote) {
-                document.getElementById('log-id').value = existingNote.id;
-                document.getElementById('log-notes').value = existingNote.notes || '';
-                if (existingNote.time) document.getElementById('log-time').value = existingNote.time;
-                document.getElementById('btn-delete-log').classList.remove('d-none');
-            } else {
-                document.getElementById('btn-delete-log').classList.add('d-none');
-            }
-        } else {
-            document.getElementById('btn-delete-log').classList.add('d-none');
-        }
-
-        // Mettre à jour le titre selon le type
-        const title = document.getElementById('logModalTitle');
-        title.textContent = type === 'note' ? t("add_note") : t("mark_done");
-
         this.refreshExistingNotesInLogModal();
-
         this.logModal.show();
     }
 
     refreshExistingNotesInLogModal() {
         const actionId = document.getElementById('log-actionId').value;
         const type = document.getElementById('log-type').value;
-        const date = document.getElementById('log-date').value;
+        // Utiliser la date d'occurrence pour trouver les notes de l'occurrence ciblée
+        const occurrenceDate = document.getElementById('log-occurrence-date').value
+            || document.getElementById('log-date').value;
         const notesContainer = document.getElementById('log-existing-notes');
         
         if (type !== 'done') {
@@ -1105,7 +1381,9 @@ class ProgrammeView extends AbstractView {
             return;
         }
 
-        const notes = this.actionLogs.filter(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
+        const notes = this.actionLogs.filter(
+            l => l.programmeId === actionId && l.type === 'note' && l.date === occurrenceDate
+        );
         
         if (notes.length > 0) {
             let html = `<label class="form-label text-info fw-bold"><i class="bi bi-card-text"></i> ${t("instructions") || "Instructions"} :</label>`;
@@ -1140,6 +1418,13 @@ class ProgrammeView extends AbstractView {
 
         if (!date) return;
 
+        // Validation : la date de réalisation ne peut pas être dans le futur
+        const todayStr = RecurrenceUtils.formatDateStr(new Date());
+        if (type === 'done' && date > todayStr) {
+            alert(t("error") + ': ' + (t("date_in_future") || "La date ne peut pas être dans le futur."));
+            return;
+        }
+
         try {
             const data = {
                 programmeId: actionId,
@@ -1150,16 +1435,22 @@ class ProgrammeView extends AbstractView {
                 durationUnit: duration ? durationUnit : null,
                 notes,
                 type,
-                state
+                state,
+                timestamp: Date.now()
             };
 
             if (type === 'note') {
-                const existing = logId ? this.actionLogs.find(l => l.id === logId) : this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
+                const existing = logId
+                    ? this.actionLogs.find(l => l.id === logId)
+                    : this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
                 if (existing) {
                     await api.update(this.orgId, 'action-logs', existing.id, data);
                 } else {
                     await api.create(this.orgId, 'action-logs', data);
                 }
+            } else if (logId) {
+                // Mise à jour d'un log "done" existant (note, durée, date, heure)
+                await api.update(this.orgId, 'action-logs', logId, data);
             } else {
                 await api.create(this.orgId, 'action-logs', data);
             }
