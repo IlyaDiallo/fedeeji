@@ -35,8 +35,7 @@ const translations = {
         "add_edit_member": "Ajouter/Modifier un membre",
         "add_edit_event": "Ajouter/Modifier un événement",
         "add_edit_inscription": "Ajouter/Modifier une inscription",
-        "confirm_delete":
-            "Êtes-vous sûr de vouloir supprimer ?",
+        "confirm_delete": "Êtes-vous sûr de vouloir supprimer ?",
         "users": "Utilisateurs",
         "subscriptions": "Cotisations",
         "events": "Événements",
@@ -48,8 +47,7 @@ const translations = {
         "role_member": "Membre",
         "is_admin": "Administrateur",
         "admin_password": "Mot de passe admin",
-        "admin_password_hint":
-            "Laisser vide pour conserver le mot de passe actuel",
+        "admin_password_hint": "Laisser vide pour conserver le mot de passe actuel",
         "amount": "Montant",
         "date": "Date",
         "event": "Événement",
@@ -58,11 +56,8 @@ const translations = {
         "empty_trash": "Vider la corbeille",
         "restore": "Restaurer",
         "permanent_delete": "Supprimer définitivement",
-        "confirm_permanent_delete":
-            "Supprimer définitivement cet élément ?",
-        "confirm_empty_trash":
-            "Vider toute la corbeille ?"
-            + " Cette action est irréversible.",
+        "confirm_permanent_delete": "Supprimer définitivement cet élément ?",
+        "confirm_empty_trash": "Vider toute la corbeille ? Cette action est irréversible.",
         "trash_empty": "La corbeille est vide.",
         "collection": "Type",
         "summary": "Résumé",
@@ -90,14 +85,12 @@ const translations = {
         "maybe": "Peut-être",
         "select_event": "Sélectionner un événement",
         "select_member": "Sélectionner un membre",
-        "add_edit_subscription":
-            "Ajouter/Modifier une cotisation",
+        "add_edit_subscription": "Ajouter/Modifier une cotisation",
         "year": "Année",
         "import": "Importer",
         "import_xlsx": "Importer un fichier XLSX",
         "import_subscriptions": "Importer des cotisations",
-        "import_file_label":
-            "Fichier XLSX de cotisations",
+        "import_file_label": "Fichier XLSX de cotisations",
         "import_in_progress": "Import en cours...",
         "import_results": "Résultat de l'import",
         "import_total": "Lignes traitées",
@@ -111,9 +104,7 @@ const translations = {
         "my_profile": "Ma fiche",
         "my_subscriptions": "Mes cotisations",
         "profile_saved": "Profil enregistré avec succès",
-        "past_event_locked":
-            "Cet événement est passé,"
-            + " modification impossible",
+        "past_event_locked": "Cet événement est passé, modification impossible",
         "past_event": "Passé",
         "register_request": "Demande d'enregistrement",
         "registration_password": "Mot de passe d'enregistrement",
@@ -192,11 +183,25 @@ const translations = {
         "target_state": "État cible",
         "action_already_done": "Cette action a déjà été marquée pour cet état et cette date.",
         "instructions": "Instructions",
-        "from_date": "À partir du"
+        "from_date": "À partir du",
+        "period": "Période",
+        "period_all": "Toutes les dates",
+        "period_this_week": "Cette semaine",
+        "period_this_month": "Ce mois-ci",
+        "period_last_month": "Le mois dernier",
+        "period_custom": "Plage personnalisée",
+        "period_from": "Du",
+        "period_to": "Au",
+        "cumulative_durations": "Cumuls de durées",
+        "total_duration": "Total",
+        "by_member": "Par membre",
+        "by_action": "Par action",
+        "no_duration_data": "Aucune durée enregistrée sur cette période.",
+        "hours_abbr": "h",
+        "minutes_abbr": "min"
     },
     en: {
-        "app_title":
-            "Feddeeji - Organization Management",
+        "app_title": "Feddeeji - Organization Management",
         "brand": "Feddeeji",
         "members": "Members",
         "login_title": "Login",
@@ -231,8 +236,7 @@ const translations = {
         "add_edit_member": "Add/Edit member",
         "add_edit_event": "Add/Edit event",
         "add_edit_inscription": "Add/Edit inscription",
-        "confirm_delete":
-            "Are you sure you want to delete?",
+        "confirm_delete": "Are you sure you want to delete?",
         "users": "Users",
         "subscriptions": "Subscriptions",
         "events": "Events",
@@ -244,8 +248,7 @@ const translations = {
         "role_member": "Member",
         "is_admin": "Administrator",
         "admin_password": "Admin password",
-        "admin_password_hint":
-            "Leave empty to keep current password",
+        "admin_password_hint": "Leave empty to keep current password",
         "amount": "Amount",
         "date": "Date",
         "event": "Event",
@@ -254,11 +257,8 @@ const translations = {
         "empty_trash": "Empty trash",
         "restore": "Restore",
         "permanent_delete": "Delete permanently",
-        "confirm_permanent_delete":
-            "Permanently delete this item?",
-        "confirm_empty_trash":
-            "Empty the entire trash?"
-            + " This action is irreversible.",
+        "confirm_permanent_delete": "Permanently delete this item?",
+        "confirm_empty_trash": "Empty the entire trash? This action is irreversible.",
         "trash_empty": "Trash is empty.",
         "collection": "Type",
         "summary": "Summary",
@@ -305,9 +305,7 @@ const translations = {
         "my_profile": "My Profile",
         "my_subscriptions": "My Subscriptions",
         "profile_saved": "Profile saved successfully",
-        "past_event_locked":
-            "This event is past,"
-            + " modification not allowed",
+        "past_event_locked": "This event is past, modification not allowed",
         "past_event": "Past",
         "register_request": "Registration request",
         "registration_password": "Registration password",
@@ -386,7 +384,22 @@ const translations = {
         "target_state": "Target state",
         "action_already_done": "This action has already been marked for this state and date.",
         "instructions": "Instructions",
-        "from_date": "Starting from"
+        "from_date": "Starting from",
+        "period": "Period",
+        "period_all": "All dates",
+        "period_this_week": "This week",
+        "period_this_month": "This month",
+        "period_last_month": "Last month",
+        "period_custom": "Custom range",
+        "period_from": "From",
+        "period_to": "To",
+        "cumulative_durations": "Duration totals",
+        "total_duration": "Total",
+        "by_member": "By member",
+        "by_action": "By action",
+        "no_duration_data": "No duration recorded for this period.",
+        "hours_abbr": "h",
+        "minutes_abbr": "min"
     }
 };
 
