@@ -166,6 +166,11 @@ class Api {
 
     // --- API publique ---
 
+    /** Version de l'application (depuis package.json côté serveur) */
+    async getVersion() {
+        return this.request('/api/version');
+    }
+
     async getOrganizations() {
         return this.request('/auth/organizations');
     }

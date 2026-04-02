@@ -6,6 +6,13 @@ class LoginView extends AbstractView {
     }
 
     async getHtml() {
+        // Récupération de la version depuis le serveur
+        try {
+            const { version } = await api.getVersion();
+            this.appVersion = version;
+        } catch {
+            this.appVersion = null;
+        }
         // Sans orgId dans l'URL : formulaire superadmin uniquement
         if (!this.orgId) {
             return this.getSuperadminHtml();
@@ -46,6 +53,11 @@ class LoginView extends AbstractView {
                                 </div>
                             </form>
                         </div>
+                        ${this.appVersion ? `
+                        <div class="card-footer text-center
+                            text-muted small">
+                            v${this.appVersion}
+                        </div>` : ''}
                     </div>
                 </div>
             </div>
@@ -166,6 +178,11 @@ class LoginView extends AbstractView {
 
                             </div>
                         </div>
+                        ${this.appVersion ? `
+                        <div class="card-footer text-center
+                            text-muted small">
+                            v${this.appVersion}
+                        </div>` : ''}
                     </div>
                 </div>
             </div>

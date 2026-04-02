@@ -214,6 +214,12 @@ app.post('/api/:orgId/import-subscriptions',
     }
 );
 
+// Route publique : version de l'application
+const { version } = require('../../package.json');
+app.get('/api/version', (req, res) => {
+    res.json({ version });
+});
+
 app.use('/api/:orgId', authMiddleware, apiRouter);
 
 // Rediriger toutes les autres requêtes vers index.html
