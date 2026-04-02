@@ -461,11 +461,11 @@ class ProgrammeView extends AbstractView {
         const cancelledLabel = occ.isCancelled ? ` <span class="badge bg-danger ms-1">${t("occurrence_cancelled")}</span>` : '';
 
         const inscLink = isRecurrent
-            ? `<a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary ms-1" data-link title="${t("plan_inscriptions")}"><i class="bi bi-calendar-check"></i></a>`
-            : `<a href="/${this.collectiveId}/inscriptions?eventId=${event.id}&date=${occ.occurrenceDate}" class="btn btn-sm btn-outline-success ms-1" data-link title="${t("inscriptions")}"><i class="bi bi-calendar-plus"></i></a>`;
+            ? `<a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary" data-link title="${t("plan_inscriptions")}"><i class="bi bi-calendar-check"></i></a>`
+            : `<a href="/${this.collectiveId}/inscriptions?eventId=${event.id}&date=${occ.occurrenceDate}" class="btn btn-sm btn-outline-success" data-link title="${t("inscriptions")}"><i class="bi bi-calendar-plus"></i></a>`;
 
         return `
-            <div class="d-flex w-100 justify-content-between align-items-center">
+            <div class="d-flex w-100 flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                 <div class="ms-2 me-auto">
                     <div class="fw-bold text-primary d-flex align-items-center">
                         <span class="badge bg-info me-2">📅 ${t("event")}</span>
@@ -476,7 +476,7 @@ class ProgrammeView extends AbstractView {
                     </div>
                     ${event.description ? `<div class="mt-1 text-dark small">${event.description}</div>` : ''}
                 </div>
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center flex-wrap justify-content-end gap-1 mt-2 mt-sm-0 align-self-end align-self-sm-auto">
                     ${inscLink}
                 </div>
             </div>`;
@@ -540,31 +540,31 @@ class ProgrammeView extends AbstractView {
         let doneBtn;
         if (isDone) {
             // Déjà fait → consulter/éditer le log existant
-            doneBtn = `<button class="btn btn-sm btn-outline-success btn-edit-log ms-1"
+            doneBtn = `<button class="btn btn-sm btn-outline-success btn-edit-log"
                 data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-check-circle-fill"></i></button>`;
         } else if (canDo) {
             // Dans la fenêtre, pas encore fait → marquer comme fait
-            doneBtn = `<button class="btn btn-sm btn-success btn-mark-done ms-1"
+            doneBtn = `<button class="btn btn-sm btn-success btn-mark-done"
                 data-id="${action.id}" title="${t("mark_done")}">
                 ${nextStateName}</button>`;
         } else {
             // Hors fenêtre → éditer instructions et heure/durée
-            doneBtn = `<button class="btn btn-sm btn-outline-secondary btn-edit-future ms-1"
+            doneBtn = `<button class="btn btn-sm btn-outline-secondary btn-edit-future"
                 data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-pencil-square"></i></button>`;
         }
 
         const noteBtn = canDo
-            ? `<button class="btn btn-sm btn-outline-info btn-add-note ms-1"
+            ? `<button class="btn btn-sm btn-outline-info btn-add-note"
                 data-id="${action.id}" title="${t("add_note")}">📝</button>`
             : '';
 
         const adminBtns = this.isMember ? '' : `
-            <button class="btn btn-sm btn-outline-primary btn-edit-action ms-1" data-id="${action.id}" title="${t("edit")}">
+            <button class="btn btn-sm btn-outline-primary btn-edit-action" data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-sm btn-outline-danger btn-delete-action ms-1" data-id="${action.id}" title="${t("delete")}">
+            <button class="btn btn-sm btn-outline-danger btn-delete-action" data-id="${action.id}" title="${t("delete")}">
                 <i class="bi bi-trash"></i>
             </button>`;
 
@@ -582,7 +582,7 @@ class ProgrammeView extends AbstractView {
         }
 
         return `
-            <div class="d-flex w-100 justify-content-between align-items-center">
+            <div class="d-flex w-100 flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
                 <div class="ms-2 me-auto">
                     <div class="fw-bold d-flex align-items-center flex-wrap">
                         <span class="badge bg-warning text-dark me-2">🔧 ${t("action_label")}</span>
@@ -608,10 +608,10 @@ class ProgrammeView extends AbstractView {
                         ${lastLogStr}
                     </div>
                 </div>
-                <div class="d-flex align-items-center">
+                <div class="d-flex align-items-center flex-wrap justify-content-end gap-1 mt-2 mt-sm-0 align-self-end align-self-sm-auto">
                     ${doneBtn}
                     ${noteBtn}
-                    <button class="btn btn-sm btn-outline-secondary btn-history ms-1" data-id="${action.id}" title="${t("history")}">
+                    <button class="btn btn-sm btn-outline-secondary btn-history" data-id="${action.id}" title="${t("history")}">
                         <i class="bi bi-clock-history"></i>
                     </button>
                     ${adminBtns}
