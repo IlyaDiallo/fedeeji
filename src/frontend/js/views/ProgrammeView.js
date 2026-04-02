@@ -129,7 +129,7 @@ class ProgrammeView extends AbstractView {
                                 <div class="mb-3">
                                     <label class="form-label" data-i18n="recurrence">${t("recurrence")}</label>
                                     <div class="input-group">
-                                        <span class="input-group-text">${t("every")}</span>
+                                        <span class="input-group-text" id="action-recurrence-label">${t("every")}</span>
                                         <input type="number" class="form-control" id="action-recurrenceInterval" min="1" value="1" style="max-width: 80px;">
                                         <select class="form-select" id="action-recurrence">
                                             <option value="none">${t("recurrence_none")}</option>
@@ -977,8 +977,10 @@ class ProgrammeView extends AbstractView {
         this.toggleActionAllDay();
 
         document.getElementById('action-recurrence').value = 'none';
+        document.getElementById('action-recurrence').classList.add('rounded-start');
         document.getElementById('action-recurrenceInterval').value = '1';
-        document.getElementById('action-recurrenceInterval').disabled = true;
+        document.getElementById('action-recurrenceInterval').style.display = 'none';
+        document.getElementById('action-recurrence-label').style.display = 'none';
         document.getElementById('action-recurrence-days-container').style.display = 'none';
         document.getElementById('action-monthly-type-container').style.display = 'none';
         document.querySelectorAll('.action-recurrence-day').forEach(cb => cb.checked = false);
@@ -1022,8 +1024,10 @@ class ProgrammeView extends AbstractView {
             }
             
             document.getElementById('action-recurrence').value = rec;
+            document.getElementById('action-recurrence').classList.toggle('rounded-start', rec === 'none');
             document.getElementById('action-recurrenceInterval').value = interval;
-            document.getElementById('action-recurrenceInterval').disabled = (rec === 'none');
+            document.getElementById('action-recurrenceInterval').style.display = (rec === 'none') ? 'none' : '';
+            document.getElementById('action-recurrence-label').style.display = (rec === 'none') ? 'none' : '';
             document.getElementById('action-monthlyType').value = action.monthlyType || 'date';
             
             document.querySelectorAll('.action-recurrence-day').forEach(cb => {
@@ -1597,10 +1601,15 @@ class ProgrammeView extends AbstractView {
                     document.getElementById('action-monthly-type-container').style.display = (val === 'monthly') ? 'block' : 'none';
                     
                     const intervalInput = document.getElementById('action-recurrenceInterval');
+                    const intervalLabel = document.getElementById('action-recurrence-label');
                     if (val === 'none') {
-                        intervalInput.disabled = true;
+                        intervalInput.style.display = 'none';
+                        if (intervalLabel) intervalLabel.style.display = 'none';
+                        recSel.classList.add('rounded-start');
                     } else {
-                        intervalInput.disabled = false;
+                        intervalInput.style.display = '';
+                        if (intervalLabel) intervalLabel.style.display = '';
+                        recSel.classList.remove('rounded-start');
                     }
                 });
             }
