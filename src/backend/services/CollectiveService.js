@@ -1,12 +1,12 @@
 const fs = require('fs').promises;
 const path = require('path');
 
-class OrganizationService {
+class CollectiveService {
     constructor() {
         const root = path.join(__dirname, '../../..');
         // Priorité au fichier dans /data, fallback à la racine
-        this.filePath = path.join(root, 'data', 'organizations.json');
-        this.fallbackPath = path.join(root, 'organizations.json');
+        this.filePath = path.join(root, 'data', 'collectives.json');
+        this.fallbackPath = path.join(root, 'collectives.json');
     }
 
     async getAll() {
@@ -29,7 +29,7 @@ class OrganizationService {
 
     async update(id, data) {
         const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'organizations.json');
+        const filePath = path.join(root, 'data', 'collectives.json');
         let orgs = [];
 
         try {
@@ -52,7 +52,7 @@ class OrganizationService {
 
         const index = orgs.findIndex(org => org.id === id);
         if (index === -1) {
-            throw new Error('Organisation non trouvée');
+            throw new Error('Collectif non trouvé');
         }
 
         Object.assign(orgs[index], data);
@@ -82,7 +82,7 @@ class OrganizationService {
     }
 
     /**
-     * Crée une nouvelle organisation
+     * Crée un nouveau collectif
      * @param {Object} params
      * @param {string} params.id - Identifiant unique (slug)
      * @param {string} params.name - Nom complet
@@ -90,20 +90,20 @@ class OrganizationService {
      * @param {string} [params.adminEmail] - Email admin
      * @param {string} [params.defaultLanguage] - Langue par défaut
      * @param {string} [params.registrationPassword] - Mot de passe inscription
-     * @param {boolean} [params.subscriptionsEnabled] - Activation des cotisations
+     * @param {boolean} [params.contributionsEnabled] - Activation des contributions
      */
     async create({
         id, name, label, adminEmail, defaultLanguage,
-        registrationPassword, subscriptionsEnabled
+        registrationPassword, contributionsEnabled
     }) {
         const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'organizations.json');
+        const filePath = path.join(root, 'data', 'collectives.json');
         const dataDir = path.join(root, 'data', id);
 
         // Vérifier si l'ID existe déjà
         const existing = await this.getAll();
         if (existing.find(org => org.id === id)) {
-            throw new Error('Une organisation avec cet ID existe déjà');
+            throw new Error('Un collectif avec cet ID existe déjà');
         }
 
         // Valider l'ID (slug valide)
@@ -119,7 +119,7 @@ class OrganizationService {
 
         // Initialiser les fichiers de données
         const collections = [
-            'members.json', 'events.json', 'subscriptions.json',
+            'members.json', 'events.json', 'contributions.json',
             'inscriptions.json'
         ];
         for (const col of collections) {
@@ -130,7 +130,7 @@ class OrganizationService {
             );
         }
 
-        // Lire les organisations existantes
+        // Lire les collectifs existants
         let orgs = [];
         try {
             const content = await fs.readFile(filePath, 'utf8');
@@ -146,7 +146,7 @@ class OrganizationService {
             adminEmail: adminEmail || '',
             defaultLanguage: defaultLanguage || 'fr',
             registrationPassword: registrationPassword || '',
-            subscriptionsEnabled: subscriptionsEnabled !== false,
+            contributionsEnabled: contributionsEnabled !== false,
             createdAt: new Date().toISOString()
         };
 
@@ -157,16 +157,16 @@ class OrganizationService {
     }
 
     /**
-     * Supprime une organisation
+     * Supprime un collectif
      * @param {string} id
      */
     async delete(id) {
         const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'organizations.json');
+        const filePath = path.join(root, 'data', 'collectives.json');
         const dataDir = path.join(root, 'data', id);
         const logosDir = path.join(root, 'data', 'logos');
 
-        // Lire les organisations existantes
+        // Lire les collectifs existants
         let orgs = [];
         try {
             const content = await fs.readFile(filePath, 'utf8');
@@ -177,10 +177,10 @@ class OrganizationService {
 
         const index = orgs.findIndex(org => org.id === id);
         if (index === -1) {
-            throw new Error('Organisation non trouvée');
+            throw new Error('Collectif non trouvé');
         }
 
-        // Supprimer l'organisation de la liste
+        // Supprimer le collectif de la liste
         orgs.splice(index, 1);
         await fs.writeFile(filePath, JSON.stringify(orgs, null, 2), 'utf8');
 
@@ -209,4 +209,4 @@ class OrganizationService {
     }
 }
 
-module.exports = OrganizationService;
+module.exports = CollectiveService;

@@ -10,26 +10,26 @@ class ImportService {
     }
 
     /**
-     * Importe des cotisations depuis un fichier XLSX
+     * Importe des contributions depuis un fichier XLSX
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {Buffer} params.fileBuffer
      * @returns {Promise<Object>} Résultat de l'import
      */
-    async importSubscriptions({ organisationId, fileBuffer }) {
+    async importContributions({ collectiveId, fileBuffer }) {
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(fileBuffer);
         const worksheet = workbook.getWorksheet(1);
         const rows = this._toRowObjects(worksheet);
 
         const members = await this.dataService.list({
-            organisationId,
+            collectiveId,
             collection: 'members'
         });
 
-        const existingSubscriptions = await this.dataService.list({
-            organisationId,
-            collection: 'subscriptions'
+        const existingContributions = await this.dataService.list({
+            collectiveId,
+            collection: 'contributions'
         });
 
         const results = {
@@ -61,7 +61,7 @@ class ImportService {
                 // Créer le membre s'il n'existe pas
                 if (!member) {
                     member = await this.dataService.create({
-                        organisationId,
+                        collectiveId,
                         collection: 'members',
                         data: {
                             lastName: parsed.lastName,
@@ -77,8 +77,8 @@ class ImportService {
                     results.membersCreated++;
                 }
 
-                // Vérifier si la cotisation existe déjà (par référence commande)
-                const duplicate = existingSubscriptions.find(
+                // Vérifier si la contribution existe déjà (par référence commande)
+                const duplicate = existingContributions.find(
                     s => s.orderRef && parsed.orderRef && s.orderRef === parsed.orderRef
                 );
 
@@ -87,9 +87,9 @@ class ImportService {
                     continue;
                 }
 
-                const subscription = await this.dataService.create({
-                    organisationId,
-                    collection: 'subscriptions',
+                const contribution = await this.dataService.create({
+                    collectiveId,
+                    collection: 'contributions',
                     data: {
                         memberId: member.id,
                         amount: parsed.amount,
@@ -101,7 +101,7 @@ class ImportService {
                         paymentMethod: parsed.paymentMethod
                     }
                 });
-                existingSubscriptions.push(subscription);
+                existingContributions.push(contribution);
                 results.created++;
             } catch (error) {
                 results.errors.push({

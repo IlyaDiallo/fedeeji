@@ -49,14 +49,14 @@ function requireRole(...roles) {
         }
 
         // Vérifier que l'admin/membre accède à sa propre org
-        const orgId = req.params.orgId || req.organisationId;
+        const collectiveId = req.params.collectiveId || req.collectiveId;
         if (
             (req.user.role === 'admin'
                 || req.user.role === 'member')
-            && req.user.orgId !== orgId
+            && req.user.collectiveId !== collectiveId
         ) {
             return res.status(403).json({
-                error: 'Accès interdit à cette organisation'
+                error: 'Accès interdit à ce collectif'
             });
         }
 

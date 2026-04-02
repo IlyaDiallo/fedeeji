@@ -15,37 +15,37 @@ class DataService {
 
     /**
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.collection
      */
-    async list({ organisationId, collection }) {
-        return await this.storage.read({ organisationId, collection }) || [];
+    async list({ collectiveId, collection }) {
+        return await this.storage.read({ collectiveId, collection }) || [];
     }
 
     /**
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.collection
      * @param {string} params.id
      */
-    async get({ organisationId, collection, id }) {
-        return await this.storage.read({ organisationId, collection, id });
+    async get({ collectiveId, collection, id }) {
+        return await this.storage.read({ collectiveId, collection, id });
     }
 
     /**
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.collection
      * @param {any} params.data
      */
-    async create({ organisationId, collection, data }) {
+    async create({ collectiveId, collection, data }) {
         const id = crypto.randomUUID();
         const item = { ...data, id };
 
-        await this.storage.write({ organisationId, collection, id, data: item });
+        await this.storage.write({ collectiveId, collection, id, data: item });
 
         await this.logService.log({
-            organisationId,
+            collectiveId,
             action: 'CREATE',
             targetCollection: collection,
             targetId: id,
@@ -57,14 +57,14 @@ class DataService {
 
     /**
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.collection
      * @param {string} params.id
      * @param {any} params.data
      */
-    async update({ organisationId, collection, id, data }) {
+    async update({ collectiveId, collection, id, data }) {
         const previousData = await this.storage.read({
-            organisationId, collection, id
+            collectiveId, collection, id
         });
         if (!previousData) {
             throw new Error('Élément introuvable');
@@ -72,11 +72,11 @@ class DataService {
 
         const updatedItem = { ...previousData, ...data, id };
         await this.storage.write({
-            organisationId, collection, id, data: updatedItem
+            collectiveId, collection, id, data: updatedItem
         });
 
         await this.logService.log({
-            organisationId,
+            collectiveId,
             action: 'UPDATE',
             targetCollection: collection,
             targetId: id,
@@ -89,13 +89,13 @@ class DataService {
     /**
      * Supprime un élément en le déplaçant dans la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.collection
      * @param {string} params.id
      */
-    async delete({ organisationId, collection, id }) {
+    async delete({ collectiveId, collection, id }) {
         const item = await this.storage.read({
-            organisationId, collection, id
+            collectiveId, collection, id
         });
         if (!item) {
             throw new Error('Élément introuvable');
@@ -103,15 +103,15 @@ class DataService {
 
         // Déplacer dans la corbeille avant suppression
         await this.trashService.moveToTrash({
-            organisationId,
+            collectiveId,
             sourceCollection: collection,
             item
         });
 
-        await this.storage.delete({ organisationId, collection, id });
+        await this.storage.delete({ collectiveId, collection, id });
 
         await this.logService.log({
-            organisationId,
+            collectiveId,
             action: 'DELETE',
             targetCollection: collection,
             targetId: id,

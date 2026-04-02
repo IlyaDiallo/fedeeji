@@ -3,7 +3,7 @@ class MembersView extends AbstractView {
         super(params);
         this.setTitle(t("members") + " - " + t("brand"));
         this.members = [];
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
@@ -205,7 +205,7 @@ class MembersView extends AbstractView {
     async loadMembers() {
         try {
             this.members = await api.get(
-                this.orgId, 'members'
+                this.collectiveId, 'members'
             );
             this.renderTable();
         } catch (error) {
@@ -419,11 +419,11 @@ class MembersView extends AbstractView {
         try {
             if (id) {
                 await api.update(
-                    this.orgId, 'members', id, data
+                    this.collectiveId, 'members', id, data
                 );
             } else {
                 await api.create(
-                    this.orgId, 'members', data
+                    this.collectiveId, 'members', data
                 );
             }
             this.modal.hide();
@@ -438,7 +438,7 @@ class MembersView extends AbstractView {
         if (confirm(t("confirm_delete"))) {
             try {
                 await api.delete(
-                    this.orgId, 'members', id
+                    this.collectiveId, 'members', id
                 );
                 await this.loadMembers();
             } catch (error) {

@@ -12,15 +12,15 @@ class FileSystemAdapter extends StorageAdapter {
         this.basePath = basePath;
     }
 
-    async _getFilePath({ organisationId, collection }) {
-        const dir = path.join(this.basePath, organisationId);
+    async _getFilePath({ collectiveId, collection }) {
+        const dir = path.join(this.basePath, collectiveId);
         await fs.mkdir(dir, { recursive: true });
         return path.join(dir, `${collection}.json`);
     }
 
-    async _readAll({ organisationId, collection }) {
+    async _readAll({ collectiveId, collection }) {
         try {
-            const filePath = await this._getFilePath({ organisationId, collection });
+            const filePath = await this._getFilePath({ collectiveId, collection });
             const data = await fs.readFile(filePath, 'utf8');
             return JSON.parse(data);
         } catch (error) {
@@ -31,21 +31,21 @@ class FileSystemAdapter extends StorageAdapter {
         }
     }
 
-    async _writeAll({ organisationId, collection, data }) {
-        const filePath = await this._getFilePath({ organisationId, collection });
+    async _writeAll({ collectiveId, collection, data }) {
+        const filePath = await this._getFilePath({ collectiveId, collection });
         await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
     }
 
-    async read({ organisationId, collection, id }) {
-        const allData = await this._readAll({ organisationId, collection });
+    async read({ collectiveId, collection, id }) {
+        const allData = await this._readAll({ collectiveId, collection });
         if (id) {
             return allData.find((item) => item.id === id);
         }
         return allData;
     }
 
-    async write({ organisationId, collection, id, data }) {
-        const allData = await this._readAll({ organisationId, collection });
+    async write({ collectiveId, collection, id, data }) {
+        const allData = await this._readAll({ collectiveId, collection });
         if (id) {
             const index = allData.findIndex((item) => item.id === id);
             if (index !== -1) {
@@ -53,17 +53,17 @@ class FileSystemAdapter extends StorageAdapter {
             } else {
                 allData.push(data);
             }
-            await this._writeAll({ organisationId, collection, data: allData });
+            await this._writeAll({ collectiveId, collection, data: allData });
         } else {
             // Écriture en bloc
-            await this._writeAll({ organisationId, collection, data });
+            await this._writeAll({ collectiveId, collection, data });
         }
     }
 
-    async delete({ organisationId, collection, id }) {
+    async delete({ collectiveId, collection, id }) {
         if (!id) {
             // Supprimer toute la collection
-            const filePath = await this._getFilePath({ organisationId, collection });
+            const filePath = await this._getFilePath({ collectiveId, collection });
             try {
                 await fs.unlink(filePath);
             } catch (err) {
@@ -71,9 +71,9 @@ class FileSystemAdapter extends StorageAdapter {
             }
             return;
         }
-        const allData = await this._readAll({ organisationId, collection });
+        const allData = await this._readAll({ collectiveId, collection });
         const filteredData = allData.filter((item) => item.id !== id);
-        await this._writeAll({ organisationId, collection, data: filteredData });
+        await this._writeAll({ collectiveId, collection, data: filteredData });
     }
 }
 

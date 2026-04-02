@@ -2,7 +2,7 @@ class ActionHistoryView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(t("action_history") + " - " + t("brand"));
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.isMember = api.getRole() === 'member';
         this.actionLogs = [];
         this.actions = [];
@@ -76,9 +76,9 @@ class ActionHistoryView extends AbstractView {
     async loadData() {
         try {
             const [actionLogs, actions, members] = await Promise.all([
-                api.get(this.orgId, 'action-logs'),
-                api.get(this.orgId, 'actions'),
-                this.isMember ? Promise.resolve([]) : api.get(this.orgId, 'members')
+                api.get(this.collectiveId, 'action-logs'),
+                api.get(this.collectiveId, 'actions'),
+                this.isMember ? Promise.resolve([]) : api.get(this.collectiveId, 'members')
             ]);
             this.actionLogs = actionLogs || [];
             this.actions = actions || [];

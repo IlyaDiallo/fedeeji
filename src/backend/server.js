@@ -12,7 +12,7 @@ const TrashService = require('./services/TrashService');
 const DataService = require('./services/DataService');
 const LogService = require('./services/LogService');
 const AuthService = require('./services/AuthService');
-const OrganizationService = require('./services/OrganizationService');
+const CollectiveService = require('./services/CollectiveService');
 const ImportService = require('./services/ImportService');
 
 const app = express();
@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Servir les logos des organisations
+// Servir les logos des collectifs
 app.use('/api/logos', express.static(
     path.join(__dirname, '../../data/logos')
 ));
@@ -41,14 +41,14 @@ const dataService = new DataService({
     storage, trashService, logService
 });
 const authService = new AuthService({ storage });
-const organizationService = new OrganizationService();
+const collectiveService = new CollectiveService();
 const importService = new ImportService({ dataService });
 
 const authMiddleware = createAuthMiddleware(authService);
 
 // API routes
 const authRouter = createAuthRouter({
-    authService, organizationService, dataService
+    authService, collectiveService, dataService
 });
 app.use('/auth', authRouter);
 
@@ -185,11 +185,11 @@ app.delete('/api/files/:filename',
     }
 );
 
-app.post('/api/:orgId/import-subscriptions',
+app.post('/api/:collectiveId/import-contributions',
     authMiddleware,
     requireRole('admin'),
     (req, res, next) => {
-        req.organisationId = req.params.orgId;
+        req.collectiveId = req.params.collectiveId;
         next();
     },
     importUpload.single('file'),
@@ -201,8 +201,8 @@ app.post('/api/:orgId/import-subscriptions',
                 });
             }
             const results = await importService
-                .importSubscriptions({
-                    organisationId: req.organisationId,
+                .importContributions({
+                    collectiveId: req.collectiveId,
                     fileBuffer: req.file.buffer
                 });
             res.json(results);
@@ -220,7 +220,7 @@ app.get('/api/version', (req, res) => {
     res.json({ version });
 });
 
-app.use('/api/:orgId', authMiddleware, apiRouter);
+app.use('/api/:collectiveId', authMiddleware, apiRouter);
 
 // Rediriger toutes les autres requêtes vers index.html
 app.use((req, res) => {

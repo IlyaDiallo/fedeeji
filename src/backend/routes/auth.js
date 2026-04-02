@@ -7,9 +7,9 @@ const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
 /**
  * @param {Object} params
  * @param {import('../services/AuthService')} params.authService
- * @param {import('../services/OrganizationService')} params.organizationService
+ * @param {import('../services/CollectiveService')} params.collectiveService
  */
-function createAuthRouter({ authService, organizationService, dataService }) {
+function createAuthRouter({ authService, collectiveService, dataService }) {
     const router = express.Router();
 
     // Middleware superadmin (inline pour éviter circular deps)
@@ -34,9 +34,9 @@ function createAuthRouter({ authService, organizationService, dataService }) {
     // Vérification du mot de passe d'enregistrement
     router.post('/verify-registration-password', async (req, res) => {
         try {
-            const { orgId, password } = req.body;
-            const org = await organizationService.getById(orgId);
-            if (!org) throw new Error('Organisation non trouvée');
+            const { collectiveId, password } = req.body;
+            const org = await collectiveService.getById(collectiveId);
+            if (!org) throw new Error('Collectif non trouvé');
             if (!org.registrationPassword || org.registrationPassword !== password) {
                 throw new Error('Mot de passe d\'enregistrement incorrect');
             }
@@ -49,9 +49,9 @@ function createAuthRouter({ authService, organizationService, dataService }) {
     // Enregistrement d'un membre
     router.post('/register', async (req, res) => {
         try {
-            const { orgId, password, memberData } = req.body;
-            const org = await organizationService.getById(orgId);
-            if (!org) throw new Error('Organisation non trouvée');
+            const { collectiveId, password, memberData } = req.body;
+            const org = await collectiveService.getById(collectiveId);
+            if (!org) throw new Error('Collectif non trouvé');
             if (!org.registrationPassword || org.registrationPassword !== password) {
                 throw new Error('Mot de passe d\'enregistrement incorrect');
             }
@@ -70,7 +70,7 @@ function createAuthRouter({ authService, organizationService, dataService }) {
             };
             
             const newMember = await dataService.create({
-                organisationId: orgId,
+                collectiveId: collectiveId,
                 collection: 'members',
                 data: safeData
             });
@@ -97,9 +97,9 @@ function createAuthRouter({ authService, organizationService, dataService }) {
     // Connexion admin (membre avec flag admin)
     router.post('/login/admin', async (req, res) => {
         try {
-            const { orgId, email, password } = req.body;
+            const { collectiveId, email, password } = req.body;
             const result = await authService.loginAdmin({
-                orgId, email, password
+                collectiveId, email, password
             });
             res.json(result);
         } catch (error) {
@@ -110,9 +110,9 @@ function createAuthRouter({ authService, organizationService, dataService }) {
     // Connexion membre simple (email seul)
     router.post('/login/member', async (req, res) => {
         try {
-            const { orgId, email } = req.body;
+            const { collectiveId, email } = req.body;
             const result = await authService.loginMember({
-                orgId, email
+                collectiveId, email
             });
             res.json(result);
         } catch (error) {
@@ -120,10 +120,10 @@ function createAuthRouter({ authService, organizationService, dataService }) {
         }
     });
 
-    // Liste des organisations (publique)
-    router.get('/organizations', async (req, res) => {
+    // Liste des collectifs (publique)
+    router.get('/collectives', async (req, res) => {
         try {
-            const orgs = await organizationService.getAll();
+            const orgs = await collectiveService.getAll();
             res.json(orgs);
         } catch (error) {
             res.status(500).json({ error: error.message });
@@ -135,14 +135,14 @@ function createAuthRouter({ authService, organizationService, dataService }) {
         res.json({ email: SUPERADMIN_EMAIL || '' });
     });
 
-    // Modification d'une organisation (superadmin)
+    // Modification d'un collectif (superadmin)
     router.put(
-        '/organizations/:id',
+        '/collectives/:id',
         async (req, res) => {
             try {
                 const { id } = req.params;
                 const { id: _id, ...data } = req.body;
-                const updated = await organizationService.update(id, data);
+                const updated = await collectiveService.update(id, data);
                 res.json(updated);
             } catch (error) {
                 res.status(400).json({ error: error.message });
@@ -169,7 +169,7 @@ function createAuthRouter({ authService, organizationService, dataService }) {
     });
 
     router.post(
-        '/organizations/:id/logo',
+        '/collectives/:id/logo',
         logoUpload.single('file'),
         async (req, res) => {
             try {
@@ -178,7 +178,7 @@ function createAuthRouter({ authService, organizationService, dataService }) {
                         error: 'Aucun fichier fourni'
                     });
                 }
-                const logoUrl = await organizationService.uploadLogo(
+                const logoUrl = await collectiveService.uploadLogo(
                     req.params.id,
                     req.file
                 );
@@ -189,9 +189,9 @@ function createAuthRouter({ authService, organizationService, dataService }) {
         }
     );
 
-    // Création d'une organisation (superadmin uniquement)
+    // Création d'un collectif (superadmin uniquement)
     router.post(
-        '/organizations',
+        '/collectives',
         requireSuperadmin,
         async (req, res) => {
             try {
@@ -204,7 +204,7 @@ function createAuthRouter({ authService, organizationService, dataService }) {
                     });
                 }
 
-                const org = await organizationService.create({
+                const org = await collectiveService.create({
                     id, name, label, adminEmail,
                     defaultLanguage, registrationPassword
                 });
@@ -215,13 +215,13 @@ function createAuthRouter({ authService, organizationService, dataService }) {
         }
     );
 
-    // Suppression d'une organisation (superadmin uniquement)
+    // Suppression d'un collectif (superadmin uniquement)
     router.delete(
-        '/organizations/:id',
+        '/collectives/:id',
         requireSuperadmin,
         async (req, res) => {
             try {
-                await organizationService.delete(req.params.id);
+                await collectiveService.delete(req.params.id);
                 res.json({ success: true });
             } catch (error) {
                 res.status(400).json({ error: error.message });

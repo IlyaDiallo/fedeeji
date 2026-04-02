@@ -35,7 +35,7 @@ class Api {
 
     /** OrgId de l'utilisateur connecté (admin/member) */
     getUserOrgId() {
-        return this.user?.orgId || null;
+        return this.user?.collectiveId || null;
     }
 
     /** MemberId de l'utilisateur connecté */
@@ -65,12 +65,12 @@ class Api {
             && endpoint !== '/auth/login/admin'
             && endpoint !== '/auth/login/member'
         ) {
-            const orgId = this.getUserOrgId();
+            const collectiveId = this.getUserOrgId();
             this.setToken(null);
             this.setUser(null);
-            if (orgId) {
+            if (collectiveId) {
                 window.location.href =
-                    `/${orgId}/login`;
+                    `/${collectiveId}/login`;
             } else {
                 window.location.href = '/login';
             }
@@ -91,17 +91,17 @@ class Api {
 
     // --- Méthodes d'authentification ---
 
-    async verifyRegistrationPassword(orgId, password) {
+    async verifyRegistrationPassword(collectiveId, password) {
         return this.request('/auth/verify-registration-password', {
             method: 'POST',
-            body: JSON.stringify({ orgId, password })
+            body: JSON.stringify({ collectiveId, password })
         });
     }
 
-    async registerMember({ orgId, password, memberData }) {
+    async registerMember({ collectiveId, password, memberData }) {
         return this.request('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ orgId, password, memberData })
+            body: JSON.stringify({ collectiveId, password, memberData })
         });
     }
 
@@ -116,49 +116,49 @@ class Api {
     }
 
     /** Connexion admin (membre avec flag admin) */
-    async loginAdmin({ orgId, email, password }) {
+    async loginAdmin({ collectiveId, email, password }) {
         const res = await this.request(
             '/auth/login/admin',
             {
                 method: 'POST',
                 body: JSON.stringify({
-                    orgId, email, password
+                    collectiveId, email, password
                 })
             }
         );
         this.setToken(res.token);
         this.setUser({
             role: res.role,
-            orgId: res.orgId,
+            collectiveId: res.collectiveId,
             memberId: res.memberId,
             memberName: res.memberName
         });
     }
 
     /** Connexion membre simple (email seul) */
-    async loginMember({ orgId, email }) {
+    async loginMember({ collectiveId, email }) {
         const res = await this.request(
             '/auth/login/member',
             {
                 method: 'POST',
-                body: JSON.stringify({ orgId, email })
+                body: JSON.stringify({ collectiveId, email })
             }
         );
         this.setToken(res.token);
         this.setUser({
             role: res.role,
-            orgId: res.orgId,
+            collectiveId: res.collectiveId,
             memberId: res.memberId,
             memberName: res.memberName
         });
     }
 
     logout() {
-        const orgId = this.getUserOrgId();
+        const collectiveId = this.getUserOrgId();
         this.setToken(null);
         this.setUser(null);
-        if (orgId) {
-            window.location.href = `/${orgId}/login`;
+        if (collectiveId) {
+            window.location.href = `/${collectiveId}/login`;
         } else {
             window.location.href = '/login';
         }
@@ -171,8 +171,8 @@ class Api {
         return this.request('/api/version');
     }
 
-    async getOrganizations() {
-        return this.request('/auth/organizations');
+    async getCollectives() {
+        return this.request('/auth/collectives');
     }
 
     async getSuperadminEmail() {
@@ -181,15 +181,15 @@ class Api {
 
     // --- Profil membre ---
 
-    async getMyProfile(orgId) {
+    async getMyProfile(collectiveId) {
         return this.request(
-            `/api/${orgId}/members/me`
+            `/api/${collectiveId}/members/me`
         );
     }
 
-    async updateMyProfile(orgId, data) {
+    async updateMyProfile(collectiveId, data) {
         return this.request(
-            `/api/${orgId}/members/me`,
+            `/api/${collectiveId}/members/me`,
             {
                 method: 'PUT',
                 body: JSON.stringify(data)
@@ -199,21 +199,21 @@ class Api {
 
     // --- API protégée ---
 
-    async get(orgId, collection) {
+    async get(collectiveId, collection) {
         return this.request(
-            `/api/${orgId}/${collection}`
+            `/api/${collectiveId}/${collection}`
         );
     }
 
-    async getById(orgId, collection, id) {
+    async getById(collectiveId, collection, id) {
         return this.request(
-            `/api/${orgId}/${collection}/${id}`
+            `/api/${collectiveId}/${collection}/${id}`
         );
     }
 
-    async create(orgId, collection, data) {
+    async create(collectiveId, collection, data) {
         return this.request(
-            `/api/${orgId}/${collection}`,
+            `/api/${collectiveId}/${collection}`,
             {
                 method: 'POST',
                 body: JSON.stringify(data)
@@ -221,9 +221,9 @@ class Api {
         );
     }
 
-    async update(orgId, collection, id, data) {
+    async update(collectiveId, collection, id, data) {
         return this.request(
-            `/api/${orgId}/${collection}/${id}`,
+            `/api/${collectiveId}/${collection}/${id}`,
             {
                 method: 'PUT',
                 body: JSON.stringify(data)
@@ -231,42 +231,42 @@ class Api {
         );
     }
 
-    async delete(orgId, collection, id) {
+    async delete(collectiveId, collection, id) {
         return this.request(
-            `/api/${orgId}/${collection}/${id}`,
+            `/api/${collectiveId}/${collection}/${id}`,
             { method: 'DELETE' }
         );
     }
 
     // --- Corbeille ---
 
-    async getTrash(orgId) {
-        return this.request(`/api/${orgId}/trash`);
+    async getTrash(collectiveId) {
+        return this.request(`/api/${collectiveId}/trash`);
     }
 
-    async restoreFromTrash(orgId, trashId) {
+    async restoreFromTrash(collectiveId, trashId) {
         return this.request(
-            `/api/${orgId}/trash/${trashId}/restore`,
+            `/api/${collectiveId}/trash/${trashId}/restore`,
             { method: 'POST' }
         );
     }
 
-    async permanentDeleteFromTrash(orgId, trashId) {
+    async permanentDeleteFromTrash(collectiveId, trashId) {
         return this.request(
-            `/api/${orgId}/trash/${trashId}`,
+            `/api/${collectiveId}/trash/${trashId}`,
             { method: 'DELETE' }
         );
     }
 
-    async emptyTrash(orgId) {
+    async emptyTrash(collectiveId) {
         return this.request(
-            `/api/${orgId}/trash`,
+            `/api/${collectiveId}/trash`,
             { method: 'DELETE' }
         );
     }
 
     /** Upload un fichier vers un endpoint */
-    async uploadFile({ orgId, endpoint, file }) {
+    async uploadFile({ collectiveId, endpoint, file }) {
         const formData = new FormData();
         formData.append('file', file);
 
@@ -277,7 +277,7 @@ class Api {
         }
 
         const response = await fetch(
-            `/api/${orgId}/${endpoint}`,
+            `/api/${collectiveId}/${endpoint}`,
             {
                 method: 'POST',
                 headers,
@@ -297,10 +297,10 @@ class Api {
         return response.json();
     }
 
-    /** Modifier une organisation (superadmin) */
-    async updateOrganization(id, data) {
+    /** Modifier un collectif (superadmin) */
+    async updateCollective(id, data) {
         return this.request(
-            `/auth/organizations/${id}`,
+            `/auth/collectives/${id}`,
             {
                 method: 'PUT',
                 body: JSON.stringify(data)
@@ -308,10 +308,10 @@ class Api {
         );
     }
 
-    /** Créer une organisation (superadmin) */
-    async createOrganization(data) {
+    /** Créer un collectif (superadmin) */
+    async createCollective(data) {
         return this.request(
-            '/auth/organizations',
+            '/auth/collectives',
             {
                 method: 'POST',
                 body: JSON.stringify(data)
@@ -319,15 +319,15 @@ class Api {
         );
     }
 
-    /** Supprimer une organisation (superadmin) */
-    async deleteOrganization(id) {
+    /** Supprimer un collectif (superadmin) */
+    async deleteCollective(id) {
         return this.request(
-            `/auth/organizations/${id}`,
+            `/auth/collectives/${id}`,
             { method: 'DELETE' }
         );
     }
 
-    /** Upload le logo d'une organisation (superadmin) */
+    /** Upload le logo d'un collectif (superadmin) */
     async uploadOrgLogo(id, file) {
         const formData = new FormData();
         formData.append('file', file);
@@ -339,7 +339,7 @@ class Api {
         }
 
         const response = await fetch(
-            `/auth/organizations/${id}/logo`,
+            `/auth/collectives/${id}/logo`,
             {
                 method: 'POST',
                 headers,

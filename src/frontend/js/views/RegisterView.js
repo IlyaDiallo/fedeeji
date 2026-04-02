@@ -2,7 +2,7 @@ class RegisterView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(t("register_request") + " - " + t("brand"));
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.passwordVerified = false;
         this.registrationPassword = "";
     }
@@ -30,7 +30,7 @@ class RegisterView extends AbstractView {
                                         </button>
                                     </div>
                                     <div class="mt-3 text-center">
-                                        <a href="/${this.orgId}/login" data-link data-i18n="back_to_login">
+                                        <a href="/${this.collectiveId}/login" data-link data-i18n="back_to_login">
                                             ${t("back_to_login")}
                                         </a>
                                     </div>
@@ -93,7 +93,7 @@ class RegisterView extends AbstractView {
                                 </div>
                                 <div class="d-grid gap-2">
                                     <button type="submit" class="btn btn-primary" data-i18n="save">${t("save")}</button>
-                                    <a href="/${this.orgId}/login" class="btn btn-secondary" data-link data-i18n="cancel">${t("cancel")}</a>
+                                    <a href="/${this.collectiveId}/login" class="btn btn-secondary" data-link data-i18n="cancel">${t("cancel")}</a>
                                 </div>
                                 <div id="register-error" class="text-danger mt-3 text-center d-none"></div>
                             </form>
@@ -125,7 +125,7 @@ class RegisterView extends AbstractView {
                     errDiv.classList.add('d-none');
                     const pwd = document.getElementById('reg-password').value;
                     try {
-                        await api.verifyRegistrationPassword(this.orgId, pwd);
+                        await api.verifyRegistrationPassword(this.collectiveId, pwd);
                         this.registrationPassword = pwd;
                         this.passwordVerified = true;
                         document.querySelector("#app").innerHTML = await this.getHtml();
@@ -159,12 +159,12 @@ class RegisterView extends AbstractView {
                     
                     try {
                         await api.registerMember({
-                            orgId: this.orgId,
+                            collectiveId: this.collectiveId,
                             password: this.registrationPassword,
                             memberData
                         });
                         alert(t("registration_success"));
-                        navigateTo(`/${this.orgId}/login`);
+                        navigateTo(`/${this.collectiveId}/login`);
                     } catch (error) {
                         errDiv.textContent = error.message;
                         errDiv.classList.remove('d-none');

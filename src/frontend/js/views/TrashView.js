@@ -3,7 +3,7 @@ class TrashView extends AbstractView {
         super(params);
         this.setTitle(t("trash") + " - " + t("brand"));
         this.items = [];
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
@@ -57,7 +57,7 @@ class TrashView extends AbstractView {
 
     async loadTrash() {
         try {
-            this.items = await api.getTrash(this.orgId);
+            this.items = await api.getTrash(this.collectiveId);
             this.renderTable();
         } catch (error) {
             alert('Erreur: ' + error.message);
@@ -138,7 +138,7 @@ class TrashView extends AbstractView {
 
     async restoreItem(trashId) {
         try {
-            await api.restoreFromTrash(this.orgId, trashId);
+            await api.restoreFromTrash(this.collectiveId, trashId);
             await this.loadTrash();
         } catch (error) {
             alert('Erreur: ' + error.message);
@@ -149,7 +149,7 @@ class TrashView extends AbstractView {
         if (confirm(t("confirm_permanent_delete"))) {
             try {
                 await api.permanentDeleteFromTrash(
-                    this.orgId, trashId
+                    this.collectiveId, trashId
                 );
                 await this.loadTrash();
             } catch (error) {
@@ -161,7 +161,7 @@ class TrashView extends AbstractView {
     async emptyTrash() {
         if (confirm(t("confirm_empty_trash"))) {
             try {
-                await api.emptyTrash(this.orgId);
+                await api.emptyTrash(this.collectiveId);
                 await this.loadTrash();
             } catch (error) {
                 alert('Erreur: ' + error.message);

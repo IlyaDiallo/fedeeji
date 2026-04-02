@@ -1,34 +1,34 @@
-class SubscriptionsView extends AbstractView {
+class ContributionsView extends AbstractView {
     constructor(params) {
         super(params);
         this.isMember = api.getRole() === 'member';
         this.setTitle(
             (this.isMember
-                ? t("my_subscriptions")
-                : t("subscriptions"))
+                ? t("my_contributions")
+                : t("contributions"))
             + " - " + t("brand")
         );
-        this.subscriptions = [];
+        this.contributions = [];
         this.members = [];
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
         const titleKey = this.isMember
-            ? 'my_subscriptions' : 'subscriptions';
+            ? 'my_contributions' : 'contributions';
 
         // Membre : pas de boutons d'action
         const adminButtons = this.isMember ? '' : `
             <div class="d-flex gap-2">
                 <button class="btn btn-outline-primary"
-                    id="btn-import-subscription">
+                    id="btn-import-contribution">
                     <i class="bi bi-upload"></i>
                     <span class="d-none d-md-inline"
                         data-i18n="import_xlsx">
                         ${t("import_xlsx")}</span>
                 </button>
                 <button class="btn btn-primary"
-                    id="btn-add-subscription">
+                    id="btn-add-contribution">
                     <i class="bi bi-plus-lg"></i>
                     <span class="d-none d-md-inline"
                         data-i18n="add">
@@ -39,7 +39,7 @@ class SubscriptionsView extends AbstractView {
         const searchBar = this.isMember ? '' : `
             <div class="mb-3">
                 <input type="text"
-                    id="search-subscription"
+                    id="search-contribution"
                     class="form-control"
                     placeholder="${t("search_member")}">
             </div>`;
@@ -71,33 +71,33 @@ class SubscriptionsView extends AbstractView {
                                 ${t("actions")}</th>
                         </tr>
                     </thead>
-                    <tbody id="subscriptions-table-body">
+                    <tbody id="contributions-table-body">
                     </tbody>
                 </table>
             </div>
 
             <!-- Modal ajout/édition -->
-            <div class="modal fade" id="subscriptionModal"
+            <div class="modal fade" id="contributionModal"
                 tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"
-                                id="subscriptionModalTitle">
-                                ${t("add_edit_subscription")}</h5>
+                                id="contributionModalTitle">
+                                ${t("add_edit_contribution")}</h5>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <form id="subscription-form">
+                            <form id="contribution-form">
                                 <input type="hidden"
-                                    id="subscription-id">
+                                    id="contribution-id">
                                 <div class="mb-3">
                                     <label class="form-label"
                                         data-i18n="member">
                                         ${t("member")}</label>
                                     <select class="form-select"
-                                        id="subscription-memberId"
+                                        id="contribution-memberId"
                                         required>
                                     </select>
                                 </div>
@@ -107,14 +107,14 @@ class SubscriptionsView extends AbstractView {
                                         ${t("amount")}</label>
                                     <input type="number" step="0.01"
                                         class="form-control"
-                                        id="subscription-amount"
+                                        id="contribution-amount"
                                         required>
                                 </div>
                                 <div class="mb-3">
          
                                     <input type="number"
                                         class="form-control"
-                                        id="subscription-year"
+                                        id="contribution-year"
                                         min="2000" max="2100"
                                         value="${new Date().getFullYear()}"
                                         required>
@@ -125,7 +125,7 @@ class SubscriptionsView extends AbstractView {
                                         ${t("date")}</label>
                                     <input type="date"
                                         class="form-control"
-                                        id="subscription-date"
+                                        id="contribution-date"
                                         required>
                                 </div>
                             </form>
@@ -138,7 +138,7 @@ class SubscriptionsView extends AbstractView {
                                 ${t("cancel")}</button>
                             <button type="button"
                                 class="btn btn-primary"
-                                id="btn-save-subscription"
+                                id="btn-save-contribution"
                                 data-i18n="save">
                                 ${t("save")}</button>
                         </div>
@@ -153,8 +153,8 @@ class SubscriptionsView extends AbstractView {
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"
-                                data-i18n="import_subscriptions">
-                                ${t("import_subscriptions")}</h5>
+                                data-i18n="import_contributions">
+                                ${t("import_contributions")}</h5>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
@@ -205,18 +205,18 @@ class SubscriptionsView extends AbstractView {
     async loadData() {
         try {
             if (this.isMember) {
-                // Membre : seulement ses propres cotisations
-                this.subscriptions = await api.get(
-                    this.orgId, 'subscriptions'
+                // Membre : seulement ses propres contributions
+                this.contributions = await api.get(
+                    this.collectiveId, 'contributions'
                 );
                 this.members = [];
             } else {
-                [this.subscriptions, this.members] =
+                [this.contributions, this.members] =
                     await Promise.all([
                         api.get(
-                            this.orgId, 'subscriptions'
+                            this.collectiveId, 'contributions'
                         ),
-                        api.get(this.orgId, 'members')
+                        api.get(this.collectiveId, 'members')
                     ]);
             }
             this.renderTable();
@@ -230,7 +230,7 @@ class SubscriptionsView extends AbstractView {
 
     renderMemberSelect() {
         const select = document.getElementById(
-            'subscription-memberId'
+            'contribution-memberId'
         );
         if (!select) return;
         select.innerHTML =
@@ -246,11 +246,11 @@ class SubscriptionsView extends AbstractView {
 
     renderTable(searchTerm = '') {
         const tbody = document.getElementById(
-            'subscriptions-table-body'
+            'contributions-table-body'
         );
         tbody.innerHTML = '';
 
-        const filtered = this.subscriptions.filter(s => {
+        const filtered = this.contributions.filter(s => {
             const member =
                 this.members.find(m => m.id === s.memberId);
             const memberName = member
@@ -313,7 +313,7 @@ class SubscriptionsView extends AbstractView {
                     btn.addEventListener('click', (e) => {
                         const id = e.target
                             .closest('button').dataset.id;
-                        this.deleteSubscription(id);
+                        this.deleteContribution(id);
                     });
                 });
         }
@@ -325,28 +325,28 @@ class SubscriptionsView extends AbstractView {
         if (this.isMember) return;
 
         this.modal = new bootstrap.Modal(
-            document.getElementById('subscriptionModal')
+            document.getElementById('contributionModal')
         );
         this.importModal = new bootstrap.Modal(
             document.getElementById('importModal')
         );
 
-        document.getElementById('btn-add-subscription')
+        document.getElementById('btn-add-contribution')
             .addEventListener('click', () => {
                 this.openModal();
             });
 
-        document.getElementById('btn-save-subscription')
+        document.getElementById('btn-save-contribution')
             .addEventListener('click', () => {
-                this.saveSubscription();
+                this.saveContribution();
             });
 
-        document.getElementById('search-subscription')
+        document.getElementById('search-contribution')
             .addEventListener('input', (e) => {
                 this.renderTable(e.target.value);
             });
 
-        document.getElementById('btn-import-subscription')
+        document.getElementById('btn-import-contribution')
             .addEventListener('click', () => {
                 this.openImportModal();
             });
@@ -358,24 +358,24 @@ class SubscriptionsView extends AbstractView {
     }
 
     openModal(id = null) {
-        const form = document.getElementById('subscription-form');
+        const form = document.getElementById('contribution-form');
         form.reset();
-        document.getElementById('subscription-id').value = '';
+        document.getElementById('contribution-id').value = '';
 
         if (id) {
-            const sub = this.subscriptions
+            const sub = this.contributions
                 .find(s => s.id === id);
             if (sub) {
-                document.getElementById('subscription-id')
+                document.getElementById('contribution-id')
                     .value = sub.id;
-                document.getElementById('subscription-memberId')
+                document.getElementById('contribution-memberId')
                     .value = sub.memberId || '';
-                document.getElementById('subscription-amount')
+                document.getElementById('contribution-amount')
                     .value = sub.amount || '';
-                document.getElementById('subscription-year')
+                document.getElementById('contribution-year')
                     .value = sub.year
                         || new Date().getFullYear();
-                document.getElementById('subscription-date')
+                document.getElementById('contribution-date')
                     .value = sub.date || '';
             }
         }
@@ -419,8 +419,8 @@ class SubscriptionsView extends AbstractView {
 
         try {
             const results = await api.uploadFile({
-                orgId: this.orgId,
-                endpoint: 'import-subscriptions',
+                collectiveId: this.collectiveId,
+                endpoint: 'import-contributions',
                 file
             });
             this.showImportResults(results);
@@ -500,21 +500,21 @@ class SubscriptionsView extends AbstractView {
         `;
     }
 
-    async saveSubscription() {
+    async saveContribution() {
         const id =
-            document.getElementById('subscription-id').value;
+            document.getElementById('contribution-id').value;
         const data = {
             memberId: document.getElementById(
-                'subscription-memberId'
+                'contribution-memberId'
             ).value,
             amount: document.getElementById(
-                'subscription-amount'
+                'contribution-amount'
             ).value,
             year: Number(document.getElementById(
-                'subscription-year'
+                'contribution-year'
             ).value),
             date: document.getElementById(
-                'subscription-date'
+                'contribution-date'
             ).value
         };
 
@@ -526,11 +526,11 @@ class SubscriptionsView extends AbstractView {
         try {
             if (id) {
                 await api.update(
-                    this.orgId, 'subscriptions', id, data
+                    this.collectiveId, 'contributions', id, data
                 );
             } else {
                 await api.create(
-                    this.orgId, 'subscriptions', data
+                    this.collectiveId, 'contributions', data
                 );
             }
             this.modal.hide();
@@ -541,11 +541,11 @@ class SubscriptionsView extends AbstractView {
         }
     }
 
-    async deleteSubscription(id) {
+    async deleteContribution(id) {
         if (confirm(t("confirm_delete"))) {
             try {
                 await api.delete(
-                    this.orgId, 'subscriptions', id
+                    this.collectiveId, 'contributions', id
                 );
                 await this.loadData();
             } catch (error) {

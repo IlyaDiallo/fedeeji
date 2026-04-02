@@ -2,7 +2,7 @@ class ProgrammeView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(t("programme") + " - " + t("brand"));
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.isMember = api.getRole() === 'member';
         this.events = [];
         this.actions = [];
@@ -257,15 +257,15 @@ class ProgrammeView extends AbstractView {
     async loadData() {
         try {
             const [events, actions, actionLogs] = await Promise.all([
-                api.get(this.orgId, 'events'),
-                api.get(this.orgId, 'actions'),
-                api.get(this.orgId, 'action-logs')
+                api.get(this.collectiveId, 'events'),
+                api.get(this.collectiveId, 'actions'),
+                api.get(this.collectiveId, 'action-logs')
             ]);
             this.events = events || [];
             this.actions = actions || [];
             this.actionLogs = actionLogs || [];
             if (!this.isMember) {
-                this.members = await api.get(this.orgId, 'members');
+                this.members = await api.get(this.collectiveId, 'members');
             }
         } catch (error) {
             this.events = [];
@@ -461,8 +461,8 @@ class ProgrammeView extends AbstractView {
         const cancelledLabel = occ.isCancelled ? ` <span class="badge bg-danger ms-1">${t("occurrence_cancelled")}</span>` : '';
 
         const inscLink = isRecurrent
-            ? `<a href="/${this.orgId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary ms-1" data-link title="${t("plan_inscriptions")}"><i class="bi bi-calendar-check"></i></a>`
-            : `<a href="/${this.orgId}/inscriptions?eventId=${event.id}&date=${occ.occurrenceDate}" class="btn btn-sm btn-outline-success ms-1" data-link title="${t("inscriptions")}"><i class="bi bi-calendar-plus"></i></a>`;
+            ? `<a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary ms-1" data-link title="${t("plan_inscriptions")}"><i class="bi bi-calendar-check"></i></a>`
+            : `<a href="/${this.collectiveId}/inscriptions?eventId=${event.id}&date=${occ.occurrenceDate}" class="btn btn-sm btn-outline-success ms-1" data-link title="${t("inscriptions")}"><i class="bi bi-calendar-plus"></i></a>`;
 
         return `
             <div class="d-flex w-100 justify-content-between align-items-center">
@@ -1071,9 +1071,9 @@ class ProgrammeView extends AbstractView {
 
         try {
             if (id) {
-                await api.update(this.orgId, 'actions', id, data);
+                await api.update(this.collectiveId, 'actions', id, data);
             } else {
-                await api.create(this.orgId, 'actions', data);
+                await api.create(this.collectiveId, 'actions', data);
             }
             this.actionModal.hide();
             await this.loadData();
@@ -1085,7 +1085,7 @@ class ProgrammeView extends AbstractView {
     async deleteAction(id) {
         if (!confirm(t("confirm_delete"))) return;
         try {
-            await api.delete(this.orgId, 'actions', id);
+            await api.delete(this.collectiveId, 'actions', id);
             await this.loadData();
         } catch (error) {
             alert(t("error") + ': ' + error.message);
@@ -1449,9 +1449,9 @@ class ProgrammeView extends AbstractView {
 
         try {
             if (id) {
-                await api.update(this.orgId, 'action-logs', id, data);
+                await api.update(this.collectiveId, 'action-logs', id, data);
             } else {
-                await api.create(this.orgId, 'action-logs', data);
+                await api.create(this.collectiveId, 'action-logs', data);
             }
             this.logModal.hide();
             await this.loadData();
@@ -1466,7 +1466,7 @@ class ProgrammeView extends AbstractView {
         if (!confirm(t("confirm_delete"))) return;
 
         try {
-            await api.delete(this.orgId, 'action-logs', logId);
+            await api.delete(this.collectiveId, 'action-logs', logId);
             this.logModal.hide();
             await this.loadData();
         } catch (error) {

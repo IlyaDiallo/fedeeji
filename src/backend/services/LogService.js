@@ -12,13 +12,13 @@ class LogService {
 
     /**
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.action
      * @param {string} params.targetCollection
      * @param {string} params.targetId
      * @param {any} params.details
      */
-    async log({ organisationId, action, targetCollection, targetId, details }) {
+    async log({ collectiveId, action, targetCollection, targetId, details }) {
         const logEntry = {
             id: crypto.randomUUID(),
             timestamp: Date.now(),
@@ -28,13 +28,13 @@ class LogService {
             details
         };
 
-        const logs = await this.storage.read({ organisationId, collection: this.collection }) || [];
+        const logs = await this.storage.read({ collectiveId, collection: this.collection }) || [];
         logs.push(logEntry);
-        await this.storage.write({ organisationId, collection: this.collection, data: logs });
+        await this.storage.write({ collectiveId, collection: this.collection, data: logs });
     }
 
-    async getLogs({ organisationId }) {
-        return await this.storage.read({ organisationId, collection: this.collection }) || [];
+    async getLogs({ collectiveId }) {
+        return await this.storage.read({ collectiveId, collection: this.collection }) || [];
     }
 }
 

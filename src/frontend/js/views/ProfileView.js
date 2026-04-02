@@ -4,7 +4,7 @@ class ProfileView extends AbstractView {
         this.setTitle(
             t("my_profile") + " - " + t("brand")
         );
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.member = null;
     }
 
@@ -123,7 +123,7 @@ class ProfileView extends AbstractView {
     async loadProfile() {
         try {
             this.member = await api.getMyProfile(
-                this.orgId
+                this.collectiveId
             );
             this.fillForm();
         } catch (error) {
@@ -187,7 +187,7 @@ class ProfileView extends AbstractView {
 
         try {
             this.member = await api.updateMyProfile(
-                this.orgId, data
+                this.collectiveId, data
             );
             this.showAlert('success', t('profile_saved'));
         } catch (error) {

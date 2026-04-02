@@ -44,13 +44,13 @@ class AuthService {
     /**
      * Connexion admin (membre avec flag admin + mot de passe)
      * @param {Object} params
-     * @param {string} params.orgId
+     * @param {string} params.collectiveId
      * @param {string} params.email
      * @param {string} params.password
      */
-    async loginAdmin({ orgId, email, password }) {
+    async loginAdmin({ collectiveId, email, password }) {
         const members = await this.storage.read({
-            organisationId: orgId,
+            collectiveId: collectiveId,
             collection: 'members'
         }) || [];
 
@@ -82,7 +82,7 @@ class AuthService {
         const token = jwt.sign(
             {
                 role: 'admin',
-                orgId,
+                collectiveId,
                 memberId: member.id
             },
             JWT_SECRET,
@@ -92,7 +92,7 @@ class AuthService {
         return {
             token,
             role: 'admin',
-            orgId,
+            collectiveId,
             memberId: member.id,
             memberName: `${member.firstName} ${member.lastName}`
         };
@@ -101,12 +101,12 @@ class AuthService {
     /**
      * Connexion membre simple (email seul, sans mot de passe)
      * @param {Object} params
-     * @param {string} params.orgId
+     * @param {string} params.collectiveId
      * @param {string} params.email
      */
-    async loginMember({ orgId, email }) {
+    async loginMember({ collectiveId, email }) {
         const members = await this.storage.read({
-            organisationId: orgId,
+            collectiveId: collectiveId,
             collection: 'members'
         }) || [];
 
@@ -121,7 +121,7 @@ class AuthService {
         const token = jwt.sign(
             {
                 role: 'member',
-                orgId,
+                collectiveId,
                 memberId: member.id
             },
             JWT_SECRET,
@@ -131,7 +131,7 @@ class AuthService {
         return {
             token,
             role: 'member',
-            orgId,
+            collectiveId,
             memberId: member.id,
             memberName: `${member.firstName} ${member.lastName}`
         };

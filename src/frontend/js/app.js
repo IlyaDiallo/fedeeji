@@ -22,28 +22,28 @@ const navigateTo = url => {
 let currentOrgId = null;
 let currentOrgName = null;
 let currentOrgLabel = null;
-let currentOrgSubscriptionsEnabled = true;
+let currentOrgContributionsEnabled = true;
 
 /**
- * Récupère le nom et le label d'une organisation via l'API publique et les met en cache
+ * Récupère le nom et le label d'un collectif via l'API publique et les met en cache
  */
-const fetchOrgName = async (orgId) => {
-    if (!orgId) {
+const fetchOrgName = async (collectiveId) => {
+    if (!collectiveId) {
         currentOrgName = null;
         currentOrgLabel = null;
-        currentOrgSubscriptionsEnabled = true;
+        currentOrgContributionsEnabled = true;
         return;
     }
     try {
-        const orgs = await api.getOrganizations();
-        const org = orgs.find(o => o.id === orgId);
+        const orgs = await api.getCollectives();
+        const org = orgs.find(o => o.id === collectiveId);
         currentOrgName = org?.name || null;
         currentOrgLabel = org?.label || null;
-        currentOrgSubscriptionsEnabled = org?.subscriptionsEnabled !== false;
+        currentOrgContributionsEnabled = org?.contributionsEnabled !== false;
     } catch (e) {
         currentOrgName = null;
         currentOrgLabel = null;
-        currentOrgSubscriptionsEnabled = true;
+        currentOrgContributionsEnabled = true;
     }
 };
 
@@ -61,7 +61,7 @@ const updateNavbarBrand = () => {
  */
 const canAccessRoute = (path) => {
     // Routes de login toujours accessibles
-    if (path === '/login' || path === '/:orgId/login' || path === '/:orgId/register') {
+    if (path === '/login' || path === '/:collectiveId/login' || path === '/:collectiveId/register') {
         return true;
     }
 
@@ -79,15 +79,15 @@ const canAccessRoute = (path) => {
     // Membre : accès limité
     if (role === 'member') {
         const memberRoutes = [
-            '/:orgId',
-            '/:orgId/events',
-            '/:orgId/inscriptions',
-            '/:orgId/events/:eventId/inscription-schedule',
-            '/:orgId/programme',
-            '/:orgId/profile'
+            '/:collectiveId',
+            '/:collectiveId/events',
+            '/:collectiveId/inscriptions',
+            '/:collectiveId/events/:eventId/inscription-schedule',
+            '/:collectiveId/programme',
+            '/:collectiveId/profile'
         ];
-        if (currentOrgSubscriptionsEnabled) {
-            memberRoutes.push('/:orgId/subscriptions');
+        if (currentOrgContributionsEnabled) {
+            memberRoutes.push('/:collectiveId/contributions');
         }
         return memberRoutes.includes(path);
     }
@@ -133,16 +133,16 @@ const updateNav = () => {
         navLinks.innerHTML = `
             <li class="nav-item">
                 <a class="nav-link" href="/" data-link
-                    data-i18n="org_list_title">
-                    ${t("org_list_title")}</a>
+                    data-i18n="collective_list_title">
+                    ${t("collective_list_title")}</a>
             </li>
         `;
         updateTranslations();
         return;
     }
 
-    const orgId = currentOrgId || api.getUserOrgId();
-    if (!orgId) {
+    const collectiveId = currentOrgId || api.getUserOrgId();
+    if (!collectiveId) {
         navLinks.innerHTML = '';
         updateTranslations();
         return;
@@ -155,8 +155,8 @@ const updateNav = () => {
         links += `
             <li class="nav-item">
                 <a class="nav-link" href="/" data-link
-                    data-i18n="org_list_title">
-                    ${t("org_list_title")}</a>
+                    data-i18n="collective_list_title">
+                    ${t("collective_list_title")}</a>
             </li>
         `;
     }
@@ -164,7 +164,7 @@ const updateNav = () => {
     // Accueil org (tous les rôles)
     links += `
         <li class="nav-item">
-            <a class="nav-link" href="/${orgId}"
+            <a class="nav-link" href="/${collectiveId}"
                 data-link data-i18n="welcome">
                 ${t("welcome")}</a>
         </li>
@@ -173,7 +173,7 @@ const updateNav = () => {
     // Événements (tous les rôles)
     links += `
         <li class="nav-item">
-            <a class="nav-link" href="/${orgId}/events"
+            <a class="nav-link" href="/${collectiveId}/events"
                 data-link data-i18n="events">
                 ${t("events")}</a>
         </li>
@@ -183,7 +183,7 @@ const updateNav = () => {
     links += `
         <li class="nav-item">
             <a class="nav-link"
-                href="/${orgId}/inscriptions"
+                href="/${collectiveId}/inscriptions"
                 data-link data-i18n="inscriptions">
                 ${t("inscriptions")}</a>
         </li>
@@ -193,36 +193,36 @@ const updateNav = () => {
     links += `
         <li class="nav-item">
             <a class="nav-link"
-                href="/${orgId}/programme"
+                href="/${collectiveId}/programme"
                 data-link data-i18n="programme">
                 ${t("programme")}</a>
         </li>
         <li class="nav-item">
             <a class="nav-link"
-                href="/${orgId}/action-history"
+                href="/${collectiveId}/action-history"
                 data-link data-i18n="action_history">
                 ${t("action_history")}</a>
         </li>
     `;
 
-    // Membre : accès profil et cotisations
+    // Membre : accès profil et contributions
     if (role === 'member') {
         links += `
             <li class="nav-item">
                 <a class="nav-link"
-                    href="/${orgId}/profile"
+                    href="/${collectiveId}/profile"
                     data-link data-i18n="my_profile">
                     ${t("my_profile")}</a>
             </li>
         `;
-        if (currentOrgSubscriptionsEnabled) {
+        if (currentOrgContributionsEnabled) {
             links += `
                 <li class="nav-item">
                     <a class="nav-link"
-                        href="/${orgId}/subscriptions"
+                        href="/${collectiveId}/contributions"
                         data-link
-                        data-i18n="my_subscriptions">
-                        ${t("my_subscriptions")}</a>
+                        data-i18n="my_contributions">
+                        ${t("my_contributions")}</a>
                 </li>
             `;
         }
@@ -233,25 +233,25 @@ const updateNav = () => {
         links += `
             <li class="nav-item">
                 <a class="nav-link"
-                    href="/${orgId}/members"
+                    href="/${collectiveId}/members"
                     data-link data-i18n="members">
                     ${t("members")}</a>
             </li>
         `;
-        if (currentOrgSubscriptionsEnabled) {
+        if (currentOrgContributionsEnabled) {
             links += `
                 <li class="nav-item">
                     <a class="nav-link"
-                        href="/${orgId}/subscriptions"
-                        data-link data-i18n="subscriptions">
-                        ${t("subscriptions")}</a>
+                        href="/${collectiveId}/contributions"
+                        data-link data-i18n="contributions">
+                        ${t("contributions")}</a>
                 </li>
             `;
         }
         links += `
             <li class="nav-item">
                 <a class="nav-link"
-                    href="/${orgId}/trash"
+                    href="/${collectiveId}/trash"
                     data-link data-i18n="trash">
                     🗑 ${t("trash")}</a>
             </li>
@@ -279,28 +279,28 @@ const updateTranslations = () => {
 const router = async () => {
     const routes = [
         { path: "/login", view: LoginView },
-        { path: "/:orgId/login", view: LoginView },
-        { path: "/:orgId/register", view: RegisterView },
-        { path: "/", view: OrgListView },
-        { path: "/:orgId", view: HomeView },
-        { path: "/:orgId/members", view: MembersView },
+        { path: "/:collectiveId/login", view: LoginView },
+        { path: "/:collectiveId/register", view: RegisterView },
+        { path: "/", view: CollectiveListView },
+        { path: "/:collectiveId", view: HomeView },
+        { path: "/:collectiveId/members", view: MembersView },
         {
-            path: "/:orgId/subscriptions",
-            view: SubscriptionsView
+            path: "/:collectiveId/contributions",
+            view: ContributionsView
         },
-        { path: "/:orgId/events", view: EventsView },
+        { path: "/:collectiveId/events", view: EventsView },
         {
-            path: "/:orgId/inscriptions",
+            path: "/:collectiveId/inscriptions",
             view: InscriptionsView
         },
         {
-            path: "/:orgId/events/:eventId/inscription-schedule",
+            path: "/:collectiveId/events/:eventId/inscription-schedule",
             view: InscriptionScheduleView
         },
-        { path: "/:orgId/programme", view: ProgrammeView },
-        { path: "/:orgId/action-history", view: ActionHistoryView },
-        { path: "/:orgId/profile", view: ProfileView },
-        { path: "/:orgId/trash", view: TrashView },
+        { path: "/:collectiveId/programme", view: ProgrammeView },
+        { path: "/:collectiveId/action-history", view: ActionHistoryView },
+        { path: "/:collectiveId/profile", view: ProfileView },
+        { path: "/:collectiveId/trash", view: TrashView },
     ];
 
     // Tester chaque route pour un match
@@ -327,16 +327,16 @@ const router = async () => {
     const params = getParams(match);
     const isLoginRoute =
         match.route.path === '/login'
-        || match.route.path === '/:orgId/login'
-        || match.route.path === '/:orgId/register';
+        || match.route.path === '/:collectiveId/login'
+        || match.route.path === '/:collectiveId/register';
 
-    // Récupérer le nom/label de l'org si l'orgId a changé (y compris pages login)
-    const newOrgId = params.orgId || null;
+    // Récupérer le nom/label de l'org si l'collectiveId a changé (y compris pages login)
+    const newOrgId = params.collectiveId || null;
     if (newOrgId !== currentOrgId || (newOrgId && !currentOrgName)) {
         await fetchOrgName(newOrgId);
     }
 
-    // Mettre à jour l'orgId courant (sauf sur les pages login)
+    // Mettre à jour l'collectiveId courant (sauf sur les pages login)
     if (!isLoginRoute) {
         currentOrgId = newOrgId;
     }
@@ -346,8 +346,8 @@ const router = async () => {
 
     // Redirection si non authentifié (sauf pages login)
     if (!api.isAuthenticated() && !isLoginRoute) {
-        if (params.orgId) {
-            navigateTo(`/${params.orgId}/login`);
+        if (params.collectiveId) {
+            navigateTo(`/${params.collectiveId}/login`);
         } else {
             navigateTo('/login');
         }
@@ -359,9 +359,9 @@ const router = async () => {
         api.isAuthenticated()
         && !canAccessRoute(match.route.path)
     ) {
-        const orgId = api.getUserOrgId();
-        if (orgId) {
-            navigateTo(`/${orgId}`);
+        const collectiveId = api.getUserOrgId();
+        if (collectiveId) {
+            navigateTo(`/${collectiveId}`);
         } else {
             navigateTo('/');
         }
@@ -374,9 +374,9 @@ const router = async () => {
         && match.route.path === '/'
         && api.getRole() !== 'superadmin'
     ) {
-        const orgId = api.getUserOrgId();
-        if (orgId) {
-            navigateTo(`/${orgId}`);
+        const collectiveId = api.getUserOrgId();
+        if (collectiveId) {
+            navigateTo(`/${collectiveId}`);
             return;
         }
     }
@@ -387,8 +387,8 @@ const router = async () => {
         if (role === 'superadmin') {
             navigateTo('/');
         } else {
-            const orgId = api.getUserOrgId();
-            navigateTo(orgId ? `/${orgId}` : '/');
+            const collectiveId = api.getUserOrgId();
+            navigateTo(collectiveId ? `/${collectiveId}` : '/');
         }
         return;
     }

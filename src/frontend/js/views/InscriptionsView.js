@@ -7,7 +7,7 @@ class InscriptionsView extends AbstractView {
         this.inscriptions = [];
         this.members = [];
         this.events = [];
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.isMember = api.getRole() === 'member';
     }
 
@@ -172,13 +172,13 @@ class InscriptionsView extends AbstractView {
     async loadData() {
         try {
             const promises = [
-                api.get(this.orgId, 'inscriptions'),
-                api.get(this.orgId, 'events')
+                api.get(this.collectiveId, 'inscriptions'),
+                api.get(this.collectiveId, 'events')
             ];
             // Membre : pas d'accès à la liste des membres
             if (!this.isMember) {
                 promises.push(
-                    api.get(this.orgId, 'members')
+                    api.get(this.collectiveId, 'members')
                 );
             }
             const results = await Promise.all(promises);
@@ -501,11 +501,11 @@ class InscriptionsView extends AbstractView {
         try {
             if (id) {
                 await api.update(
-                    this.orgId, 'inscriptions', id, data
+                    this.collectiveId, 'inscriptions', id, data
                 );
             } else {
                 await api.create(
-                    this.orgId, 'inscriptions', data
+                    this.collectiveId, 'inscriptions', data
                 );
             }
             this.modal.hide();
@@ -520,7 +520,7 @@ class InscriptionsView extends AbstractView {
         if (confirm(t("confirm_delete"))) {
             try {
                 await api.delete(
-                    this.orgId, 'inscriptions', id
+                    this.collectiveId, 'inscriptions', id
                 );
                 await this.loadData();
             } catch (error) {

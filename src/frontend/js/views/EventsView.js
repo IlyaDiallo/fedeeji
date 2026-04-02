@@ -3,7 +3,7 @@ class EventsView extends AbstractView {
         super(params);
         this.setTitle(t("events") + " - " + t("brand"));
         this.events = [];
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.isMember = api.getRole() === 'member';
     }
 
@@ -273,7 +273,7 @@ class EventsView extends AbstractView {
     async loadEvents() {
         try {
             this.events = await api.get(
-                this.orgId, 'events'
+                this.collectiveId, 'events'
             );
             this.renderTable();
         } catch (error) {
@@ -319,17 +319,17 @@ class EventsView extends AbstractView {
                     ${this.isMember ? `
                     <div class="btn-group-actions">
                         ${(event.recurrence && event.recurrence !== 'none') ? `
-                        <a href="/${this.orgId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary" data-link title="${t("plan_inscriptions")}">
+                        <a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary" data-link title="${t("plan_inscriptions")}">
                             <i class="bi bi-calendar-check"></i>
                         </a>` : ''}
-                        <a href="/${this.orgId}/inscriptions?eventId=${event.id}" class="btn btn-sm btn-outline-success" data-link title="${t("inscriptions")}">
+                        <a href="/${this.collectiveId}/inscriptions?eventId=${event.id}" class="btn btn-sm btn-outline-success" data-link title="${t("inscriptions")}">
                             <i class="bi bi-calendar-plus"></i>
                         </a>
                     </div>
                     ` : `
                     <div class="btn-group-actions">
                         ${(event.recurrence && event.recurrence !== 'none') ? `
-                        <a href="/${this.orgId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-info" data-link title="${t("plan_inscriptions")}">
+                        <a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-info" data-link title="${t("plan_inscriptions")}">
                             <i class="bi bi-calendar-check"></i>
                         </a>` : ''}
                         <button class="btn btn-sm
@@ -572,11 +572,11 @@ class EventsView extends AbstractView {
         try {
             if (id) {
                 await api.update(
-                    this.orgId, 'events', id, data
+                    this.collectiveId, 'events', id, data
                 );
             } else {
                 await api.create(
-                    this.orgId, 'events', data
+                    this.collectiveId, 'events', data
                 );
             }
             this.modal.hide();
@@ -591,7 +591,7 @@ class EventsView extends AbstractView {
         if (confirm(t("confirm_delete"))) {
             try {
                 await api.delete(
-                    this.orgId, 'events', id
+                    this.collectiveId, 'events', id
                 );
                 await this.loadEvents();
             } catch (error) {

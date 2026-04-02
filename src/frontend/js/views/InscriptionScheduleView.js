@@ -4,7 +4,7 @@ class InscriptionScheduleView extends AbstractView {
         this.setTitle(
             t("inscription_schedule") + " - " + t("brand")
         );
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
         this.eventId = params.eventId;
         this.isMember = api.getRole() === 'member';
         this.event = null;
@@ -42,7 +42,7 @@ class InscriptionScheduleView extends AbstractView {
                 align-items-center mb-3">
                 <h2 id="schedule-title">
                     ${t("inscription_schedule")}</h2>
-                <a href="/${this.orgId}/programme"
+                <a href="/${this.collectiveId}/programme"
                     class="btn btn-outline-secondary"
                     data-link>
                     <i class="bi bi-arrow-left"></i>
@@ -112,13 +112,13 @@ class InscriptionScheduleView extends AbstractView {
         try {
             const promises = [
                 api.getById(
-                    this.orgId, 'events', this.eventId
+                    this.collectiveId, 'events', this.eventId
                 ),
-                api.get(this.orgId, 'inscriptions')
+                api.get(this.collectiveId, 'inscriptions')
             ];
             if (!this.isMember) {
                 promises.push(
-                    api.get(this.orgId, 'members')
+                    api.get(this.collectiveId, 'members')
                 );
             }
             const results = await Promise.all(promises);
@@ -600,7 +600,7 @@ class InscriptionScheduleView extends AbstractView {
                     [...cancelled, date];
             }
             await api.update(
-                this.orgId, 'events', this.eventId,
+                this.collectiveId, 'events', this.eventId,
                 {
                     cancelledDates:
                         this.event.cancelledDates
@@ -702,7 +702,7 @@ class InscriptionScheduleView extends AbstractView {
 
         try {
             await api.request(
-                `/api/${this.orgId}/inscriptions/bulk`,
+                `/api/${this.collectiveId}/inscriptions/bulk`,
                 {
                     method: 'POST',
                     body: JSON.stringify({
@@ -717,7 +717,7 @@ class InscriptionScheduleView extends AbstractView {
                 .disabled = true;
             // Recharger les inscriptions pour être à jour
             this.inscriptions = await api.get(
-                this.orgId, 'inscriptions'
+                this.collectiveId, 'inscriptions'
             );
             this.loadLocalResponses();
             this.renderMonth();

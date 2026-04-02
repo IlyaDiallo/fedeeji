@@ -1,12 +1,12 @@
 [
   {
     "id": "default",
-    "name": "Default Organization",
-    "label": "Organisation par défaut",
+    "name": "Default Collective",
+    "label": "Collectif par défaut",
     "adminEmail": "admin@default.com",
     "defaultLanguage": "fr",
     "logo": "/favicon.svg",
     "registrationPassword": "test",
-    "subscriptionsEnabled": true
+    "contributionsEnabled": true
   }
 ]

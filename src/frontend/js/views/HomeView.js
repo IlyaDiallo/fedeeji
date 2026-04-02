@@ -2,19 +2,19 @@ class HomeView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(t("welcome"));
-        this.orgId = params.orgId;
+        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
         let logo = "/favicon.svg";
         let orgLabel = null;
         try {
-            const orgs = await api.getOrganizations();
-            const currentOrg = orgs.find(o => o.id === this.orgId);
+            const orgs = await api.getCollectives();
+            const currentOrg = orgs.find(o => o.id === this.collectiveId);
             if (currentOrg?.logo) logo = currentOrg.logo;
             if (currentOrg?.label) orgLabel = currentOrg.label;
         } catch (error) {
-            console.error("Erreur lors de la récupération de l'organisation", error);
+            console.error("Erreur lors de la récupération du collectif", error);
         }
 
         const title = orgLabel || t("welcome");

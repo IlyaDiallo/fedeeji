@@ -2,7 +2,7 @@ class LoginView extends AbstractView {
     constructor(params) {
         super(params);
         this.setTitle(t("login_title"));
-        this.orgId = params.orgId || null;
+        this.collectiveId = params.collectiveId || null;
     }
 
     async getHtml() {
@@ -13,11 +13,11 @@ class LoginView extends AbstractView {
         } catch {
             this.appVersion = null;
         }
-        // Sans orgId dans l'URL : formulaire superadmin uniquement
-        if (!this.orgId) {
+        // Sans collectiveId dans l'URL : formulaire superadmin uniquement
+        if (!this.collectiveId) {
             return this.getSuperadminHtml();
         }
-        // Avec orgId dans l'URL : onglets Membre / Admin
+        // Avec collectiveId dans l'URL : onglets Membre / Admin
         return this.getOrgLoginHtml();
     }
 
@@ -124,7 +124,7 @@ class LoginView extends AbstractView {
                                             </button>
                                         </div>
                                         <div class="mt-3 text-center">
-                                            <a href="/${this.orgId}/register" data-link data-i18n="register_request">
+                                            <a href="/${this.collectiveId}/register" data-link data-i18n="register_request">
                                                 ${t("register_request")}
                                             </a>
                                         </div>
@@ -201,12 +201,12 @@ class LoginView extends AbstractView {
     }
 
     async init() {
-        // Sans orgId : login superadmin
-        if (!this.orgId) {
+        // Sans collectiveId : login superadmin
+        if (!this.collectiveId) {
             this.initSuperadminForm();
             return;
         }
-        // Avec orgId : login membre + admin
+        // Avec collectiveId : login membre + admin
         this.initMemberForm();
         this.initAdminForm();
     }
@@ -243,9 +243,9 @@ class LoginView extends AbstractView {
                 ).value;
                 try {
                     await api.loginMember({
-                        orgId: this.orgId, email
+                        collectiveId: this.collectiveId, email
                     });
-                    navigateTo(`/${this.orgId}`);
+                    navigateTo(`/${this.collectiveId}`);
                 } catch (error) {
                     this.showError(
                         'member-login-error',
@@ -269,11 +269,11 @@ class LoginView extends AbstractView {
                 ).value;
                 try {
                     await api.loginAdmin({
-                        orgId: this.orgId,
+                        collectiveId: this.collectiveId,
                         email,
                         password
                     });
-                    navigateTo(`/${this.orgId}`);
+                    navigateTo(`/${this.collectiveId}`);
                 } catch (error) {
                     this.showError(
                         'admin-login-error',

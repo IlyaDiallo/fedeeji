@@ -1,7 +1,7 @@
-class OrgListView extends AbstractView {
+class CollectiveListView extends AbstractView {
     constructor(params) {
         super(params);
-        this.setTitle(t("org_list_title"));
+        this.setTitle(t("collective_list_title"));
     }
 
     async getHtml() {
@@ -15,21 +15,21 @@ class OrgListView extends AbstractView {
                 </span>
             </div>
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h2 data-i18n="org_list_title">${t("org_list_title")}</h2>
+                <h2 data-i18n="collective_list_title">${t("collective_list_title")}</h2>
                 <button class="btn btn-success" id="new-org-btn">
-                    <i class="bi bi-plus-lg"></i> Nouvelle organisation
+                    <i class="bi bi-plus-lg"></i> Nouveau collectif
                 </button>
             </div>
             <div class="row" id="orgs-container">
                 <!-- Rempli dynamiquement -->
             </div>
 
-            <!-- Modal de création organisation -->
+            <!-- Modal de création collectif -->
             <div class="modal fade" id="newOrgModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Nouvelle organisation</h5>
+                            <h5 class="modal-title">Nouveau collectif</h5>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
@@ -89,10 +89,10 @@ class OrgListView extends AbstractView {
                                     <div class="form-check">
                                         <input type="checkbox"
                                             class="form-check-input"
-                                            id="new-org-subscriptionsEnabled"
+                                            id="new-org-contributionsEnabled"
                                             checked>
                                         <label class="form-check-label">
-                                            Activer les cotisations
+                                            Activer les contributions
                                         </label>
                                     </div>
                                 </div>
@@ -111,12 +111,12 @@ class OrgListView extends AbstractView {
                 </div>
             </div>
 
-            <!-- Modal d'édition organisation -->
+            <!-- Modal d'édition collectif -->
             <div class="modal fade" id="editOrgModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Modifier l'organisation</h5>
+                            <h5 class="modal-title">Modifier le collectif</h5>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
@@ -179,9 +179,9 @@ class OrgListView extends AbstractView {
                                     <div class="form-check">
                                         <input type="checkbox"
                                             class="form-check-input"
-                                            id="edit-org-subscriptionsEnabled">
+                                            id="edit-org-contributionsEnabled">
                                         <label class="form-check-label">
-                                            Activer les cotisations
+                                            Activer les contributions
                                         </label>
                                     </div>
                                 </div>
@@ -205,17 +205,17 @@ class OrgListView extends AbstractView {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header bg-danger text-white">
-                            <h5 class="modal-title">Supprimer l'organisation</h5>
+                            <h5 class="modal-title">Supprimer le collectif</h5>
                             <button type="button" class="btn-close btn-close-white"
                                 data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
-                            <p>Êtes-vous sûr de vouloir supprimer l'organisation
+                            <p>Êtes-vous sûr de vouloir supprimer le collectif
                                 <strong id="delete-org-label"></strong> ?</p>
                             <p class="text-danger">
                                 <i class="bi bi-exclamation-triangle"></i>
                                 Cette action est irréversible. Toutes les données
-                                (membres, événements, cotisations) seront supprimées.
+                                (membres, événements, contributions) seront supprimées.
                             </p>
                             <input type="hidden" id="delete-org-id">
                         </div>
@@ -254,7 +254,7 @@ class OrgListView extends AbstractView {
 
         await this.loadOrgs();
 
-        // Bouton nouvelle organisation
+        // Bouton nouveau collectif
         document.getElementById('new-org-btn')
             .addEventListener('click', () => {
                 this.openNewOrgModal();
@@ -311,13 +311,13 @@ class OrgListView extends AbstractView {
             registrationPassword: document.getElementById(
                 'new-org-registrationPassword'
             ).value.trim(),
-            subscriptionsEnabled: document.getElementById(
-                'new-org-subscriptionsEnabled'
+            contributionsEnabled: document.getElementById(
+                'new-org-contributionsEnabled'
             ).checked
         };
 
         try {
-            await api.createOrganization(data);
+            await api.createCollective(data);
             bootstrap.Modal.getInstance(
                 document.getElementById('newOrgModal')
             ).hide();
@@ -329,12 +329,12 @@ class OrgListView extends AbstractView {
 
     async loadOrgs() {
         try {
-            const orgs = await api.getOrganizations();
+            const orgs = await api.getCollectives();
             const container = document.getElementById('orgs-container');
 
             if (orgs.length === 0) {
                 container.innerHTML = `<div class="col"><p>
-                    Aucune organisation trouvée.</p></div>`;
+                    Aucun collectif trouvée.</p></div>`;
                 return;
             }
 
@@ -353,11 +353,11 @@ class OrgListView extends AbstractView {
                             <p class="card-text text-muted">${org.id}</p>
                             <div class="mt-auto d-flex flex-wrap gap-2 justify-content-center">
                                 <button class="btn btn-sm btn-outline-primary
-                                    edit-org-btn" data-org-id="${org.id}">
+                                    edit-org-btn" data-collective-id="${org.id}">
                                     Modifier
                                 </button>
                                 <button class="btn btn-sm btn-outline-danger
-                                    delete-org-btn" data-org-id="${org.id}"
+                                    delete-org-btn" data-collective-id="${org.id}"
                                     data-org-label="${org.label}">
                                     Supprimer
                                 </button>
@@ -374,7 +374,7 @@ class OrgListView extends AbstractView {
             document.querySelectorAll('.edit-org-btn')
                 .forEach(btn => {
                     btn.addEventListener('click', () => {
-                        this.openEditModal(btn.dataset.orgId);
+                        this.openEditModal(btn.dataset.collectiveId);
                     });
                 });
 
@@ -382,7 +382,7 @@ class OrgListView extends AbstractView {
                 .forEach(btn => {
                     btn.addEventListener('click', () => {
                         this.openDeleteModal(
-                            btn.dataset.orgId,
+                            btn.dataset.collectiveId,
                             btn.dataset.orgLabel
                         );
                     });
@@ -392,10 +392,10 @@ class OrgListView extends AbstractView {
         }
     }
 
-    async openEditModal(orgId) {
+    async openEditModal(collectiveId) {
         try {
-            const orgs = await api.getOrganizations();
-            const org = orgs.find(o => o.id === orgId);
+            const orgs = await api.getCollectives();
+            const org = orgs.find(o => o.id === collectiveId);
             if (!org) return;
 
             document.getElementById('edit-org-id').value = org.id;
@@ -407,8 +407,8 @@ class OrgListView extends AbstractView {
                 org.defaultLanguage || 'fr';
             document.getElementById('edit-org-registrationPassword').value =
                 org.registrationPassword || '';
-            document.getElementById('edit-org-subscriptionsEnabled').checked =
-                org.subscriptionsEnabled !== false;
+            document.getElementById('edit-org-contributionsEnabled').checked =
+                org.contributionsEnabled !== false;
             document.getElementById('edit-org-logo-preview').src =
                 org.logo || '/favicon.svg';
 
@@ -421,8 +421,8 @@ class OrgListView extends AbstractView {
         }
     }
 
-    async openDeleteModal(orgId, orgLabel) {
-        document.getElementById('delete-org-id').value = orgId;
+    async openDeleteModal(collectiveId, orgLabel) {
+        document.getElementById('delete-org-id').value = collectiveId;
         document.getElementById('delete-org-label').textContent = orgLabel;
         const modal = new bootstrap.Modal(
             document.getElementById('deleteOrgModal')
@@ -431,9 +431,9 @@ class OrgListView extends AbstractView {
     }
 
     async deleteOrg() {
-        const orgId = document.getElementById('delete-org-id').value;
+        const collectiveId = document.getElementById('delete-org-id').value;
         try {
-            await api.deleteOrganization(orgId);
+            await api.deleteCollective(collectiveId);
             bootstrap.Modal.getInstance(
                 document.getElementById('deleteOrgModal')
             ).hide();
@@ -450,8 +450,8 @@ class OrgListView extends AbstractView {
         }
 
         try {
-            const orgId = document.getElementById('edit-org-id').value;
-            const result = await api.uploadOrgLogo(orgId, file);
+            const collectiveId = document.getElementById('edit-org-id').value;
+            const result = await api.uploadOrgLogo(collectiveId, file);
             document.getElementById('edit-org-logo-preview').src = result.logo;
         } catch (error) {
             alert('Erreur upload logo: ' + error.message);
@@ -459,7 +459,7 @@ class OrgListView extends AbstractView {
     }
 
     async saveOrg() {
-        const orgId = document.getElementById('edit-org-id').value;
+        const collectiveId = document.getElementById('edit-org-id').value;
         const data = {
             name: document.getElementById('edit-org-name').value,
             label: document.getElementById('edit-org-label').value,
@@ -468,13 +468,13 @@ class OrgListView extends AbstractView {
                 document.getElementById('edit-org-defaultLanguage').value,
             registrationPassword:
                 document.getElementById('edit-org-registrationPassword').value,
-            subscriptionsEnabled: document.getElementById(
-                'edit-org-subscriptionsEnabled'
+            contributionsEnabled: document.getElementById(
+                'edit-org-contributionsEnabled'
             ).checked
         };
 
         try {
-            await api.updateOrganization(orgId, data);
+            await api.updateCollective(collectiveId, data);
             bootstrap.Modal.getInstance(
                 document.getElementById('editOrgModal')
             ).hide();

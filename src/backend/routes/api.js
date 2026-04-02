@@ -11,14 +11,14 @@ const { requireRole } = require('../middleware/auth');
 function createApiRouter({ dataService, trashService, importService }) {
     const router = express.Router({ mergeParams: true });
 
-    // Middleware : vérifie que l'organisationId est présent
+    // Middleware : vérifie que l'collectiveId est présent
     router.use((req, res, next) => {
-        if (!req.params.orgId) {
+        if (!req.params.collectiveId) {
             return res.status(400).json({
-                error: 'OrganisationId manquant dans l\'URL'
+                error: 'CollectiveId manquant dans l\'URL'
             });
         }
-        req.organisationId = req.params.orgId;
+        req.collectiveId = req.params.collectiveId;
         next();
     });
 
@@ -29,7 +29,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await trashService.list({
-                    organisationId: req.organisationId
+                    collectiveId: req.collectiveId
                 });
                 res.json(data);
             } catch (error) {
@@ -43,7 +43,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const entry = await trashService.restore({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     trashId: req.params.trashId
                 });
                 res.json(entry);
@@ -58,7 +58,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await trashService.permanentDelete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     trashId: req.params.trashId
                 });
                 res.json({ success: true });
@@ -73,7 +73,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await trashService.empty({
-                    organisationId: req.organisationId
+                    collectiveId: req.collectiveId
                 });
                 res.json({ success: true });
             } catch (error) {
@@ -82,17 +82,17 @@ function createApiRouter({ dataService, trashService, importService }) {
         }
     );
 
-    // --- Cotisations : membres voient les leurs (lecture seule) ---
+    // --- Contributions : membres voient les leurs (lecture seule) ---
 
-    router.get('/subscriptions',
+    router.get('/contributions',
         requireRole('admin', 'member'),
         async (req, res) => {
             try {
                 let data = await dataService.list({
-                    organisationId: req.organisationId,
-                    collection: 'subscriptions'
+                    collectiveId: req.collectiveId,
+                    collection: 'contributions'
                 });
-                // Membre : ne voir que ses propres cotisations
+                // Membre : ne voir que ses propres contributions
                 if (req.user.role === 'member') {
                     data = data.filter(
                         s => s.memberId === req.user.memberId
@@ -124,7 +124,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     ? req.user.memberId : memberId;
 
                 const existing = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions'
                 });
 
@@ -144,7 +144,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                         // Suppression si  l inscription existe
                         if (found) {
                             await dataService.delete({
-                                organisationId: req.organisationId,
+                                collectiveId: req.collectiveId,
                                 collection: 'inscriptions',
                                 id: found.id
                             });
@@ -152,7 +152,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     } else if (found) {
                         // Mise à jour
                         const updated = await dataService.update({
-                            organisationId: req.organisationId,
+                            collectiveId: req.collectiveId,
                             collection: 'inscriptions',
                             id: found.id,
                             data: { response }
@@ -161,7 +161,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     } else {
                         // Création
                         const created = await dataService.create({
-                            organisationId: req.organisationId,
+                            collectiveId: req.collectiveId,
                             collection: 'inscriptions',
                             data: {
                                 eventId,
@@ -185,7 +185,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 let data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions'
                 });
                 // Membre : ne voir que ses propres inscriptions
@@ -206,7 +206,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions',
                     id: req.params.id
                 });
@@ -242,7 +242,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     // Vérifier que l'événement n'est pas passé
                     if (body.eventId) {
                         const evt = await dataService.get({
-                            organisationId: req.organisationId,
+                            collectiveId: req.collectiveId,
                             collection: 'events',
                             id: body.eventId
                         });
@@ -261,7 +261,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     }
                 }
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions',
                     data: body
                 });
@@ -279,7 +279,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 // Membre : vérifier que c'est  son inscription
                 if (req.user.role === 'member') {
                     const existing = await dataService.get({
-                        organisationId: req.organisationId,
+                        collectiveId: req.collectiveId,
                         collection: 'inscriptions',
                         id: req.params.id
                     });
@@ -297,7 +297,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                         existing.eventId || req.body.eventId;
                     if (eventId) {
                         const evt = await dataService.get({
-                            organisationId: req.organisationId,
+                            collectiveId: req.collectiveId,
                             collection: 'events',
                             id: eventId
                         });
@@ -317,7 +317,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     req.body.memberId = req.user.memberId;
                 }
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions',
                     id: req.params.id,
                     data: req.body
@@ -334,7 +334,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'inscriptions',
                     id: req.params.id
                 });
@@ -352,7 +352,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'actions'
                 });
                 res.json(data);
@@ -369,7 +369,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'actions',
                     id: req.params.id
                 });
@@ -392,7 +392,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'actions',
                     data: req.body
                 });
@@ -410,7 +410,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'actions',
                     id: req.params.id,
                     data: req.body
@@ -429,7 +429,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'actions',
                     id: req.params.id
                 });
@@ -449,7 +449,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'action-logs'
                 });
                 res.json(data);
@@ -473,7 +473,7 @@ function createApiRouter({ dataService, trashService, importService }) {
 
                 if (body.type === 'note') {
                     const existingLogs = await dataService.list({
-                        organisationId: req.organisationId,
+                        collectiveId: req.collectiveId,
                         collection: 'action-logs'
                     });
                     const existingNote = existingLogs.find(l => 
@@ -483,7 +483,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     );
                     if (existingNote) {
                         const data = await dataService.update({
-                            organisationId: req.organisationId,
+                            collectiveId: req.collectiveId,
                             collection: 'action-logs',
                             id: existingNote.id,
                             data: body
@@ -493,7 +493,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 } else if (body.type === 'done') {
                     // Bloquer si le dernier log (par timestamp) a déjà cet état
                     const existingLogs = await dataService.list({
-                        organisationId: req.organisationId,
+                        collectiveId: req.collectiveId,
                         collection: 'action-logs'
                     });
                     const bodyState = body.state !== undefined ? body.state : 1;
@@ -516,7 +516,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 }
 
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'action-logs',
                     data: body
                 });
@@ -535,7 +535,7 @@ function createApiRouter({ dataService, trashService, importService }) {
             try {
                 if (req.user.role === 'member') {
                     const existing = await dataService.get({
-                        organisationId: req.organisationId,
+                        collectiveId: req.collectiveId,
                         collection: 'action-logs',
                         id: req.params.id
                     });
@@ -549,7 +549,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     req.body.memberId = req.user.memberId;
                 }
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'action-logs',
                     id: req.params.id,
                     data: req.body
@@ -569,7 +569,7 @@ function createApiRouter({ dataService, trashService, importService }) {
             try {
                 if (req.user.role === 'member') {
                     const existing = await dataService.get({
-                        organisationId: req.organisationId,
+                        collectiveId: req.collectiveId,
                         collection: 'action-logs',
                         id: req.params.id
                     });
@@ -582,7 +582,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     }
                 }
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'action-logs',
                     id: req.params.id
                 });
@@ -602,7 +602,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'events'
                 });
                 res.json(data);
@@ -617,7 +617,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'events',
                     id: req.params.id
                 });
@@ -640,7 +640,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     id: req.user.memberId
                 });
@@ -670,7 +670,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                 delete body.id;
 
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     id: req.user.memberId,
                     data: body
@@ -692,7 +692,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members'
                 });
                 // Ne jamais exposer le hash du mot de passe
@@ -712,7 +712,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     id: req.params.id
                 });
@@ -744,7 +744,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     delete body.adminPassword;
                 }
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     data: body
                 });
@@ -775,7 +775,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     delete body.adminPassword;
                 }
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     id: req.params.id,
                     data: body
@@ -793,7 +793,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'members',
                     id: req.params.id
                 });
@@ -816,7 +816,7 @@ function createApiRouter({ dataService, trashService, importService }) {
                     });
                 }
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'events',
                     data: req.body
                 });
@@ -834,7 +834,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'events',
                     id: req.params.id,
                     data: req.body
@@ -853,7 +853,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: 'events',
                     id: req.params.id
                 });
@@ -874,7 +874,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.list({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: req.params.collection
                 });
                 res.json(data);
@@ -889,7 +889,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.get({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: req.params.collection,
                     id: req.params.id
                 });
@@ -910,7 +910,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.create({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: req.params.collection,
                     data: req.body
                 });
@@ -926,7 +926,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 const data = await dataService.update({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: req.params.collection,
                     id: req.params.id,
                     data: req.body
@@ -943,7 +943,7 @@ function createApiRouter({ dataService, trashService, importService }) {
         async (req, res) => {
             try {
                 await dataService.delete({
-                    organisationId: req.organisationId,
+                    collectiveId: req.collectiveId,
                     collection: req.params.collection,
                     id: req.params.id
                 });

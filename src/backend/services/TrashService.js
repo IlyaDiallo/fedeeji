@@ -13,11 +13,11 @@ class TrashService {
     /**
      * Déplace un élément dans la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.sourceCollection
      * @param {any} params.item
      */
-    async moveToTrash({ organisationId, sourceCollection, item }) {
+    async moveToTrash({ collectiveId, sourceCollection, item }) {
         const trashEntry = {
             id: crypto.randomUUID(),
             sourceCollection,
@@ -25,11 +25,11 @@ class TrashService {
             deletedAt: Date.now()
         };
         const entries = await this.storage.read({
-            organisationId, collection: this.collection
+            collectiveId, collection: this.collection
         }) || [];
         entries.push(trashEntry);
         await this.storage.write({
-            organisationId, collection: this.collection, data: entries
+            collectiveId, collection: this.collection, data: entries
         });
         return trashEntry;
     }
@@ -37,23 +37,23 @@ class TrashService {
     /**
      * Liste le contenu de la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      */
-    async list({ organisationId }) {
+    async list({ collectiveId }) {
         return await this.storage.read({
-            organisationId, collection: this.collection
+            collectiveId, collection: this.collection
         }) || [];
     }
 
     /**
      * Restaure un élément depuis la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.trashId
      */
-    async restore({ organisationId, trashId }) {
+    async restore({ collectiveId, trashId }) {
         const entries = await this.storage.read({
-            organisationId, collection: this.collection
+            collectiveId, collection: this.collection
         }) || [];
         const entry = entries.find(e => e.id === trashId);
         if (!entry) {
@@ -62,7 +62,7 @@ class TrashService {
 
         // Restaurer dans la collection d'origine
         await this.storage.write({
-            organisationId,
+            collectiveId,
             collection: entry.sourceCollection,
             id: entry.item.id,
             data: entry.item
@@ -71,7 +71,7 @@ class TrashService {
         // Retirer de la corbeille
         const remaining = entries.filter(e => e.id !== trashId);
         await this.storage.write({
-            organisationId, collection: this.collection, data: remaining
+            collectiveId, collection: this.collection, data: remaining
         });
         return entry;
     }
@@ -79,30 +79,30 @@ class TrashService {
     /**
      * Supprime définitivement un élément de la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      * @param {string} params.trashId
      */
-    async permanentDelete({ organisationId, trashId }) {
+    async permanentDelete({ collectiveId, trashId }) {
         const entries = await this.storage.read({
-            organisationId, collection: this.collection
+            collectiveId, collection: this.collection
         }) || [];
         const remaining = entries.filter(e => e.id !== trashId);
         if (remaining.length === entries.length) {
             throw new Error('Élément introuvable dans la corbeille');
         }
         await this.storage.write({
-            organisationId, collection: this.collection, data: remaining
+            collectiveId, collection: this.collection, data: remaining
         });
     }
 
     /**
      * Vide la corbeille
      * @param {Object} params
-     * @param {string} params.organisationId
+     * @param {string} params.collectiveId
      */
-    async empty({ organisationId }) {
+    async empty({ collectiveId }) {
         await this.storage.write({
-            organisationId, collection: this.collection, data: []
+            collectiveId, collection: this.collection, data: []
         });
     }
 }
