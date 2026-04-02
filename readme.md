@@ -26,6 +26,7 @@ Fonctionnalités futures:
 - publications publiques et privées
 - actions (groupes de publications et d'événements)
 - envois d'emails aux membres
+- intégration Home Assistant
 - gestion des groupes (ajout, modification, suppression, recherche)
 - gestion des statistiques (ajout, modification, suppression, recherche)
 - gestion des rapports (ajout, modification, suppression, recherche)
