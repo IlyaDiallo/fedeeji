@@ -1370,39 +1370,50 @@ class ProgrammeView extends AbstractView {
 
     refreshExistingNotesInLogModal() {
         const actionId = document.getElementById('log-actionId').value;
-        const type = document.getElementById('log-type').value;
-        // Utiliser la date d'occurrence pour trouver les notes de l'occurrence ciblée
-        const occurrenceDate = document.getElementById('log-occurrence-date').value
-            || document.getElementById('log-date').value;
-        const notesContainer = document.getElementById('log-existing-notes');
-        
-        if (type !== 'done') {
-            notesContainer.classList.add('d-none');
+        const date = document.getElementById('log-date').value;
+        const container = document.getElementById('log-existing-notes');
+
+        if (!actionId || !date) {
+            container.classList.add('d-none');
+            container.innerHTML = '';
             return;
         }
 
+        // Filtrer les notes existantes pour cette action et cette date
         const notes = this.actionLogs.filter(
-            l => l.programmeId === actionId && l.type === 'note' && l.date === occurrenceDate
+            l => l.programmeId === actionId && l.type === 'note' && l.date === date
         );
-        
-        if (notes.length > 0) {
-            let html = `<label class="form-label text-info fw-bold"><i class="bi bi-card-text"></i> ${t("instructions") || "Instructions"} :</label>`;
-            notes.forEach(note => {
-                const memberName = this.getMemberName(note.memberId);
-                html += `<div class="alert alert-info py-2 mb-1">
-                    <small class="fw-bold">${memberName}</small><br>
-                    ${note.notes}
-                </div>`;
-            });
-            notesContainer.innerHTML = html;
-            notesContainer.classList.remove('d-none');
-        } else {
-            notesContainer.innerHTML = '';
-            notesContainer.classList.add('d-none');
+
+        if (notes.length === 0) {
+            container.classList.add('d-none');
+            container.innerHTML = '';
+            return;
         }
+
+        const locale = i18n.lang === 'en' ? 'en-US' : 'fr-FR';
+        container.classList.remove('d-none');
+        container.innerHTML = `
+            <label class="form-label fw-bold">
+                <i class="bi bi-card-text"></i> ${t("notes")}
+            </label>
+            <div class="list-group">
+                ${notes.map(n => {
+                    const memberName = this.getMemberName(n.memberId);
+                    const timeStr = n.time ? ` ⏰ ${n.time}` : '';
+                    return `
+                    <div class="list-group-item list-group-item-info py-1 small">
+                        <div class="d-flex justify-content-between">
+                            <span>${timeStr}</span>
+                            <small class="text-muted">${memberName}</small>
+                        </div>
+                        ${n.notes ? `<div>${n.notes}</div>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>`;
     }
 
     async saveLog() {
+        const id = document.getElementById('log-id').value;
         const actionId = document.getElementById('log-actionId').value;
         const type = document.getElementById('log-type').value;
         const date = document.getElementById('log-date').value;
@@ -1410,60 +1421,42 @@ class ProgrammeView extends AbstractView {
         const duration = document.getElementById('log-duration').value;
         const durationUnit = document.getElementById('log-durationUnit').value;
         const notes = document.getElementById('log-notes').value;
-        const logId = document.getElementById('log-id').value;
-        
-        const stateSelect = document.getElementById('log-state');
+
         const stateContainer = document.getElementById('log-state-container');
-        const state = (type === 'done' && stateContainer.style.display !== 'none') ? parseInt(stateSelect.value) : 1;
+        const stateSelect = document.getElementById('log-state');
+        const state = (stateContainer.style.display !== 'none' && stateSelect.value)
+            ? Number(stateSelect.value)
+            : undefined;
 
-        if (!date) return;
-
-        // Validation : la date de réalisation ne peut pas être dans le futur
-        const todayStr = RecurrenceUtils.formatDateStr(new Date());
-        if (type === 'done' && date > todayStr) {
-            alert(t("error") + ': ' + (t("date_in_future") || "La date ne peut pas être dans le futur."));
+        if (!date) {
+            alert(t("error") + ': ' + t("date"));
             return;
         }
 
-        try {
-            const data = {
-                programmeId: actionId,
-                memberId: api.getMemberId(),
-                date,
-                time: time || null,
-                duration: duration ? Number(duration) : null,
-                durationUnit: duration ? durationUnit : null,
-                notes,
-                type,
-                state,
-                timestamp: Date.now()
-            };
+        const data = {
+            programmeId: actionId,
+            type: type || 'done',
+            date,
+            time: time || null,
+            duration: duration ? Number(duration) : null,
+            durationUnit: duration ? durationUnit : null,
+            notes: notes || null,
+            timestamp: Date.now()
+        };
+        if (state !== undefined) {
+            data.state = state;
+        }
 
-            if (type === 'note') {
-                const existing = logId
-                    ? this.actionLogs.find(l => l.id === logId)
-                    : this.actionLogs.find(l => l.programmeId === actionId && l.type === 'note' && l.date === date);
-                if (existing) {
-                    await api.update(this.orgId, 'action-logs', existing.id, data);
-                } else {
-                    await api.create(this.orgId, 'action-logs', data);
-                }
-            } else if (logId) {
-                // Mise à jour d'un log "done" existant (note, durée, date, heure)
-                await api.update(this.orgId, 'action-logs', logId, data);
+        try {
+            if (id) {
+                await api.update(this.orgId, 'action-logs', id, data);
             } else {
                 await api.create(this.orgId, 'action-logs', data);
             }
-
             this.logModal.hide();
             await this.loadData();
         } catch (error) {
-            if (error.message.includes('Action already marked as done')) {
-                alert(t("action_already_done"));
-                this.logModal.hide();
-            } else {
-                alert(t("error") + ': ' + error.message);
-            }
+            alert(t("error") + ': ' + error.message);
         }
     }
 
