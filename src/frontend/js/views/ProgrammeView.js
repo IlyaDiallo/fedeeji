@@ -16,16 +16,28 @@ class ProgrammeView extends AbstractView {
         const addBtn = this.isMember ? '' : `
             <button class="btn btn-primary"
                 id="btn-add-action">
-                <i class="bi bi-plus-lg"></i>
+                <i class="bi bi-calendar-plus"></i>
                 <span class="d-none d-md-inline"
-                    data-i18n="add_action">
-                    ${t("add_action")}</span>
+                    data-i18n="schedule_action">
+                    ${t("schedule_action") || "Programmer une action"}</span>
+            </button>`;
+
+        const recordBtn = `
+            <button class="btn btn-success ms-2"
+                id="btn-record-action">
+                <i class="bi bi-record-circle"></i>
+                <span class="d-none d-md-inline"
+                    data-i18n="record_action">
+                    ${t("record_action") || "Enregistrer une action"}</span>
             </button>`;
 
         return `
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h2 data-i18n="programme">${t("programme")}</h2>
-                ${addBtn}
+                <div>
+                    ${addBtn}
+                    ${recordBtn}
+                </div>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -70,12 +82,16 @@ class ProgrammeView extends AbstractView {
                 <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="actionModalTitle">${t("add_edit_action")}</h5>
+                            <h5 class="modal-title" id="actionModalTitle">${t("schedule_action_title")}</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
                             <form id="action-form">
                                 <input type="hidden" id="action-id">
+                                <div class="mb-3" id="action-template-container">
+                                    <label class="form-label">${t("template")}</label>
+                                    <select class="form-select" id="action-template-select"></select>
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">${t("name")}</label>
                                     <input type="text" class="form-control" id="action-name" required>
@@ -90,10 +106,10 @@ class ProgrammeView extends AbstractView {
                                 </div>
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
-                                        <label class="form-label" data-i18n="start_date">${t("start_date")}</label>
+                                        <label class="form-label" id="action-date-label">${t("date")}</label>
                                         <input type="date" class="form-control" id="action-date" required>
                                     </div>
-                                    <div class="col-md-6 mb-3">
+                                    <div class="col-md-6 mb-3" id="action-recurrenceEndDate-container" style="display:none;">
                                         <label class="form-label">${t("recurrence_end_date")}</label>
                                         <input type="date" class="form-control" id="action-recurrenceEndDate">
                                     </div>
@@ -249,6 +265,61 @@ class ProgrammeView extends AbstractView {
                     </div>
                 </div>
             </div>
+
+            <!-- Modal action spontanée -->
+            <div class="modal fade" id="spontaneousModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="spontaneousModalTitle">${t("record_action")}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="spontaneous-form">
+                                <div class="mb-3">
+                                    <label class="form-label">${t("template")}</label>
+                                    <select class="form-select" id="spontaneous-template-select">
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">${t("name")}</label>
+                                    <input type="text" class="form-control" id="spontaneous-name" required>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">${t("date") || "Date"}</label>
+                                        <input type="date" class="form-control" id="spontaneous-date" required>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">${t("time") || "Heure"}</label>
+                                        <input type="time" class="form-control" id="spontaneous-time">
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">${t("duration") || "Durée"}</label>
+                                        <div class="input-group">
+                                            <input type="number" class="form-control" id="spontaneous-duration" min="1">
+                                            <select class="form-select" id="spontaneous-durationUnit" style="max-width:140px">
+                                                <option value="minutes">${t("minutes") || "Minutes"}</option>
+                                                <option value="hours" selected>${t("hours") || "Heures"}</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">${t("notes") || "Notes"}</label>
+                                    <textarea class="form-control" id="spontaneous-notes" rows="2"></textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${t("cancel") || "Annuler"}</button>
+                            <button type="button" class="btn btn-success" id="btn-save-spontaneous">${t("save") || "Enregistrer"}</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
@@ -330,6 +401,9 @@ class ProgrammeView extends AbstractView {
                     if (action.frequencyUnit === 'days') {
                         action.recurrence = 'daily';
                         action.recurrenceInterval = action.frequencyValue || 1;
+                    } else if (action.frequencyUnit === 'weeks') {
+                        action.recurrence = 'weekly';
+                        action.recurrenceInterval = action.frequencyValue || 1;
                     } else {
                         action.recurrence = 'monthly';
                         action.recurrenceInterval = action.frequencyValue || 1;
@@ -368,6 +442,12 @@ class ProgrammeView extends AbstractView {
                 let targetOccurrence = null;
                 if (lastLog) {
                     targetOccurrence = occurrences.find(o => o.occurrenceDate > lastLog.date);
+                    if (!targetOccurrence && occurrences.length > 0) {
+                        const lastOcc = occurrences[occurrences.length - 1];
+                        if (lastOcc.occurrenceDate >= todayStr) {
+                            targetOccurrence = lastOcc;
+                        }
+                    }
                 } else {
                     targetOccurrence = occurrences[0];
                 }
@@ -691,6 +771,9 @@ class ProgrammeView extends AbstractView {
                     if (action.frequencyUnit === 'days') {
                         action.recurrence = 'daily';
                         action.recurrenceInterval = action.frequencyValue || 1;
+                    } else if (action.frequencyUnit === 'weeks') {
+                        action.recurrence = 'weekly';
+                        action.recurrenceInterval = action.frequencyValue || 1;
                     } else {
                         action.recurrence = 'monthly';
                         action.recurrenceInterval = action.frequencyValue || 1;
@@ -974,9 +1057,26 @@ class ProgrammeView extends AbstractView {
         const form = document.getElementById('action-form');
         form.reset();
         document.getElementById('action-id').value = '';
+        
+        const titleEl = document.getElementById('actionModalTitle');
+        const templateContainer = document.getElementById('action-template-container');
+        
+        if (id) {
+            titleEl.textContent = t("edit_action_title");
+            templateContainer.style.display = 'none';
+        } else {
+            titleEl.textContent = t("schedule_action_title");
+            templateContainer.style.display = 'block';
+            
+            const templateSelect = document.getElementById('action-template-select');
+            templateSelect.innerHTML = `<option value="">${t("no_template")}</option>` + 
+                this.actions.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        }
+        
         this.toggleActionAllDay();
 
         document.getElementById('action-recurrence').value = 'none';
+        document.getElementById('action-recurrenceEndDate-container').style.display = 'none';
         document.getElementById('action-recurrence').classList.add('rounded-start');
         document.getElementById('action-recurrenceInterval').value = '1';
         document.getElementById('action-recurrenceInterval').style.display = 'none';
@@ -1014,6 +1114,9 @@ class ProgrammeView extends AbstractView {
                 if (action.frequencyUnit === 'days') {
                     rec = 'daily';
                     interval = action.frequencyValue || 1;
+                } else if (action.frequencyUnit === 'weeks') {
+                    rec = 'weekly';
+                    interval = action.frequencyValue || 1;
                 } else {
                     rec = 'monthly';
                     interval = action.frequencyValue || 1;
@@ -1036,6 +1139,7 @@ class ProgrammeView extends AbstractView {
 
             document.getElementById('action-recurrence-days-container').style.display = (rec === 'weekly') ? 'block' : 'none';
             document.getElementById('action-monthly-type-container').style.display = (rec === 'monthly') ? 'block' : 'none';
+            document.getElementById('action-recurrenceEndDate-container').style.display = (rec === 'none') ? 'none' : 'block';
         }
 
         this.actionModal.show();
@@ -1542,6 +1646,98 @@ class ProgrammeView extends AbstractView {
         this.historyModal.show();
     }
 
+    // --- Action Spontanée ---
+
+    openSpontaneousModal() {
+        const form = document.getElementById('spontaneous-form');
+        form.reset();
+        
+        const templateSelect = document.getElementById('spontaneous-template-select');
+        templateSelect.innerHTML = `<option value="">${t("no_template")}</option>` + 
+            this.actions.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+
+        const today = new Date();
+        const dateStr = window.RecurrenceUtils ? RecurrenceUtils.formatDateStr(today) : today.toISOString().split('T')[0];
+        const timeStr = today.toTimeString().slice(0, 5);
+
+        const dateInput = document.getElementById('spontaneous-date');
+        dateInput.value = dateStr;
+        dateInput.max = dateStr; // Pas dans le futur
+        
+        document.getElementById('spontaneous-time').value = timeStr;
+
+        this.spontaneousModal.show();
+    }
+
+    async saveSpontaneousAction() {
+        const form = document.getElementById('spontaneous-form');
+        if (!form.reportValidity()) return;
+
+        const name = document.getElementById('spontaneous-name').value;
+        const templateId = document.getElementById('spontaneous-template-select').value;
+        const date = document.getElementById('spontaneous-date').value;
+        const time = document.getElementById('spontaneous-time').value;
+        const duration = document.getElementById('spontaneous-duration').value;
+        const durationUnit = document.getElementById('spontaneous-durationUnit').value;
+        const notes = document.getElementById('spontaneous-notes').value;
+
+        // Validation pas dans le futur
+        const todayStr = window.RecurrenceUtils ? RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().split('T')[0];
+        if (date > todayStr) {
+            alert(t("error") + ': ' + t("error_date_in_future"));
+            return;
+        }
+
+        if (!name) {
+            alert(t("error_action_name_required"));
+            return;
+        }
+
+        try {
+            let template = null;
+            if (templateId) {
+                template = this.actions.find(a => a.id === templateId);
+            }
+
+            const newActionData = {
+                name: name,
+                description: template ? (template.description || "") : "",
+                date: date,
+                time: time || "",
+                allDay: !time,
+                duration: duration ? Number(duration) : null,
+                durationUnit: duration ? durationUnit : 'hours',
+                recurrence: 'none',
+                recurrenceInterval: 1,
+                states: template ? (template.states || []) : [],
+                scheduleMode: 'scheduled'
+            };
+            
+            const createdAction = await api.create(this.collectiveId, 'actions', newActionData);
+            const actionId = createdAction.id;
+            const finalState = newActionData.states.length > 0 ? newActionData.states.length + 1 : 1;
+
+            const logData = {
+                programmeId: actionId,
+                type: 'done',
+                date: date,
+                time: time || null,
+                duration: duration ? Number(duration) : null,
+                durationUnit: duration ? durationUnit : null,
+                notes: notes || null,
+                state: finalState,
+                timestamp: Date.now()
+            };
+
+            await api.create(this.collectiveId, 'action-logs', logData);
+
+            this.spontaneousModal.hide();
+            await this.loadData();
+        } catch (error) {
+            alert(t("error") + ': ' + error.message);
+        }
+    }
+
     // --- Init ---
 
     async init() {
@@ -1599,6 +1795,7 @@ class ProgrammeView extends AbstractView {
                     const val = e.target.value;
                     document.getElementById('action-recurrence-days-container').style.display = (val === 'weekly') ? 'block' : 'none';
                     document.getElementById('action-monthly-type-container').style.display = (val === 'monthly') ? 'block' : 'none';
+                    document.getElementById('action-recurrenceEndDate-container').style.display = (val === 'none') ? 'none' : 'block';
                     
                     const intervalInput = document.getElementById('action-recurrenceInterval');
                     const intervalLabel = document.getElementById('action-recurrence-label');
@@ -1613,11 +1810,96 @@ class ProgrammeView extends AbstractView {
                     }
                 });
             }
+
+            // Changer de modèle dans actionModal
+            const actionTemplateSel = document.getElementById('action-template-select');
+            if (actionTemplateSel) {
+                actionTemplateSel.addEventListener('change', (e) => {
+                    const templateId = e.target.value;
+                    if (!templateId) return;
+                    const template = this.actions.find(a => a.id === templateId);
+                    if (template) {
+                        document.getElementById('action-name').value = template.name || '';
+                        document.getElementById('action-states').value = (template.states || []).join(', ');
+                        document.getElementById('action-description').value = template.description || '';
+                        document.getElementById('action-windowDays').value = template.windowDays || 0;
+                        
+                        const isAllDay = template.allDay !== undefined ? template.allDay : !template.time;
+                        document.getElementById('action-allDay-yes').checked = isAllDay;
+                        document.getElementById('action-allDay-no').checked = !isAllDay;
+                        this.toggleActionAllDay();
+
+                        document.getElementById('action-time').value = template.time || '';
+                        document.getElementById('action-duration').value = template.duration || '';
+                        document.getElementById('action-durationUnit').value = template.durationUnit || 'hours';
+
+                        // Copie de la récurrence
+                        let rec = template.recurrence || 'none';
+                        let interval = template.recurrenceInterval || 1;
+                        
+                        if (template.scheduleMode === 'frequency') {
+                            if (template.frequencyUnit === 'days') {
+                                rec = 'daily';
+                                interval = template.frequencyValue || 1;
+                            } else if (template.frequencyUnit === 'weeks') {
+                                rec = 'weekly';
+                                interval = template.frequencyValue || 1;
+                            } else {
+                                rec = 'monthly';
+                                interval = template.frequencyValue || 1;
+                            }
+                        } else if (rec === 'biweekly') {
+                            rec = 'weekly';
+                            interval = 2;
+                        }
+                        
+                        document.getElementById('action-recurrence').value = rec;
+                        document.getElementById('action-recurrence').classList.toggle('rounded-start', rec === 'none');
+                        document.getElementById('action-recurrenceInterval').value = interval;
+                        document.getElementById('action-recurrenceInterval').style.display = (rec === 'none') ? 'none' : '';
+                        document.getElementById('action-recurrence-label').style.display = (rec === 'none') ? 'none' : '';
+                        document.getElementById('action-monthlyType').value = template.monthlyType || 'date';
+                        
+                        document.querySelectorAll('.action-recurrence-day').forEach(cb => {
+                            cb.checked = template.recurrenceDays ? template.recurrenceDays.includes(parseInt(cb.value)) : false;
+                        });
+
+                        document.getElementById('action-recurrence-days-container').style.display = (rec === 'weekly') ? 'block' : 'none';
+                        document.getElementById('action-monthly-type-container').style.display = (rec === 'monthly') ? 'block' : 'none';
+                        document.getElementById('action-recurrenceEndDate-container').style.display = (rec === 'none') ? 'none' : 'block';
+                    }
+                });
+            }
         }
 
         // Modals accessibles à tous
         this.logModal = new bootstrap.Modal(document.getElementById('logModal'));
         this.historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
+        this.spontaneousModal = new bootstrap.Modal(document.getElementById('spontaneousModal'));
+
+        document.getElementById('btn-record-action').addEventListener('click', () => {
+            this.openSpontaneousModal();
+        });
+
+        document.getElementById('spontaneous-template-select').addEventListener('change', (e) => {
+            const templateId = e.target.value;
+            const action = this.actions.find(a => a.id === templateId);
+            if (action) {
+                document.getElementById('spontaneous-name').value = action.name || '';
+                if (action.duration) {
+                    document.getElementById('spontaneous-duration').value = action.duration;
+                    document.getElementById('spontaneous-durationUnit').value = action.durationUnit || 'hours';
+                }
+            } else {
+                document.getElementById('spontaneous-name').value = '';
+                document.getElementById('spontaneous-duration').value = '';
+                document.getElementById('spontaneous-durationUnit').value = 'hours';
+            }
+        });
+
+        document.getElementById('btn-save-spontaneous').addEventListener('click', () => {
+            this.saveSpontaneousAction();
+        });
 
         document.getElementById('btn-save-log').addEventListener('click', () => {
             this.saveLog();
