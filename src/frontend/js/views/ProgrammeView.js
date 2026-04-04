@@ -1046,8 +1046,16 @@ class ProgrammeView extends AbstractView {
             }
             
             const templateSelect = document.getElementById('action-template-select');
+            const seenNames = new Set();
+            const uniqueActions = this.actions.filter(a => {
+                const name = a.name ? a.name.trim().toLowerCase() : '';
+                if (!name || seenNames.has(name)) return false;
+                seenNames.add(name);
+                return true;
+            });
+            uniqueActions.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             templateSelect.innerHTML = `<option value="">${t("no_template")}</option>` + 
-                this.actions.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+                uniqueActions.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
         }
         
         this.toggleActionAllDay();
