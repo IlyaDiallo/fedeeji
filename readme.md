@@ -1,6 +1,9 @@
-Feddeeji
+# Feddeeji
 
-Application de gestion de collectif
+Application de gestion de collectif.
+
+> 📐 Voir **[ARCHITECTURE.md](ARCHITECTURE.md)** pour la documentation technique
+> détaillée (diagrammes, arborescence, flux de données, rôles).
 
 - frontend JS (minimum de dépendances, style visuel bootstrap), backend node.js
 - Stockage des données en json ou binaire, passant par une couche d'abstraction, implémentation soit en fichier par le fs local, soit en bdd MongoDB, soit Amazon S3

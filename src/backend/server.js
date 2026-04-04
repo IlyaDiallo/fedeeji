@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const multer = require('multer');
+
 const createApiRouter = require('./routes/api');
 const createAuthRouter = require('./routes/auth');
-const {
-    createAuthMiddleware
-} = require('./middleware/auth');
+const createFilesRouter = require('./routes/files');
+const { createAuthMiddleware, requireRole } = require('./middleware/auth');
+
 const FileSystemAdapter = require('./storage/FileSystemAdapter');
 const TrashService = require('./services/TrashService');
 const DataService = require('./services/DataService');
@@ -31,7 +33,8 @@ app.use(express.static(
     path.join(__dirname, '../frontend')
 ));
 
-// Initialisation des services
+// --- Initialisation des services ---
+
 const storage = new FileSystemAdapter({
     basePath: path.join(__dirname, '../../data')
 });
@@ -46,18 +49,23 @@ const importService = new ImportService({ dataService });
 
 const authMiddleware = createAuthMiddleware(authService);
 
-// API routes
+// --- Routes d'authentification ---
+
 const authRouter = createAuthRouter({
     authService, collectiveService, dataService
 });
 app.use('/auth', authRouter);
 
-const apiRouter = createApiRouter({
-    dataService, trashService, importService
-});
+// --- Upload de fichiers (superadmin) ---
 
-// Route d'import XLSX (avant le routeur générique pour éviter les conflits)
-const multer = require('multer');
+const uploadsDir = path.join(__dirname, '../../data/uploads');
+const filesRouter = createFilesRouter({
+    authService, uploadsDir
+});
+app.use('/api/files', filesRouter);
+
+// --- Import XLSX (admin, avant le routeur générique) ---
+
 const importUpload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
@@ -73,117 +81,6 @@ const importUpload = multer({
         }
     }
 });
-
-const { requireRole } = require('./middleware/auth');
-
-// ============================================================
-// Upload de fichiers (superadmin uniquement)
-// Stockage dans /data/uploads
-// ============================================================
-const fs = require('fs');
-const uploadsDir = path.join(__dirname, '../../data/uploads');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-const fileUpload = multer({
-    storage: multer.diskStorage({
-        destination: (req, file, cb) => cb(null, uploadsDir),
-        filename: (req, file, cb) => {
-            const uniqueSuffix = `${Date.now()}-${Math.round(
-                Math.random() * 1E9
-            )}`;
-            const safeName = file.originalname.replace(
-                /[^a-zA-Z0-9._-]/g, '_'
-            );
-            cb(null, `${uniqueSuffix}-${safeName}`);
-        }
-    }),
-    limits: { fileSize: 3 * 1024 * 1024 },
-    fileFilter: (req, file, cb) => {
-        cb(null, true);
-    }
-});
-
-app.post('/api/files',
-    authMiddleware,
-    requireRole('superadmin'),
-    fileUpload.single('file'),
-    (req, res) => {
-        if (!req.file) {
-            return res.status(400).json({
-                error: 'Aucun fichier fourni'
-            });
-        }
-        res.status(201).json({
-            filename: req.file.filename,
-            originalName: req.file.originalname,
-            size: req.file.size,
-            mimetype: req.file.mimetype,
-            path: `/api/files/${req.file.filename}`
-        });
-    }
-);
-
-app.get('/api/files',
-    authMiddleware,
-    requireRole('superadmin'),
-    (req, res) => {
-        try {
-            const files = fs.readdirSync(uploadsDir)
-                .filter(f => f !== '.gitkeep')
-                .map(filename => {
-                    const filePath = path.join(uploadsDir, filename);
-                    const stats = fs.statSync(filePath);
-                    return {
-                        filename,
-                        size: stats.size,
-                        modified: stats.mtime.toISOString()
-                    };
-                });
-            res.json(files);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    }
-);
-
-app.get('/api/files/:filename',
-    authMiddleware,
-    requireRole('superadmin'),
-    (req, res) => {
-        const filename = path.basename(req.params.filename);
-        const filePath = path.join(uploadsDir, filename);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                error: 'Fichier non trouvé'
-            });
-        }
-        res.download(filePath, filename);
-    }
-);
-
-app.delete('/api/files/:filename',
-    authMiddleware,
-    requireRole('superadmin'),
-    (req, res) => {
-        const filename = path.basename(req.params.filename);
-        const filePath = path.join(uploadsDir, filename);
-        if (!fs.existsSync(filePath)) {
-            return res.status(404).json({
-                error: 'Fichier non trouvé'
-            });
-        }
-        try {
-            fs.unlinkSync(filePath);
-            res.json({ success: true });
-        } catch (error) {
-            res.status(500).json({
-                error: 'Erreur lors de la suppression'
-            });
-        }
-    }
-);
 
 app.post('/api/:collectiveId/import-contributions',
     authMiddleware,
@@ -207,9 +104,7 @@ app.post('/api/:collectiveId/import-contributions',
                 });
             res.json(results);
         } catch (error) {
-            res.status(400).json({
-                error: error.message
-            });
+            res.status(400).json({ error: error.message });
         }
     }
 );
@@ -220,6 +115,9 @@ app.get('/api/version', (req, res) => {
     res.json({ version });
 });
 
+// --- Routeur API principal ---
+
+const apiRouter = createApiRouter({ dataService, trashService });
 app.use('/api/:collectiveId', authMiddleware, apiRouter);
 
 // Rediriger toutes les autres requêtes vers index.html

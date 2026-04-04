@@ -386,10 +386,7 @@ class ActionHistoryView extends AbstractView {
     }
 
     getMemberName(memberId) {
-        if (!memberId) return '';
-        const m = this.members.find(m => m.id === memberId);
-        if (!m) return '';
-        return `(${m.firstName || ''} ${m.lastName || ''})`.trim();
+        return ActionUtils.getMemberName(memberId, this.members);
     }
 
     initFilters() {

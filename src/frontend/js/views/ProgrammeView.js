@@ -344,23 +344,7 @@ class ProgrammeView extends AbstractView {
         // Actions
         if (filter === 'all' || filter === 'actions') {
             this.actions.forEach(rawAction => {
-                const action = { ...rawAction };
-                if (action.scheduleMode === 'frequency') {
-                    if (action.frequencyUnit === 'days') {
-                        action.recurrence = 'daily';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    } else if (action.frequencyUnit === 'weeks') {
-                        action.recurrence = 'weekly';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    } else {
-                        action.recurrence = 'monthly';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    }
-                    action.date = action.startDate || action.date || todayStr;
-                } else if (action.recurrence === 'biweekly') {
-                    action.recurrence = 'weekly';
-                    action.recurrenceInterval = 2;
-                }
+                const action = ActionUtils.normalize(rawAction, todayStr);
 
                 const logs = this.actionLogs
                     .filter(l => l.programmeId === action.id)
@@ -714,23 +698,7 @@ class ProgrammeView extends AbstractView {
         // Actions
         if (filter === 'all' || filter === 'actions') {
             this.actions.forEach(rawAction => {
-                const action = { ...rawAction };
-                if (action.scheduleMode === 'frequency') {
-                    if (action.frequencyUnit === 'days') {
-                        action.recurrence = 'daily';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    } else if (action.frequencyUnit === 'weeks') {
-                        action.recurrence = 'weekly';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    } else {
-                        action.recurrence = 'monthly';
-                        action.recurrenceInterval = action.frequencyValue || 1;
-                    }
-                    action.date = action.startDate || action.date || startStr;
-                } else if (action.recurrence === 'biweekly') {
-                    action.recurrence = 'weekly';
-                    action.recurrenceInterval = 2;
-                }
+                const action = ActionUtils.normalize(rawAction, startStr);
 
                 const logs = this.actionLogs
                     .filter(l => l.programmeId === action.id)
@@ -921,10 +889,7 @@ class ProgrammeView extends AbstractView {
     }
 
     getMemberName(memberId) {
-        if (!memberId) return '';
-        const m = this.members.find(m => m.id === memberId);
-        if (!m) return '';
-        return `(${m.firstName || ''} ${m.lastName || ''})`.trim();
+        return ActionUtils.getMemberName(memberId, this.members);
     }
 
     // --- Événements d'interface ---
@@ -1092,25 +1057,10 @@ class ProgrammeView extends AbstractView {
             document.getElementById('action-duration').value = action.duration || '';
             document.getElementById('action-durationUnit').value = action.durationUnit || 'hours';
             
-            // Conversion biweekly/frequency to new recurrence model
-            let rec = action.recurrence || 'none';
-            let interval = action.recurrenceInterval || 1;
-            
-            if (action.scheduleMode === 'frequency') {
-                if (action.frequencyUnit === 'days') {
-                    rec = 'daily';
-                    interval = action.frequencyValue || 1;
-                } else if (action.frequencyUnit === 'weeks') {
-                    rec = 'weekly';
-                    interval = action.frequencyValue || 1;
-                } else {
-                    rec = 'monthly';
-                    interval = action.frequencyValue || 1;
-                }
-            } else if (rec === 'biweekly') {
-                rec = 'weekly';
-                interval = 2;
-            }
+            // Conversion biweekly/frequency vers le modèle récurrence unifié
+            const normalized = ActionUtils.normalize(action);
+            const rec = normalized.recurrence || 'none';
+            const interval = normalized.recurrenceInterval || 1;
             
             document.getElementById('action-recurrence').value = rec;
             document.getElementById('action-recurrence').classList.toggle('rounded-start', rec === 'none');
@@ -1749,25 +1699,10 @@ class ProgrammeView extends AbstractView {
                         document.getElementById('action-duration').value = template.duration || '';
                         document.getElementById('action-durationUnit').value = template.durationUnit || 'hours';
 
-                        // Copie de la récurrence
-                        let rec = template.recurrence || 'none';
-                        let interval = template.recurrenceInterval || 1;
-                        
-                        if (template.scheduleMode === 'frequency') {
-                            if (template.frequencyUnit === 'days') {
-                                rec = 'daily';
-                                interval = template.frequencyValue || 1;
-                            } else if (template.frequencyUnit === 'weeks') {
-                                rec = 'weekly';
-                                interval = template.frequencyValue || 1;
-                            } else {
-                                rec = 'monthly';
-                                interval = template.frequencyValue || 1;
-                            }
-                        } else if (rec === 'biweekly') {
-                            rec = 'weekly';
-                            interval = 2;
-                        }
+                        // Copie de la récurrence via normalisation
+                        const norm = ActionUtils.normalize(template);
+                        const rec = norm.recurrence || 'none';
+                        const interval = norm.recurrenceInterval || 1;
                         
                         document.getElementById('action-recurrence').value = rec;
                         document.getElementById('action-recurrence').classList.toggle('rounded-start', rec === 'none');

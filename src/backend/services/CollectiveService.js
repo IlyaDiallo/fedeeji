@@ -4,13 +4,17 @@ const path = require('path');
 class CollectiveService {
     constructor() {
         const root = path.join(__dirname, '../../..');
+        this.dataDir = path.join(root, 'data');
         // Priorité au fichier dans /data, fallback à la racine
-        this.filePath = path.join(root, 'data', 'collectives.json');
+        this.filePath = path.join(this.dataDir, 'collectives.json');
         this.fallbackPath = path.join(root, 'collectives.json');
     }
 
-    async getAll() {
-        // Chercher d'abord dans /data, puis à la racine
+    /**
+     * Lit la liste des collectifs depuis le fichier principal ou le fallback.
+     * @returns {Promise<Array>}
+     */
+    async _readOrgs() {
         for (const filePath of [this.filePath, this.fallbackPath]) {
             try {
                 const data = await fs.readFile(filePath, 'utf8');
@@ -22,86 +26,71 @@ class CollectiveService {
         return [];
     }
 
+    /**
+     * Écrit la liste des collectifs dans le fichier principal.
+     * @param {Array} orgs
+     */
+    async _writeOrgs(orgs) {
+        await fs.writeFile(
+            this.filePath,
+            JSON.stringify(orgs, null, 2),
+            'utf8'
+        );
+    }
+
+    async getAll() {
+        return this._readOrgs();
+    }
+
     async getById(id) {
-        const orgs = await this.getAll();
+        const orgs = await this._readOrgs();
         return orgs.find(org => org.id === id);
     }
 
     async update(id, data) {
-        const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'collectives.json');
-        let orgs = [];
-
-        try {
-            const dataContent = await fs.readFile(filePath, 'utf8');
-            orgs = JSON.parse(dataContent);
-        } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
-        }
-
-        if (orgs.length === 0) {
-            try {
-                const fallbackContent = await fs.readFile(
-                    this.fallbackPath, 'utf8'
-                );
-                orgs = JSON.parse(fallbackContent);
-            } catch (error) {
-                if (error.code !== 'ENOENT') throw error;
-            }
-        }
-
+        const orgs = await this._readOrgs();
         const index = orgs.findIndex(org => org.id === id);
         if (index === -1) {
             throw new Error('Collectif non trouvé');
         }
 
         Object.assign(orgs[index], data);
-        await fs.writeFile(
-            filePath,
-            JSON.stringify(orgs, null, 2),
-            'utf8'
-        );
-
+        await this._writeOrgs(orgs);
         return orgs[index];
     }
 
     async uploadLogo(id, file) {
-        const root = path.join(__dirname, '../../..');
-        const logosDir = path.join(root, 'data', 'logos');
+        const logosDir = path.join(this.dataDir, 'logos');
         await fs.mkdir(logosDir, { recursive: true });
 
         const ext = path.extname(file.originalname).toLowerCase();
         const logoPath = path.join(logosDir, `${id}${ext}`);
-
         await fs.writeFile(logoPath, file.buffer);
 
         const logoUrl = `/api/logos/${id}${ext}`;
         await this.update(id, { logo: logoUrl });
-
         return logoUrl;
     }
 
     /**
      * Crée un nouveau collectif
      * @param {Object} params
-     * @param {string} params.id - Identifiant unique (slug)
-     * @param {string} params.name - Nom complet
-     * @param {string} params.label - Label court
-     * @param {string} [params.adminEmail] - Email admin
-     * @param {string} [params.defaultLanguage] - Langue par défaut
-     * @param {string} [params.registrationPassword] - Mot de passe inscription
-     * @param {boolean} [params.contributionsEnabled] - Activation des contributions
+     * @param {string} params.id
+     * @param {string} params.name
+     * @param {string} params.label
+     * @param {string} [params.adminEmail]
+     * @param {string} [params.defaultLanguage]
+     * @param {string} [params.registrationPassword]
+     * @param {boolean} [params.contributionsEnabled]
      */
     async create({
         id, name, label, adminEmail, defaultLanguage,
         registrationPassword, contributionsEnabled
     }) {
-        const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'collectives.json');
-        const dataDir = path.join(root, 'data', id);
+        const dataDir = path.join(this.dataDir, id);
 
         // Vérifier si l'ID existe déjà
-        const existing = await this.getAll();
+        const existing = await this._readOrgs();
         if (existing.find(org => org.id === id)) {
             throw new Error('Un collectif avec cet ID existe déjà');
         }
@@ -109,8 +98,8 @@ class CollectiveService {
         // Valider l'ID (slug valide)
         if (!/^[a-z0-9-]+$/.test(id)) {
             throw new Error(
-                'L\'ID doit contenir uniquement des lettres minuscules, '
-                + 'chiffres et tirets'
+                'L\'ID doit contenir uniquement des lettres '
+                + 'minuscules, chiffres et tirets'
             );
         }
 
@@ -119,8 +108,8 @@ class CollectiveService {
 
         // Initialiser les fichiers de données
         const collections = [
-            'members.json', 'events.json', 'contributions.json',
-            'inscriptions.json'
+            'members.json', 'events.json',
+            'contributions.json', 'inscriptions.json'
         ];
         for (const col of collections) {
             await fs.writeFile(
@@ -130,19 +119,8 @@ class CollectiveService {
             );
         }
 
-        // Lire les collectifs existants
-        let orgs = [];
-        try {
-            const content = await fs.readFile(filePath, 'utf8');
-            orgs = JSON.parse(content);
-        } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
-        }
-
         const newOrg = {
-            id,
-            name,
-            label,
+            id, name, label,
             adminEmail: adminEmail || '',
             defaultLanguage: defaultLanguage || 'fr',
             registrationPassword: registrationPassword || '',
@@ -150,9 +128,8 @@ class CollectiveService {
             createdAt: new Date().toISOString()
         };
 
-        orgs.push(newOrg);
-        await fs.writeFile(filePath, JSON.stringify(orgs, null, 2), 'utf8');
-
+        existing.push(newOrg);
+        await this._writeOrgs(existing);
         return newOrg;
     }
 
@@ -161,37 +138,27 @@ class CollectiveService {
      * @param {string} id
      */
     async delete(id) {
-        const root = path.join(__dirname, '../../..');
-        const filePath = path.join(root, 'data', 'collectives.json');
-        const dataDir = path.join(root, 'data', id);
-        const logosDir = path.join(root, 'data', 'logos');
-
-        // Lire les collectifs existants
-        let orgs = [];
-        try {
-            const content = await fs.readFile(filePath, 'utf8');
-            orgs = JSON.parse(content);
-        } catch (error) {
-            if (error.code !== 'ENOENT') throw error;
-        }
-
+        const orgs = await this._readOrgs();
         const index = orgs.findIndex(org => org.id === id);
         if (index === -1) {
             throw new Error('Collectif non trouvé');
         }
 
-        // Supprimer le collectif de la liste
         orgs.splice(index, 1);
-        await fs.writeFile(filePath, JSON.stringify(orgs, null, 2), 'utf8');
+        await this._writeOrgs(orgs);
 
         // Supprimer le dossier de données
+        const dataDir = path.join(this.dataDir, id);
         try {
             await fs.rm(dataDir, { recursive: true, force: true });
         } catch (error) {
-            console.error(`Erreur suppression dossier ${id}:`, error);
+            console.error(
+                `Erreur suppression dossier ${id}:`, error
+            );
         }
 
         // Supprimer les logos associés
+        const logosDir = path.join(this.dataDir, 'logos');
         try {
             const logoFiles = await fs.readdir(logosDir);
             for (const file of logoFiles) {
@@ -201,7 +168,9 @@ class CollectiveService {
             }
         } catch (error) {
             if (error.code !== 'ENOENT') {
-                console.error(`Erreur suppression logos ${id}:`, error);
+                console.error(
+                    `Erreur suppression logos ${id}:`, error
+                );
             }
         }
 
