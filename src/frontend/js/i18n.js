@@ -211,7 +211,9 @@ const translations = {
         "by_action": "Par action",
         "no_duration_data": "Aucune durée enregistrée sur cette période.",
         "hours_abbr": "h",
-        "minutes_abbr": "min"
+        "minutes_abbr": "min",
+        "scheduled": "Programmée",
+        "now": "Maintenant"
     },
     en: {
         "app_title": "Feddeeji - Collective Management",
@@ -425,7 +427,9 @@ const translations = {
         "by_action": "By action",
         "no_duration_data": "No duration recorded for this period.",
         "hours_abbr": "h",
-        "minutes_abbr": "min"
+        "minutes_abbr": "min",
+        "scheduled": "Scheduled",
+        "now": "Now"
     }
 };
 

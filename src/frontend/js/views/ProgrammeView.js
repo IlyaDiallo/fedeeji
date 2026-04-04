@@ -16,19 +16,9 @@ class ProgrammeView extends AbstractView {
         const addBtn = this.isMember ? '' : `
             <button class="btn btn-primary"
                 id="btn-add-action">
-                <i class="bi bi-calendar-plus"></i>
-                <span class="d-none d-md-inline"
-                    data-i18n="schedule_action">
-                    ${t("schedule_action") || "Programmer une action"}</span>
-            </button>`;
-
-        const recordBtn = `
-            <button class="btn btn-success ms-2"
-                id="btn-record-action">
-                <i class="bi bi-record-circle"></i>
-                <span class="d-none d-md-inline"
-                    data-i18n="record_action">
-                    ${t("record_action") || "Enregistrer une action"}</span>
+                <i class="bi bi-plus-circle"></i>
+                <span class="d-none d-md-inline">
+                    ${t("add_action") || "Ajouter une action"}</span>
             </button>`;
 
         return `
@@ -36,7 +26,6 @@ class ProgrammeView extends AbstractView {
                 <h2 data-i18n="programme">${t("programme")}</h2>
                 <div>
                     ${addBtn}
-                    ${recordBtn}
                 </div>
             </div>
 
@@ -88,6 +77,19 @@ class ProgrammeView extends AbstractView {
                         <div class="modal-body">
                             <form id="action-form">
                                 <input type="hidden" id="action-id">
+                                <div class="mb-3" id="action-type-container">
+                                    <label class="form-label fw-bold">Quand ?</label>
+                                    <div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="action-executionType" id="exec-type-scheduled" value="scheduled" checked>
+                                            <label class="form-check-label" for="exec-type-scheduled" data-i18n="scheduled">${t("scheduled") || "Programmée"}</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="action-executionType" id="exec-type-now" value="now">
+                                            <label class="form-check-label" for="exec-type-now" data-i18n="now">${t("now") || "Maintenant"}</label>
+                                        </div>
+                                    </div>
+                                </div>
                                 <div class="mb-3" id="action-template-container">
                                     <label class="form-label">${t("template")}</label>
                                     <select class="form-select" id="action-template-select"></select>
@@ -142,7 +144,7 @@ class ProgrammeView extends AbstractView {
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
+                                <div class="mb-3" id="action-recurrence-main-container">
                                     <label class="form-label" data-i18n="recurrence">${t("recurrence")}</label>
                                     <div class="input-group">
                                         <span class="input-group-text" id="action-recurrence-label">${t("every")}</span>
@@ -175,7 +177,7 @@ class ProgrammeView extends AbstractView {
                                     </select>
                                 </div>
                                 
-                                <div class="mb-3">
+                                <div class="mb-3" id="action-window-main-container">
                                     <label class="form-label" data-i18n="window_days">${t("window_days")}</label>
                                     <div class="input-group">
                                         <input type="number" class="form-control" id="action-windowDays" min="0" value="0">
@@ -266,60 +268,6 @@ class ProgrammeView extends AbstractView {
                 </div>
             </div>
 
-            <!-- Modal action spontanée -->
-            <div class="modal fade" id="spontaneousModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="spontaneousModalTitle">${t("record_action")}</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="spontaneous-form">
-                                <div class="mb-3">
-                                    <label class="form-label">${t("template")}</label>
-                                    <select class="form-select" id="spontaneous-template-select">
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">${t("name")}</label>
-                                    <input type="text" class="form-control" id="spontaneous-name" required>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">${t("date") || "Date"}</label>
-                                        <input type="date" class="form-control" id="spontaneous-date" required>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">${t("time") || "Heure"}</label>
-                                        <input type="time" class="form-control" id="spontaneous-time">
-                                    </div>
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">${t("duration") || "Durée"}</label>
-                                        <div class="input-group">
-                                            <input type="number" class="form-control" id="spontaneous-duration" min="1">
-                                            <select class="form-select" id="spontaneous-durationUnit" style="max-width:140px">
-                                                <option value="minutes">${t("minutes") || "Minutes"}</option>
-                                                <option value="hours" selected>${t("hours") || "Heures"}</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">${t("notes") || "Notes"}</label>
-                                    <textarea class="form-control" id="spontaneous-notes" rows="2"></textarea>
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">${t("cancel") || "Annuler"}</button>
-                            <button type="button" class="btn btn-success" id="btn-save-spontaneous">${t("save") || "Enregistrer"}</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         `;
     }
 
@@ -1053,6 +1001,29 @@ class ProgrammeView extends AbstractView {
         document.getElementById('action-time-duration').style.display = isAllDay ? 'none' : 'block';
     }
 
+    toggleExecutionType() {
+        const isNow = document.getElementById('exec-type-now')?.checked;
+        const recContainer = document.getElementById('action-recurrence-main-container');
+        const windowContainer = document.getElementById('action-window-main-container');
+        
+        if (isNow) {
+            if (recContainer) recContainer.style.display = 'none';
+            if (windowContainer) windowContainer.style.display = 'none';
+            
+            const today = new Date();
+            const dateStr = window.RecurrenceUtils ? RecurrenceUtils.formatDateStr(today) : today.toISOString().split('T')[0];
+            const timeStr = today.toTimeString().slice(0, 5);
+            
+            document.getElementById('action-date').value = dateStr;
+            document.getElementById('action-time').value = timeStr;
+            document.getElementById('action-allDay-no').checked = true;
+            this.toggleActionAllDay();
+        } else {
+            if (recContainer) recContainer.style.display = 'block';
+            if (windowContainer) windowContainer.style.display = 'block';
+        }
+    }
+
     openActionModal(id = null) {
         const form = document.getElementById('action-form');
         form.reset();
@@ -1060,13 +1031,19 @@ class ProgrammeView extends AbstractView {
         
         const titleEl = document.getElementById('actionModalTitle');
         const templateContainer = document.getElementById('action-template-container');
+        const typeContainer = document.getElementById('action-type-container');
         
         if (id) {
             titleEl.textContent = t("edit_action_title");
             templateContainer.style.display = 'none';
+            if (typeContainer) typeContainer.style.display = 'none';
         } else {
-            titleEl.textContent = t("schedule_action_title");
+            titleEl.textContent = t("add_action") || "Ajouter une action";
             templateContainer.style.display = 'block';
+            if (typeContainer) {
+                typeContainer.style.display = 'block';
+                document.getElementById('exec-type-scheduled').checked = true;
+            }
             
             const templateSelect = document.getElementById('action-template-select');
             templateSelect.innerHTML = `<option value="">${t("no_template")}</option>` + 
@@ -1074,6 +1051,7 @@ class ProgrammeView extends AbstractView {
         }
         
         this.toggleActionAllDay();
+        this.toggleExecutionType();
 
         document.getElementById('action-recurrence').value = 'none';
         document.getElementById('action-recurrenceEndDate-container').style.display = 'none';
@@ -1151,6 +1129,7 @@ class ProgrammeView extends AbstractView {
 
         const id = document.getElementById('action-id').value;
         const isAllDay = document.getElementById('action-allDay-yes').checked;
+        const isNow = !id && document.getElementById('exec-type-now')?.checked;
 
         const data = {
             name: document.getElementById('action-name').value,
@@ -1165,10 +1144,10 @@ class ProgrammeView extends AbstractView {
             duration: isAllDay ? null : Number(document.getElementById('action-duration').value),
             durationUnit: isAllDay ? null : document.getElementById('action-durationUnit').value,
             
-            recurrence: document.getElementById('action-recurrence').value,
-            recurrenceInterval: Number(document.getElementById('action-recurrenceInterval').value) || 1,
-            recurrenceDays: Array.from(document.querySelectorAll('.action-recurrence-day:checked')).map(cb => parseInt(cb.value)),
-            monthlyType: document.getElementById('action-monthlyType').value,
+            recurrence: isNow ? 'none' : document.getElementById('action-recurrence').value,
+            recurrenceInterval: isNow ? 1 : (Number(document.getElementById('action-recurrenceInterval').value) || 1),
+            recurrenceDays: isNow ? [] : Array.from(document.querySelectorAll('.action-recurrence-day:checked')).map(cb => parseInt(cb.value)),
+            monthlyType: isNow ? 'date' : document.getElementById('action-monthlyType').value,
             
             // Clean up old fields
             scheduleMode: 'scheduled',
@@ -1181,7 +1160,22 @@ class ProgrammeView extends AbstractView {
             if (id) {
                 await api.update(this.collectiveId, 'actions', id, data);
             } else {
-                await api.create(this.collectiveId, 'actions', data);
+                const createdAction = await api.create(this.collectiveId, 'actions', data);
+                
+                if (isNow) {
+                    const logData = {
+                        programmeId: createdAction.id,
+                        type: 'done',
+                        date: data.date,
+                        time: data.time || null,
+                        duration: data.duration,
+                        durationUnit: data.durationUnit,
+                        notes: null,
+                        state: 1, // 1st state or done (if no states)
+                        timestamp: Date.now()
+                    };
+                    await api.create(this.collectiveId, 'action-logs', logData);
+                }
             }
             this.actionModal.hide();
             await this.loadData();
@@ -1646,98 +1640,6 @@ class ProgrammeView extends AbstractView {
         this.historyModal.show();
     }
 
-    // --- Action Spontanée ---
-
-    openSpontaneousModal() {
-        const form = document.getElementById('spontaneous-form');
-        form.reset();
-        
-        const templateSelect = document.getElementById('spontaneous-template-select');
-        templateSelect.innerHTML = `<option value="">${t("no_template")}</option>` + 
-            this.actions.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
-
-        const today = new Date();
-        const dateStr = window.RecurrenceUtils ? RecurrenceUtils.formatDateStr(today) : today.toISOString().split('T')[0];
-        const timeStr = today.toTimeString().slice(0, 5);
-
-        const dateInput = document.getElementById('spontaneous-date');
-        dateInput.value = dateStr;
-        dateInput.max = dateStr; // Pas dans le futur
-        
-        document.getElementById('spontaneous-time').value = timeStr;
-
-        this.spontaneousModal.show();
-    }
-
-    async saveSpontaneousAction() {
-        const form = document.getElementById('spontaneous-form');
-        if (!form.reportValidity()) return;
-
-        const name = document.getElementById('spontaneous-name').value;
-        const templateId = document.getElementById('spontaneous-template-select').value;
-        const date = document.getElementById('spontaneous-date').value;
-        const time = document.getElementById('spontaneous-time').value;
-        const duration = document.getElementById('spontaneous-duration').value;
-        const durationUnit = document.getElementById('spontaneous-durationUnit').value;
-        const notes = document.getElementById('spontaneous-notes').value;
-
-        // Validation pas dans le futur
-        const todayStr = window.RecurrenceUtils ? RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().split('T')[0];
-        if (date > todayStr) {
-            alert(t("error") + ': ' + t("error_date_in_future"));
-            return;
-        }
-
-        if (!name) {
-            alert(t("error_action_name_required"));
-            return;
-        }
-
-        try {
-            let template = null;
-            if (templateId) {
-                template = this.actions.find(a => a.id === templateId);
-            }
-
-            const newActionData = {
-                name: name,
-                description: template ? (template.description || "") : "",
-                date: date,
-                time: time || "",
-                allDay: !time,
-                duration: duration ? Number(duration) : null,
-                durationUnit: duration ? durationUnit : 'hours',
-                recurrence: 'none',
-                recurrenceInterval: 1,
-                states: template ? (template.states || []) : [],
-                scheduleMode: 'scheduled'
-            };
-            
-            const createdAction = await api.create(this.collectiveId, 'actions', newActionData);
-            const actionId = createdAction.id;
-            const finalState = newActionData.states.length > 0 ? newActionData.states.length + 1 : 1;
-
-            const logData = {
-                programmeId: actionId,
-                type: 'done',
-                date: date,
-                time: time || null,
-                duration: duration ? Number(duration) : null,
-                durationUnit: duration ? durationUnit : null,
-                notes: notes || null,
-                state: finalState,
-                timestamp: Date.now()
-            };
-
-            await api.create(this.collectiveId, 'action-logs', logData);
-
-            this.spontaneousModal.hide();
-            await this.loadData();
-        } catch (error) {
-            alert(t("error") + ': ' + error.message);
-        }
-    }
-
     // --- Init ---
 
     async init() {
@@ -1785,6 +1687,12 @@ class ProgrammeView extends AbstractView {
             document.querySelectorAll('input[name="action-allDay"]').forEach(radio => {
                 radio.addEventListener('change', () => {
                     this.toggleActionAllDay();
+                });
+            });
+
+            document.querySelectorAll('input[name="action-executionType"]').forEach(radio => {
+                radio.addEventListener('change', () => {
+                    this.toggleExecutionType();
                 });
             });
 
@@ -1867,6 +1775,8 @@ class ProgrammeView extends AbstractView {
                         document.getElementById('action-recurrence-days-container').style.display = (rec === 'weekly') ? 'block' : 'none';
                         document.getElementById('action-monthly-type-container').style.display = (rec === 'monthly') ? 'block' : 'none';
                         document.getElementById('action-recurrenceEndDate-container').style.display = (rec === 'none') ? 'none' : 'block';
+
+                        this.toggleExecutionType();
                     }
                 });
             }
@@ -1875,31 +1785,6 @@ class ProgrammeView extends AbstractView {
         // Modals accessibles à tous
         this.logModal = new bootstrap.Modal(document.getElementById('logModal'));
         this.historyModal = new bootstrap.Modal(document.getElementById('historyModal'));
-        this.spontaneousModal = new bootstrap.Modal(document.getElementById('spontaneousModal'));
-
-        document.getElementById('btn-record-action').addEventListener('click', () => {
-            this.openSpontaneousModal();
-        });
-
-        document.getElementById('spontaneous-template-select').addEventListener('change', (e) => {
-            const templateId = e.target.value;
-            const action = this.actions.find(a => a.id === templateId);
-            if (action) {
-                document.getElementById('spontaneous-name').value = action.name || '';
-                if (action.duration) {
-                    document.getElementById('spontaneous-duration').value = action.duration;
-                    document.getElementById('spontaneous-durationUnit').value = action.durationUnit || 'hours';
-                }
-            } else {
-                document.getElementById('spontaneous-name').value = '';
-                document.getElementById('spontaneous-duration').value = '';
-                document.getElementById('spontaneous-durationUnit').value = 'hours';
-            }
-        });
-
-        document.getElementById('btn-save-spontaneous').addEventListener('click', () => {
-            this.saveSpontaneousAction();
-        });
 
         document.getElementById('btn-save-log').addEventListener('click', () => {
             this.saveLog();
