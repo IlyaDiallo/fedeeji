@@ -174,8 +174,12 @@ src/frontend/
     ├── app.js             # Routeur SPA (history API), navigation, permissions
     ├── api.js             # Client HTTP REST (fetch), gestion du token JWT
     ├── i18n.js            # Internationalisation fr/en
-    ├── RecurrenceUtils.js # Calcul des occurrences récurrentes
-    ├── ActionUtils.js     # Normalisation des actions, nom de membre
+    ├── RecurrenceUtils.js          # Calcul des occurrences récurrentes
+    ├── ActionUtils.js              # Normalisation des actions, nom de membre
+    ├── ActionOccurrenceResolver.js # Résolution occurrences (statut, état, fenêtre)
+    ├── ProgrammeRenderers.js       # Rendu HTML liste/calendrier/historique
+    ├── ActionFormManager.js        # Modal CRUD actions
+    ├── LogFormManager.js           # Modal logs (done/note/consultation)
     └── views/
         ├── AbstractView.js           # Classe de base (setTitle, getHtml, init)
         ├── LoginView.js              # Connexion
@@ -226,6 +230,13 @@ graph TB
         ACT["ActionUtils.js"]
     end
 
+    subgraph "Modules Programme"
+        AOR["ActionOccurrenceResolver"]
+        PR["ProgrammeRenderers"]
+        AFM["ActionFormManager"]
+        LFM["LogFormManager"]
+    end
+
     ROUTER --> MATCH
     MATCH --> PERMS
     PERMS --> NAV
@@ -234,6 +245,10 @@ graph TB
     PV --> REC
     PV --> ACT
     PV --> I18N
+    PV --> AOR
+    PV --> PR
+    PV --> AFM
+    PV --> LFM
 ```
 
 ### Cycle de vie d'une vue
@@ -271,6 +286,10 @@ graph TB
 | `i18n.js`            | Dictionnaires fr/en, fonction `t(key)`, événement `langChanged`         |
 | `RecurrenceUtils.js` | Génération d'occurrences (daily, weekly, monthly) avec intervalles et exceptions |
 | `ActionUtils.js`     | `normalize(action)` : conversion des anciens formats de récurrence ; `getMemberName(id, members)` |
+| `ActionOccurrenceResolver.js` | Résolution des prochaines occurrences, calcul statut (overdue/due/ok) et état courant |
+| `ProgrammeRenderers.js` | Rendu HTML statique : items liste, grille calendrier, historique, notes existantes |
+| `ActionFormManager.js` | Gestion du modal CRUD actions (ouverture, sauvegarde, template, récurrence) |
+| `LogFormManager.js`  | Gestion du modal logs : modes done, note, consultation hors-fenêtre     |
 
 ---
 
