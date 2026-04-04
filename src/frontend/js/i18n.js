@@ -213,7 +213,15 @@ const translations = {
         "hours_abbr": "h",
         "minutes_abbr": "min",
         "scheduled": "Programmée",
-        "now": "Maintenant"
+        "now": "Maintenant",
+        "unknown": "Inconnu",
+        "select_a_date": "Sélectionner une date",
+        "please_select_member": "Veuillez sélectionner un membre",
+        "error_save": "Erreur lors de la sauvegarde",
+        "error_delete": "Erreur lors de la suppression",
+        "error_load": "Erreur de chargement",
+        "file_too_large": "Le fichier est trop volumineux (max 1 Mo)",
+        "error_upload_logo": "Erreur upload logo"
     },
     en: {
         "app_title": "Feddeeji - Collective Management",
@@ -429,7 +437,15 @@ const translations = {
         "hours_abbr": "h",
         "minutes_abbr": "min",
         "scheduled": "Scheduled",
-        "now": "Now"
+        "now": "Now",
+        "unknown": "Unknown",
+        "select_a_date": "Select a date",
+        "please_select_member": "Please select a member",
+        "error_save": "Error while saving",
+        "error_delete": "Error while deleting",
+        "error_load": "Loading error",
+        "file_too_large": "File is too large (max 1 MB)",
+        "error_upload_logo": "Error uploading logo"
     }
 };
 

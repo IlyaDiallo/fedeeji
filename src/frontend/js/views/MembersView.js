@@ -3,7 +3,6 @@ class MembersView extends AbstractView {
         super(params);
         this.setTitle(t("members") + " - " + t("brand"));
         this.members = [];
-        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
@@ -209,7 +208,7 @@ class MembersView extends AbstractView {
             );
             this.renderTable();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -429,7 +428,7 @@ class MembersView extends AbstractView {
             this.modal.hide();
             await this.loadMembers();
         } catch (error) {
-            alert('Erreur lors de la sauvegarde: '
+            alert(t("error_save") + ': '
                 + error.message);
         }
     }
@@ -442,7 +441,7 @@ class MembersView extends AbstractView {
                 );
                 await this.loadMembers();
             } catch (error) {
-                alert('Erreur lors de la suppression: '
+                alert(t("error_delete") + ': '
                     + error.message);
             }
         }

@@ -4,9 +4,7 @@ class InscriptionScheduleView extends AbstractView {
         this.setTitle(
             t("inscription_schedule") + " - " + t("brand")
         );
-        this.collectiveId = params.collectiveId;
         this.eventId = params.eventId;
-        this.isMember = api.getRole() === 'member';
         this.event = null;
         this.members = [];
         this.inscriptions = [];
@@ -157,7 +155,7 @@ class InscriptionScheduleView extends AbstractView {
                 this.renderMonth();
             }
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -218,7 +216,7 @@ class InscriptionScheduleView extends AbstractView {
         const label = document.getElementById('month-label');
         const monthName = new Date(y, m, 1)
             .toLocaleDateString(
-                i18n.lang === 'en' ? 'en-US' : 'fr-FR',
+                this.locale,
                 { month: 'long', year: 'numeric' }
             );
         label.textContent = monthName.charAt(0)
@@ -388,7 +386,7 @@ class InscriptionScheduleView extends AbstractView {
         allOccs.forEach(occ => {
             const dateObj = new Date(occ.occurrenceDate);
             const dateLabel = dateObj.toLocaleDateString(
-                i18n.lang === 'en' ? 'en-US' : 'fr-FR',
+                this.locale,
                 {
                     weekday: 'long',
                     year: 'numeric',
@@ -621,7 +619,7 @@ class InscriptionScheduleView extends AbstractView {
             }
             this.renderMonth();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -722,7 +720,7 @@ class InscriptionScheduleView extends AbstractView {
             this.loadLocalResponses();
             this.renderMonth();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 

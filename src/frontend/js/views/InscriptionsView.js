@@ -7,8 +7,6 @@ class InscriptionsView extends AbstractView {
         this.inscriptions = [];
         this.members = [];
         this.events = [];
-        this.collectiveId = params.collectiveId;
-        this.isMember = api.getRole() === 'member';
     }
 
     // Retourne le badge Bootstrap correspondant à la réponse
@@ -189,7 +187,7 @@ class InscriptionsView extends AbstractView {
             this.renderTable();
             this.renderSelects();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -271,12 +269,12 @@ class InscriptionsView extends AbstractView {
                 : (member
                     ? `${member.lastName} `
                         + `${member.firstName}`
-                    : 'Inconnu');
+                    : t("unknown"));
 
             const event = this.events
                 .find(e => e.id === p.eventId);
             let eventName = event
-                ? event.name : 'Inconnu';
+                ? event.name : t("unknown");
                 
             if (p.occurrenceDate) {
                 eventName += ` (${p.occurrenceDate})`;
@@ -420,7 +418,7 @@ class InscriptionsView extends AbstractView {
         }
         
         container.style.display = 'block';
-        select.innerHTML = `<option value="" disabled selected>Sélectionner une date</option>`;
+        select.innerHTML = `<option value="" disabled selected>${t("select_a_date")}</option>`;
         
         const today = new Date().toISOString().slice(0, 10);
         
@@ -511,7 +509,7 @@ class InscriptionsView extends AbstractView {
             this.modal.hide();
             await this.loadData();
         } catch (error) {
-            alert('Erreur lors de la sauvegarde: '
+            alert(t("error_save") + ': '
                 + error.message);
         }
     }
@@ -524,7 +522,7 @@ class InscriptionsView extends AbstractView {
                 );
                 await this.loadData();
             } catch (error) {
-                alert('Erreur lors de la suppression: '
+                alert(t("error_delete") + ': '
                     + error.message);
             }
         }

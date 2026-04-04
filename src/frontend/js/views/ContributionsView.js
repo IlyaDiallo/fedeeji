@@ -1,7 +1,6 @@
 class ContributionsView extends AbstractView {
     constructor(params) {
         super(params);
-        this.isMember = api.getRole() === 'member';
         this.setTitle(
             (this.isMember
                 ? t("my_contributions")
@@ -10,7 +9,6 @@ class ContributionsView extends AbstractView {
         );
         this.contributions = [];
         this.members = [];
-        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
@@ -224,7 +222,7 @@ class ContributionsView extends AbstractView {
                 this.renderMemberSelect();
             }
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -234,8 +232,7 @@ class ContributionsView extends AbstractView {
         );
         if (!select) return;
         select.innerHTML =
-            '<option value="">'
-            + 'Sélectionner un membre</option>';
+            `<option value="">${t("select_member")}</option>`;
         this.members.forEach(m => {
             select.innerHTML +=
                 `<option value="${m.id}">` +
@@ -267,7 +264,7 @@ class ContributionsView extends AbstractView {
                 : (member
                     ? `${member.lastName} `
                         + `${member.firstName}`
-                    : 'Inconnu');
+                    : t("unknown"));
 
             const actionsHtml = this.isMember ? '' : `
                 <div class="btn-group-actions">
@@ -519,7 +516,7 @@ class ContributionsView extends AbstractView {
         };
 
         if (!data.memberId) {
-            alert("Veuillez sélectionner un membre");
+            alert(t("please_select_member"));
             return;
         }
 
@@ -536,7 +533,7 @@ class ContributionsView extends AbstractView {
             this.modal.hide();
             await this.loadData();
         } catch (error) {
-            alert('Erreur lors de la sauvegarde: '
+            alert(t("error_save") + ': '
                 + error.message);
         }
     }
@@ -549,7 +546,7 @@ class ContributionsView extends AbstractView {
                 );
                 await this.loadData();
             } catch (error) {
-                alert('Erreur lors de la suppression: '
+                alert(t("error_delete") + ': '
                     + error.message);
             }
         }

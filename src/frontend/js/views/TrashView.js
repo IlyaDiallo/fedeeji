@@ -3,7 +3,6 @@ class TrashView extends AbstractView {
         super(params);
         this.setTitle(t("trash") + " - " + t("brand"));
         this.items = [];
-        this.collectiveId = params.collectiveId;
     }
 
     async getHtml() {
@@ -60,7 +59,7 @@ class TrashView extends AbstractView {
             this.items = await api.getTrash(this.collectiveId);
             this.renderTable();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -141,7 +140,7 @@ class TrashView extends AbstractView {
             await api.restoreFromTrash(this.collectiveId, trashId);
             await this.loadTrash();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -153,7 +152,7 @@ class TrashView extends AbstractView {
                 );
                 await this.loadTrash();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                alert(t("error") + ': ' + error.message);
             }
         }
     }
@@ -164,7 +163,7 @@ class TrashView extends AbstractView {
                 await api.emptyTrash(this.collectiveId);
                 await this.loadTrash();
             } catch (error) {
-                alert('Erreur: ' + error.message);
+                alert(t("error") + ': ' + error.message);
             }
         }
     }

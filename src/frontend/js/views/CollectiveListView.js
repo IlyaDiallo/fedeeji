@@ -323,7 +323,7 @@ class CollectiveListView extends AbstractView {
             ).hide();
             await this.loadOrgs();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -388,7 +388,7 @@ class CollectiveListView extends AbstractView {
                     });
                 });
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -417,7 +417,7 @@ class CollectiveListView extends AbstractView {
             );
             modal.show();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -439,13 +439,13 @@ class CollectiveListView extends AbstractView {
             ).hide();
             await this.loadOrgs();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
     async uploadLogo(file) {
         if (file.size > 1 * 1024 * 1024) {
-            alert('Le fichier est trop volumineux (max 1 Mo)');
+            alert(t("file_too_large"));
             return;
         }
 
@@ -454,7 +454,7 @@ class CollectiveListView extends AbstractView {
             const result = await api.uploadOrgLogo(collectiveId, file);
             document.getElementById('edit-org-logo-preview').src = result.logo;
         } catch (error) {
-            alert('Erreur upload logo: ' + error.message);
+            alert(t("error_upload_logo") + ': ' + error.message);
         }
     }
 
@@ -480,7 +480,7 @@ class CollectiveListView extends AbstractView {
             ).hide();
             await this.loadOrgs();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 }

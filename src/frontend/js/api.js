@@ -265,36 +265,31 @@ class Api {
         );
     }
 
+    /** Envoi d'un FormData avec authentification */
+    async _fetchFormData(url, formData) {
+        const headers = {};
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+        const response = await fetch(url, {
+            method: 'POST', headers, body: formData
+        });
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(
+                error.error || `Erreur HTTP: ${response.status}`
+            );
+        }
+        return response.json();
+    }
+
     /** Upload un fichier vers un endpoint */
     async uploadFile({ collectiveId, endpoint, file }) {
         const formData = new FormData();
         formData.append('file', file);
-
-        const headers = {};
-        if (this.token) {
-            headers['Authorization'] =
-                `Bearer ${this.token}`;
-        }
-
-        const response = await fetch(
-            `/api/${collectiveId}/${endpoint}`,
-            {
-                method: 'POST',
-                headers,
-                body: formData
-            }
+        return this._fetchFormData(
+            `/api/${collectiveId}/${endpoint}`, formData
         );
-
-        if (!response.ok) {
-            const error = await response.json()
-                .catch(() => ({}));
-            throw new Error(
-                error.error
-                || `Erreur HTTP: ${response.status}`
-            );
-        }
-
-        return response.json();
     }
 
     /** Modifier un collectif (superadmin) */
@@ -331,32 +326,9 @@ class Api {
     async uploadOrgLogo(id, file) {
         const formData = new FormData();
         formData.append('file', file);
-
-        const headers = {};
-        if (this.token) {
-            headers['Authorization'] =
-                `Bearer ${this.token}`;
-        }
-
-        const response = await fetch(
-            `/auth/collectives/${id}/logo`,
-            {
-                method: 'POST',
-                headers,
-                body: formData
-            }
+        return this._fetchFormData(
+            `/auth/collectives/${id}/logo`, formData
         );
-
-        if (!response.ok) {
-            const error = await response.json()
-                .catch(() => ({}));
-            throw new Error(
-                error.error
-                || `Erreur HTTP: ${response.status}`
-            );
-        }
-
-        return response.json();
     }
 }
 

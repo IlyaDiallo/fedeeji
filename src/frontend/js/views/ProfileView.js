@@ -4,7 +4,6 @@ class ProfileView extends AbstractView {
         this.setTitle(
             t("my_profile") + " - " + t("brand")
         );
-        this.collectiveId = params.collectiveId;
         this.member = null;
     }
 
@@ -127,7 +126,7 @@ class ProfileView extends AbstractView {
             );
             this.fillForm();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -193,7 +192,7 @@ class ProfileView extends AbstractView {
         } catch (error) {
             this.showAlert(
                 'danger',
-                'Erreur: ' + error.message
+                t("error") + ': ' + error.message
             );
         }
     }

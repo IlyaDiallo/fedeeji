@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const { requireRole } = require('../middleware/auth');
+const asyncHandler = require('../middleware/asyncHandler');
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
 
@@ -32,103 +33,77 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
     };
 
     // Vérification du mot de passe d'enregistrement
-    router.post('/verify-registration-password', async (req, res) => {
-        try {
-            const { collectiveId, password } = req.body;
-            const org = await collectiveService.getById(collectiveId);
-            if (!org) throw new Error('Collectif non trouvé');
-            if (!org.registrationPassword || org.registrationPassword !== password) {
-                throw new Error('Mot de passe d\'enregistrement incorrect');
-            }
-            res.json({ success: true });
-        } catch (error) {
-            res.status(401).json({ error: error.message });
+    router.post('/verify-registration-password', asyncHandler(async (req, res) => {
+        const { collectiveId, password } = req.body;
+        const org = await collectiveService.getById(collectiveId);
+        if (!org) throw new Error('Collectif non trouvé');
+        if (!org.registrationPassword || org.registrationPassword !== password) {
+            throw new Error('Mot de passe d\'enregistrement incorrect');
         }
-    });
+        res.json({ success: true });
+    }, 401));
 
     // Enregistrement d'un membre
-    router.post('/register', async (req, res) => {
-        try {
-            const { collectiveId, password, memberData } = req.body;
-            const org = await collectiveService.getById(collectiveId);
-            if (!org) throw new Error('Collectif non trouvé');
-            if (!org.registrationPassword || org.registrationPassword !== password) {
-                throw new Error('Mot de passe d\'enregistrement incorrect');
-            }
-            
-            const safeData = {
-                lastName: memberData.lastName,
-                firstName: memberData.firstName,
-                email: memberData.email,
-                phone: memberData.phone,
-                address: memberData.address,
-                address2: memberData.address2,
-                postalCode: memberData.postalCode,
-                city: memberData.city,
-                country: memberData.country,
-                admin: false
-            };
-            
-            const newMember = await dataService.create({
-                collectiveId: collectiveId,
-                collection: 'members',
-                data: safeData
-            });
-            
-            res.status(201).json({ success: true, memberId: newMember.id });
-        } catch (error) {
-            res.status(400).json({ error: error.message });
+    router.post('/register', asyncHandler(async (req, res) => {
+        const { collectiveId, password, memberData } = req.body;
+        const org = await collectiveService.getById(collectiveId);
+        if (!org) throw new Error('Collectif non trouvé');
+        if (!org.registrationPassword || org.registrationPassword !== password) {
+            throw new Error('Mot de passe d\'enregistrement incorrect');
         }
-    });
+
+        const safeData = {
+            lastName: memberData.lastName,
+            firstName: memberData.firstName,
+            email: memberData.email,
+            phone: memberData.phone,
+            address: memberData.address,
+            address2: memberData.address2,
+            postalCode: memberData.postalCode,
+            city: memberData.city,
+            country: memberData.country,
+            admin: false
+        };
+
+        const newMember = await dataService.create({
+            collectiveId: collectiveId,
+            collection: 'members',
+            data: safeData
+        });
+
+        res.status(201).json({ success: true, memberId: newMember.id });
+    }));
 
     // Connexion superadmin
-    router.post('/login', (req, res) => {
-        try {
-            const { password } = req.body;
-            const result = authService.loginSuperadmin({
-                password
-            });
-            res.json(result);
-        } catch (error) {
-            res.status(401).json({ error: error.message });
-        }
-    });
+    router.post('/login', asyncHandler((req, res) => {
+        const { password } = req.body;
+        const result = authService.loginSuperadmin({ password });
+        res.json(result);
+    }, 401));
 
     // Connexion admin (membre avec flag admin)
-    router.post('/login/admin', async (req, res) => {
-        try {
-            const { collectiveId, email, password } = req.body;
-            const result = await authService.loginAdmin({
-                collectiveId, email, password
-            });
-            res.json(result);
-        } catch (error) {
-            res.status(401).json({ error: error.message });
-        }
-    });
+    router.post('/login/admin', asyncHandler(async (req, res) => {
+        const { collectiveId, email, password } = req.body;
+        const result = await authService.loginAdmin({
+            collectiveId, email, password
+        });
+        res.json(result);
+    }, 401));
 
     // Connexion membre simple (email seul)
-    router.post('/login/member', async (req, res) => {
-        try {
-            const { collectiveId, email } = req.body;
-            const result = await authService.loginMember({
-                collectiveId, email
-            });
-            res.json(result);
-        } catch (error) {
-            res.status(401).json({ error: error.message });
-        }
-    });
+    router.post('/login/member', asyncHandler(async (req, res) => {
+        const { collectiveId, email } = req.body;
+        const result = await authService.loginMember({
+            collectiveId, email
+        });
+        res.json(result);
+    }, 401));
 
     // Liste des collectifs (publique)
-    router.get('/collectives', async (req, res) => {
-        try {
-            const orgs = await collectiveService.getAll();
-            res.json(orgs);
-        } catch (error) {
-            res.status(500).json({ error: error.message });
-        }
-    });
+    router.get('/collectives', asyncHandler(async (req, res) => {
+        const orgs = await collectiveService.getAll();
+        res.json(orgs);
+    }, 500));
 
     // Email de contact du superadmin (publique)
     router.get('/superadmin-email', (req, res) => {
@@ -138,16 +113,12 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
     // Modification d'un collectif (superadmin)
     router.put(
         '/collectives/:id',
-        async (req, res) => {
-            try {
-                const { id } = req.params;
-                const { id: _id, ...data } = req.body;
-                const updated = await collectiveService.update(id, data);
-                res.json(updated);
-            } catch (error) {
-                res.status(400).json({ error: error.message });
-            }
-        }
+        asyncHandler(async (req, res) => {
+            const { id } = req.params;
+            const { id: _id, ...data } = req.body;
+            const updated = await collectiveService.update(id, data);
+            res.json(updated);
+        })
     );
 
     // Upload du logo (superadmin, 1 Mo max)
@@ -171,62 +142,50 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
     router.post(
         '/collectives/:id/logo',
         logoUpload.single('file'),
-        async (req, res) => {
-            try {
-                if (!req.file) {
-                    return res.status(400).json({
-                        error: 'Aucun fichier fourni'
-                    });
-                }
-                const logoUrl = await collectiveService.uploadLogo(
-                    req.params.id,
-                    req.file
-                );
-                res.json({ logo: logoUrl });
-            } catch (error) {
-                res.status(400).json({ error: error.message });
+        asyncHandler(async (req, res) => {
+            if (!req.file) {
+                return res.status(400).json({
+                    error: 'Aucun fichier fourni'
+                });
             }
-        }
+            const logoUrl = await collectiveService.uploadLogo(
+                req.params.id,
+                req.file
+            );
+            res.json({ logo: logoUrl });
+        })
     );
 
     // Création d'un collectif (superadmin uniquement)
     router.post(
         '/collectives',
         requireSuperadmin,
-        async (req, res) => {
-            try {
-                const { id, name, label, adminEmail, defaultLanguage,
-                    registrationPassword } = req.body;
+        asyncHandler(async (req, res) => {
+            const { id, name, label, adminEmail, defaultLanguage,
+                registrationPassword } = req.body;
 
-                if (!id || !name || !label) {
-                    return res.status(400).json({
-                        error: 'id, name et label sont obligatoires'
-                    });
-                }
-
-                const org = await collectiveService.create({
-                    id, name, label, adminEmail,
-                    defaultLanguage, registrationPassword
+            if (!id || !name || !label) {
+                return res.status(400).json({
+                    error: 'id, name et label sont obligatoires'
                 });
-                res.status(201).json(org);
-            } catch (error) {
-                res.status(400).json({ error: error.message });
             }
-        }
+
+            const org = await collectiveService.create({
+                id, name, label, adminEmail,
+                defaultLanguage, registrationPassword
+            });
+            res.status(201).json(org);
+        })
     );
 
     // Suppression d'un collectif (superadmin uniquement)
     router.delete(
         '/collectives/:id',
         requireSuperadmin,
-        async (req, res) => {
-            try {
-                await collectiveService.delete(req.params.id);
-                res.json({ success: true });
-            } catch (error) {
-                res.status(400).json({ error: error.message });
-            }
-        }
+        asyncHandler(async (req, res) => {
+            await collectiveService.delete(req.params.id);
+            res.json({ success: true });
+        })
     );
 
     return router;

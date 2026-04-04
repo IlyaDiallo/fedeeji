@@ -3,8 +3,6 @@ class EventsView extends AbstractView {
         super(params);
         this.setTitle(t("events") + " - " + t("brand"));
         this.events = [];
-        this.collectiveId = params.collectiveId;
-        this.isMember = api.getRole() === 'member';
     }
 
     // Formate la durée avec son unité pour l'affichage
@@ -277,7 +275,7 @@ class EventsView extends AbstractView {
             );
             this.renderTable();
         } catch (error) {
-            alert('Erreur: ' + error.message);
+            alert(t("error") + ': ' + error.message);
         }
     }
 
@@ -582,7 +580,7 @@ class EventsView extends AbstractView {
             this.modal.hide();
             await this.loadEvents();
         } catch (error) {
-            alert('Erreur lors de la sauvegarde: '
+            alert(t("error_save") + ': '
                 + error.message);
         }
     }
@@ -595,7 +593,7 @@ class EventsView extends AbstractView {
                 );
                 await this.loadEvents();
             } catch (error) {
-                alert('Erreur lors de la suppression: '
+                alert(t("error_delete") + ': '
                     + error.message);
             }
         }
