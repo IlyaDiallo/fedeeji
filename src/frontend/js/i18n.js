@@ -222,7 +222,17 @@ const translations = {
         "error_load": "Erreur de chargement",
         "file_too_large": "Le fichier est trop volumineux (max 1 Mo)",
         "error_upload_logo": "Erreur upload logo",
-        "tax_receipt": "Reçu fiscal"
+        "tax_receipt": "Reçu fiscal",
+        "ha_section_title": "Notifications mobiles (Home Assistant)",
+        "ha_section_desc": "Recevez une alarme sur votre smartphone lorsqu'une action est à faire ou en retard, via l'application Home Assistant Companion. Dans HA, créez une automatisation déclenchée par Webhook et copiez les informations ci-dessous.",
+        "ha_base_url": "URL de votre instance Home Assistant",
+        "ha_base_url_help": "Adresse externe de votre HA, ex : https://mon-ha.duckdns.org ou https://192.168.1.10:8123",
+        "ha_webhook_id": "Identifiant du webhook",
+        "ha_webhook_id_help": "Dans HA : Paramètres → Automatisations → Nouvelle automatisation → Déclencheur Webhook. Copiez l'ID affiché (ex : -rx2i82Kv0A5Dqv55PiH5Du-Q).",
+        "ha_test_btn": "Tester",
+        "ha_saved": "Configuration HA enregistrée",
+        "ha_test_ok": "Notification de test envoyée ✅",
+        "ha_test_error": "Échec de la notification de test"
     },
     en: {
         "app_title": "Feddeeji - Collective Management",
@@ -447,7 +457,17 @@ const translations = {
         "error_load": "Loading error",
         "file_too_large": "File is too large (max 1 MB)",
         "error_upload_logo": "Error uploading logo",
-        "tax_receipt": "Tax receipt"
+        "tax_receipt": "Tax receipt",
+        "ha_section_title": "Mobile notifications (Home Assistant)",
+        "ha_section_desc": "Receive an alarm on your smartphone when an action is due or overdue, via the Home Assistant Companion App. In HA, create an automation triggered by Webhook and fill in the fields below.",
+        "ha_base_url": "Your Home Assistant instance URL",
+        "ha_base_url_help": "External address of your HA, e.g. https://my-ha.duckdns.org or https://192.168.1.10:8123",
+        "ha_webhook_id": "Webhook ID",
+        "ha_webhook_id_help": "In HA: Settings → Automations → New automation → Webhook trigger. Copy the displayed ID (e.g. -rx2i82Kv0A5Dqv55PiH5Du-Q).",
+        "ha_test_btn": "Test",
+        "ha_saved": "HA configuration saved",
+        "ha_test_ok": "Test notification sent ✅",
+        "ha_test_error": "Test notification failed"
     }
 };
 

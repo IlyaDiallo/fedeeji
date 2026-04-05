@@ -292,6 +292,24 @@ class Api {
         );
     }
 
+    // --- Notifications Home Assistant ---
+
+    /** Envoie une notification de test vers le webhook HA du membre connecté. */
+    async testHaNotification(collectiveId) {
+        return this.request(
+            `/api/${collectiveId}/notifications/test-ha`,
+            { method: 'POST' }
+        );
+    }
+
+    /** Déclenche un check immédiat des notifications (admin). */
+    async triggerNotifications(collectiveId) {
+        return this.request(
+            `/api/${collectiveId}/notifications/trigger`,
+            { method: 'POST' }
+        );
+    }
+
     /** Modifier un collectif (superadmin) */
     async updateCollective(id, data) {
         return this.request(

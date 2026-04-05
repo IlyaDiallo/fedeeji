@@ -8,13 +8,15 @@ const createInscriptionsRouter = require('./inscriptions');
 const createActionsRouter = require('./actions');
 const createActionLogsRouter = require('./actionLogs');
 const createEventsRouter = require('./events');
+const createNotificationsRouter = require('./notifications');
 
 /**
  * @param {Object} params
  * @param {import('../services/DataService')} params.dataService
  * @param {import('../services/TrashService')} params.trashService
+ * @param {import('../services/ActionNotificationScheduler')} [params.scheduler]
  */
-function createApiRouter({ dataService, trashService }) {
+function createApiRouter({ dataService, trashService, scheduler }) {
     const router = express.Router({ mergeParams: true });
 
     // Middleware : vérifie que le collectiveId est présent
@@ -47,6 +49,11 @@ function createApiRouter({ dataService, trashService }) {
     );
 
     router.use('/events', createEventsRouter({ dataService }));
+
+    router.use(
+        '/notifications',
+        createNotificationsRouter({ dataService, scheduler })
+    );
 
     // --- Contributions : membres voient les leurs ---
 

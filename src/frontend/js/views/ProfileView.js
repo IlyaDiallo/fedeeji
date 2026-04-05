@@ -114,6 +114,56 @@ class ProfileView extends AbstractView {
                     </form>
                     <div id="profile-alert"
                         class="mt-3 d-none"></div>
+
+                    <!-- Section Home Assistant -->
+                    <hr>
+                    <h5 class="mt-3 mb-1">
+                        <i class="bi bi-phone me-2"></i>
+                        ${t("ha_section_title")}
+                    </h5>
+                    <p class="text-muted small mb-3">
+                        ${t("ha_section_desc")}
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            ${t("ha_base_url")}
+                        </label>
+                        <input type="url"
+                            class="form-control"
+                            id="profile-haBaseUrl"
+                            placeholder="https://mon-ha.duckdns.org">
+                        <div class="form-text">
+                            ${t("ha_base_url_help")}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            ${t("ha_webhook_id")}
+                        </label>
+                        <div class="input-group">
+                            <input type="text"
+                                class="form-control font-monospace"
+                                id="profile-haWebhookId"
+                                placeholder="-rx2i82Kv0A5Dqv55PiH5Du-Q">
+                            <button class="btn btn-outline-secondary"
+                                type="button"
+                                id="btn-test-ha">
+                                <i class="bi bi-send me-1"></i>
+                                ${t("ha_test_btn")}
+                            </button>
+                        </div>
+                        <div class="form-text">
+                            ${t("ha_webhook_id_help")}
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button"
+                            class="btn btn-primary"
+                            id="btn-save-ha">
+                            ${t("save")}
+                        </button>
+                    </div>
+                    <div id="ha-alert" class="mt-3 d-none"></div>
                 </div>
             </div>
         `;
@@ -151,6 +201,10 @@ class ProfileView extends AbstractView {
             .value = m.city || '';
         document.getElementById('profile-country')
             .value = m.country || '';
+        document.getElementById('profile-haBaseUrl')
+            .value = m.haBaseUrl || '';
+        document.getElementById('profile-haWebhookId')
+            .value = m.haWebhookId || '';
     }
 
     async saveProfile() {
@@ -198,16 +252,60 @@ class ProfileView extends AbstractView {
     }
 
     showAlert(type, message) {
-        const el = document.getElementById(
-            'profile-alert'
-        );
-        el.className =
-            `mt-3 alert alert-${type}`;
+        const el = document.getElementById('profile-alert');
+        el.className = `mt-3 alert alert-${type}`;
         el.textContent = message;
         el.classList.remove('d-none');
-        setTimeout(() => {
-            el.classList.add('d-none');
-        }, 3000);
+        setTimeout(() => el.classList.add('d-none'), 3000);
+    }
+
+    showHaAlert(type, message) {
+        const el = document.getElementById('ha-alert');
+        el.className = `mt-3 alert alert-${type}`;
+        el.textContent = message;
+        el.classList.remove('d-none');
+        setTimeout(() => el.classList.add('d-none'), 4000);
+    }
+
+    /** Enregistre l'URL de base HA et l'ID de webhook dans le profil. */
+    async saveHa() {
+        const haBaseUrl = document.getElementById(
+            'profile-haBaseUrl'
+        ).value.trim().replace(/\/$/, '');
+        const haWebhookId = document.getElementById(
+            'profile-haWebhookId'
+        ).value.trim();
+
+        try {
+            this.member = await api.updateMyProfile(
+                this.collectiveId, { haBaseUrl, haWebhookId }
+            );
+            this.showHaAlert('success', t('ha_saved'));
+        } catch (error) {
+            this.showHaAlert(
+                'danger', t('error') + ': ' + error.message
+            );
+        }
+    }
+
+    /** Envoie une notification de test via le webhook HA configuré. */
+    async testHa() {
+        const btn = document.getElementById('btn-test-ha');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span>`;
+
+        try {
+            await api.testHaNotification(this.collectiveId);
+            this.showHaAlert('success', t('ha_test_ok'));
+        } catch (error) {
+            this.showHaAlert(
+                'danger', t('ha_test_error') + ': ' + error.message
+            );
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
     }
 
     async init() {
@@ -218,5 +316,11 @@ class ProfileView extends AbstractView {
                 e.preventDefault();
                 this.saveProfile();
             });
+
+        document.getElementById('btn-save-ha')
+            .addEventListener('click', () => this.saveHa());
+
+        document.getElementById('btn-test-ha')
+            .addEventListener('click', () => this.testHa());
     }
 }

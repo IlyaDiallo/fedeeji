@@ -16,6 +16,7 @@ const LogService = require('./services/LogService');
 const AuthService = require('./services/AuthService');
 const CollectiveService = require('./services/CollectiveService');
 const ImportService = require('./services/ImportService');
+const ActionNotificationScheduler = require('./services/ActionNotificationScheduler');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,10 @@ const dataService = new DataService({
 const authService = new AuthService({ storage });
 const collectiveService = new CollectiveService();
 const importService = new ImportService({ dataService });
+
+const scheduler = new ActionNotificationScheduler({
+    collectiveService, dataService
+});
 
 const authMiddleware = createAuthMiddleware(authService);
 
@@ -117,7 +122,7 @@ app.get('/api/version', (req, res) => {
 
 // --- Routeur API principal ---
 
-const apiRouter = createApiRouter({ dataService, trashService });
+const apiRouter = createApiRouter({ dataService, trashService, scheduler });
 app.use('/api/:collectiveId', authMiddleware, apiRouter);
 
 // Rediriger toutes les autres requêtes vers index.html
@@ -131,6 +136,7 @@ const server = app.listen(PORT, () => {
     console.log(
         `Serveur démarré sur http://localhost:${PORT}`
     );
+    scheduler.start();
 });
 
 server.on('error', (err) => {
