@@ -299,7 +299,7 @@ const router = async () => {
         },
         { path: "/:collectiveId/programme", view: ProgrammeView },
         { path: "/:collectiveId/action-history", view: ActionHistoryView },
-        { path: "/:collectiveId/profile", view: ProfileView },
+        { path: "/:collectiveId/profile", view: MembersView },
         { path: "/:collectiveId/trash", view: TrashView },
     ];
 

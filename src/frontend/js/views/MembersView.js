@@ -1,11 +1,71 @@
 class MembersView extends AbstractView {
     constructor(params) {
         super(params);
-        this.setTitle(t("members") + " - " + t("brand"));
+        this.role = api.getRole();
+        this.isMember = this.role === 'member';
+        this.setTitle(
+            t(this.isMember ? "my_profile" : "members")
+            + " - " + t("brand")
+        );
         this.members = [];
+        this.member = null;
     }
 
     async getHtml() {
+        return this.isMember
+            ? this._getProfileHtml()
+            : this._getMembersHtml();
+    }
+
+    // ─── Vue profil (membre) ────────────────────────────────────────────
+
+    _getProfileHtml() {
+        return `
+            <div class="d-flex justify-content-between
+                align-items-center mb-3">
+                <h2 data-i18n="my_profile">
+                    ${t("my_profile")}</h2>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    ${this._getPersonalFieldsHtml('profile')}
+                    <div class="d-flex justify-content-end">
+                        <button type="submit"
+                            class="btn btn-primary"
+                            id="btn-save-profile"
+                            data-i18n="save">
+                            ${t("save")}</button>
+                    </div>
+                    </form>
+                    <div id="profile-alert"
+                        class="mt-3 d-none"></div>
+
+                    <!-- Section Home Assistant -->
+                    <hr>
+                    <h5 class="mt-3 mb-1">
+                        <i class="bi bi-phone me-2"></i>
+                        ${t("ha_section_title")}
+                    </h5>
+                    <p class="text-muted small mb-3">
+                        ${t("ha_section_desc")}
+                    </p>
+                    ${this._getHaFieldsHtml('profile')}
+                    <div class="d-flex justify-content-end">
+                        <button type="button"
+                            class="btn btn-primary"
+                            id="btn-save-ha">
+                            ${t("save")}
+                        </button>
+                    </div>
+                    <div id="ha-alert" class="mt-3 d-none"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // ─── Vue liste membres (admin/superadmin) ───────────────────────────
+
+    _getMembersHtml() {
         return `
             <div class="d-flex justify-content-between
                 align-items-center mb-3">
@@ -67,94 +127,7 @@ class MembersView extends AbstractView {
                             <form id="member-form">
                                 <input type="hidden"
                                     id="member-id">
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="last_name">
-                                        ${t("last_name")}
-                                    </label>
-                                    <input type="text"
-                                        class="form-control"
-                                        id="member-lastName"
-                                        required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="first_name">
-                                        ${t("first_name")}
-                                    </label>
-                                    <input type="text"
-                                        class="form-control"
-                                        id="member-firstName"
-                                        required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="email">
-                                        ${t("email")}</label>
-                                    <input type="email"
-                                        class="form-control"
-                                        id="member-email"
-                                        required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="phone">
-                                        ${t("phone")}</label>
-                                    <input type="tel"
-                                        class="form-control"
-                                        id="member-phone">
-                                </div>
-                                <hr>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="address">
-                                        ${t("address")}
-                                    </label>
-                                    <input type="text"
-                                        class="form-control"
-                                        id="member-address">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="address2">
-                                        ${t("address2")}
-                                    </label>
-                                    <input type="text"
-                                        class="form-control"
-                                        id="member-address2">
-                                </div>
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label
-                                            class="form-label"
-                                            data-i18n="postal_code">
-                                            ${t("postal_code")}
-                                        </label>
-                                        <input type="text"
-                                            class="form-control"
-                                            id="member-postalCode">
-                                    </div>
-                                    <div class="col-md-8 mb-3">
-                                        <label
-                                            class="form-label"
-                                            data-i18n="city">
-                                            ${t("city")}
-                                        </label>
-                                        <input type="text"
-                                            class="form-control"
-                                            id="member-city">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label"
-                                        data-i18n="country">
-                                        ${t("country")}
-                                    </label>
-                                    <input type="text"
-                                        class="form-control"
-                                        id="member-country">
-                                </div>
-                                <hr>
+                                ${this._getPersonalFieldsHtml('member')}
                                 <div class="mb-3
                                     form-check form-switch">
                                     <input type="checkbox"
@@ -181,6 +154,12 @@ class MembersView extends AbstractView {
                                         ${t("admin_password_hint")}
                                     </div>
                                 </div>
+                                <hr>
+                                <h6 class="mb-2">
+                                    <i class="bi bi-phone me-1"></i>
+                                    ${t("ha_section_title")}
+                                </h6>
+                                ${this._getHaFieldsHtml('member')}
                             </form>
                         </div>
                         <div class="modal-footer">
@@ -199,6 +178,326 @@ class MembersView extends AbstractView {
                 </div>
             </div>
         `;
+    }
+
+    /**
+     * Génère les champs personnels communs (nom, prénom, email, téléphone, adresse…).
+     * Le préfixe permet de distinguer les IDs selon le contexte (profile ou member).
+     */
+    _getPersonalFieldsHtml(prefix) {
+        const isProfile = prefix === 'profile';
+        const wrap = isProfile
+            ? `<form id="profile-form">`
+            : '';
+        return `
+            ${wrap}
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label"
+                        data-i18n="last_name">
+                        ${t("last_name")}
+                    </label>
+                    <input type="text"
+                        class="form-control"
+                        id="${prefix}-lastName"
+                        required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label"
+                        data-i18n="first_name">
+                        ${t("first_name")}
+                    </label>
+                    <input type="text"
+                        class="form-control"
+                        id="${prefix}-firstName"
+                        required>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label"
+                        data-i18n="email">
+                        ${t("email")}</label>
+                    <input type="email"
+                        class="form-control"
+                        id="${prefix}-email"
+                        required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label"
+                        data-i18n="phone">
+                        ${t("phone")}</label>
+                    <input type="tel"
+                        class="form-control"
+                        id="${prefix}-phone">
+                </div>
+            </div>
+            <hr>
+            <div class="mb-3">
+                <label class="form-label"
+                    data-i18n="address">
+                    ${t("address")}
+                </label>
+                <input type="text"
+                    class="form-control"
+                    id="${prefix}-address">
+            </div>
+            <div class="mb-3">
+                <label class="form-label"
+                    data-i18n="address2">
+                    ${t("address2")}
+                </label>
+                <input type="text"
+                    class="form-control"
+                    id="${prefix}-address2">
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label class="form-label"
+                        data-i18n="postal_code">
+                        ${t("postal_code")}
+                    </label>
+                    <input type="text"
+                        class="form-control"
+                        id="${prefix}-postalCode">
+                </div>
+                <div class="col-md-8 mb-3">
+                    <label class="form-label"
+                        data-i18n="city">
+                        ${t("city")}
+                    </label>
+                    <input type="text"
+                        class="form-control"
+                        id="${prefix}-city">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label"
+                    data-i18n="country">
+                    ${t("country")}
+                </label>
+                <input type="text"
+                    class="form-control"
+                    id="${prefix}-country">
+            </div>
+            <hr>
+        `;
+    }
+
+    /**
+     * Génère les champs HA (URL de base et webhook ID).
+     * En mode profil, le webhook inclut le bouton de test et les textes d'aide.
+     */
+    _getHaFieldsHtml(prefix) {
+        const isProfile = prefix === 'profile';
+        const webhookInput = isProfile
+            ? `
+                <div class="input-group">
+                    <input type="text"
+                        class="form-control font-monospace"
+                        id="${prefix}-haWebhookId"
+                        placeholder="-rx2i82Kv0A5Dqv55PiH5Du-Q">
+                    <button class="btn btn-outline-secondary"
+                        type="button"
+                        id="btn-test-ha">
+                        <i class="bi bi-send me-1"></i>
+                        ${t("ha_test_btn")}
+                    </button>
+                </div>
+                <div class="form-text">
+                    ${t("ha_webhook_id_help")}
+                </div>`
+            : `
+                <input type="text"
+                    class="form-control font-monospace"
+                    id="${prefix}-haWebhookId"
+                    placeholder="-rx2i82Kv0A5Dqv55PiH5Du-Q">`;
+        return `
+            <div class="mb-3">
+                <label class="form-label">
+                    ${t("ha_base_url")}
+                </label>
+                <input type="url"
+                    class="form-control"
+                    id="${prefix}-haBaseUrl"
+                    placeholder="https://mon-ha.duckdns.org">
+                ${isProfile
+                    ? `<div class="form-text">${t("ha_base_url_help")}</div>`
+                    : ''}
+            </div>
+            <div class="mb-3">
+                <label class="form-label">
+                    ${t("ha_webhook_id")}
+                </label>
+                ${webhookInput}
+            </div>
+        `;
+    }
+
+    // ─── Initialisation ─────────────────────────────────────────────────
+
+    async init() {
+        if (this.isMember) {
+            await this._initProfile();
+        } else {
+            await this._initMembers();
+        }
+    }
+
+    // ─── Logique profil membre ──────────────────────────────────────────
+
+    async _initProfile() {
+        await this.loadProfile();
+
+        document.getElementById('profile-form')
+            .addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.saveProfile();
+            });
+
+        document.getElementById('btn-save-ha')
+            .addEventListener('click', () => this.saveHa());
+
+        document.getElementById('btn-test-ha')
+            .addEventListener('click', () => this.testHa());
+    }
+
+    async loadProfile() {
+        try {
+            this.member = await api.getMyProfile(
+                this.collectiveId
+            );
+            this._fillProfileForm();
+        } catch (error) {
+            alert(t("error") + ': ' + error.message);
+        }
+    }
+
+    _fillProfileForm() {
+        if (!this.member) return;
+        const m = this.member;
+        const fields = [
+            'lastName', 'firstName', 'email', 'phone',
+            'address', 'address2', 'postalCode', 'city',
+            'country', 'haBaseUrl', 'haWebhookId'
+        ];
+        fields.forEach(f => {
+            const el = document.getElementById(`profile-${f}`);
+            if (el) el.value = m[f] || '';
+        });
+    }
+
+    /** Collecte les champs personnels du formulaire profil. */
+    _readProfileFields() {
+        const fields = [
+            'lastName', 'firstName', 'email', 'phone',
+            'address', 'address2', 'postalCode', 'city', 'country'
+        ];
+        return Object.fromEntries(
+            fields.map(f => [
+                f,
+                document.getElementById(`profile-${f}`).value
+            ])
+        );
+    }
+
+    async saveProfile() {
+        try {
+            this.member = await api.updateMyProfile(
+                this.collectiveId, this._readProfileFields()
+            );
+            this._showAlert({ elId: 'profile-alert', type: 'success', msg: t('profile_saved') });
+        } catch (error) {
+            this._showAlert({
+                elId: 'profile-alert',
+                type: 'danger',
+                msg: t("error") + ': ' + error.message
+            });
+        }
+    }
+
+    /** Enregistre l'URL HA et le webhook ID dans le profil. */
+    async saveHa() {
+        const haBaseUrl = document.getElementById(
+            'profile-haBaseUrl'
+        ).value.trim().replace(/\/$/, '');
+        const haWebhookId = document.getElementById(
+            'profile-haWebhookId'
+        ).value.trim();
+
+        try {
+            this.member = await api.updateMyProfile(
+                this.collectiveId, { haBaseUrl, haWebhookId }
+            );
+            this._showAlert({ elId: 'ha-alert', type: 'success', msg: t('ha_saved') });
+        } catch (error) {
+            this._showAlert({
+                elId: 'ha-alert',
+                type: 'danger',
+                msg: t('error') + ': ' + error.message
+            });
+        }
+    }
+
+    /** Envoie une notification de test via le webhook HA configuré. */
+    async testHa() {
+        const btn = document.getElementById('btn-test-ha');
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML =
+            `<span class="spinner-border spinner-border-sm"></span>`;
+
+        try {
+            await api.testHaNotification(this.collectiveId);
+            this._showAlert({ elId: 'ha-alert', type: 'success', msg: t('ha_test_ok'), delay: 4000 });
+        } catch (error) {
+            this._showAlert({
+                elId: 'ha-alert',
+                type: 'danger',
+                msg: t('ha_test_error') + ': ' + error.message,
+                delay: 4000
+            });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+
+    /** Affiche un message d'alerte temporaire dans l'élément cible. */
+    _showAlert({ elId, type, msg, delay = 3000 }) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.className = `mt-3 alert alert-${type}`;
+        el.textContent = msg;
+        el.classList.remove('d-none');
+        setTimeout(() => el.classList.add('d-none'), delay);
+    }
+
+    // ─── Logique liste membres (admin) ──────────────────────────────────
+
+    async _initMembers() {
+        await this.loadMembers();
+
+        this.modal = new bootstrap.Modal(
+            document.getElementById('memberModal')
+        );
+
+        document.getElementById('btn-add-member')
+            .addEventListener('click', () => this.openModal());
+
+        document.getElementById('btn-save-member')
+            .addEventListener('click', () => this.saveMember());
+
+        document.getElementById('search-member')
+            .addEventListener('input', (e) => {
+                this.renderTable(e.target.value);
+            });
+
+        // Toggle affichage mot de passe admin
+        document.getElementById('member-admin')
+            .addEventListener('change', () => {
+                this._toggleAdminPassword();
+            });
     }
 
     async loadMembers() {
@@ -264,8 +563,7 @@ class MembersView extends AbstractView {
             .forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id =
-                        e.target.closest('button')
-                            .dataset.id;
+                        e.target.closest('button').dataset.id;
                     this.openModal(id);
                 });
             });
@@ -274,141 +572,70 @@ class MembersView extends AbstractView {
             .forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const id =
-                        e.target.closest('button')
-                            .dataset.id;
+                        e.target.closest('button').dataset.id;
                     this.deleteMember(id);
                 });
             });
     }
 
-    /** Affiche/masque le champ mot de passe admin */
-    toggleAdminPassword() {
+    /** Affiche/masque le champ mot de passe admin. */
+    _toggleAdminPassword() {
         const isAdmin = document.getElementById(
             'member-admin'
         ).checked;
         const group = document.getElementById(
             'admin-password-group'
         );
-        if (isAdmin) {
-            group.classList.remove('d-none');
-        } else {
-            group.classList.add('d-none');
-        }
-    }
-
-    async init() {
-        await this.loadMembers();
-
-        this.modal = new bootstrap.Modal(
-            document.getElementById('memberModal')
-        );
-
-        document.getElementById('btn-add-member')
-            .addEventListener('click', () => {
-                this.openModal();
-            });
-
-        document.getElementById('btn-save-member')
-            .addEventListener('click', () => {
-                this.saveMember();
-            });
-
-        document.getElementById('search-member')
-            .addEventListener('input', (e) => {
-                this.renderTable(e.target.value);
-            });
-
-        // Toggle affichage mot de passe admin
-        document.getElementById('member-admin')
-            .addEventListener('change', () => {
-                this.toggleAdminPassword();
-            });
+        group.classList.toggle('d-none', !isAdmin);
     }
 
     openModal(id = null) {
-        const form = document.getElementById(
-            'member-form'
-        );
+        const form = document.getElementById('member-form');
         form.reset();
         document.getElementById('member-id').value = '';
-        document.getElementById('member-admin')
-            .checked = false;
-        this.toggleAdminPassword();
+        document.getElementById('member-admin').checked = false;
+        this._toggleAdminPassword();
 
         if (id) {
-            const member = this.members
-                .find(m => m.id === id);
+            const member = this.members.find(m => m.id === id);
             if (member) {
-                document.getElementById('member-id')
-                    .value = member.id;
-                document.getElementById('member-lastName')
-                    .value = member.lastName;
-                document.getElementById('member-firstName')
-                    .value = member.firstName;
-                document.getElementById('member-email')
-                    .value = member.email;
-                document.getElementById('member-phone')
-                    .value = member.phone || '';
-                document.getElementById('member-address')
-                    .value = member.address || '';
-                document.getElementById('member-address2')
-                    .value = member.address2 || '';
-                document.getElementById(
-                    'member-postalCode'
-                ).value = member.postalCode || '';
-                document.getElementById('member-city')
-                    .value = member.city || '';
-                document.getElementById('member-country')
-                    .value = member.country || '';
+                const fields = [
+                    'id', 'lastName', 'firstName', 'email',
+                    'phone', 'address', 'address2',
+                    'postalCode', 'city', 'country',
+                    'haBaseUrl', 'haWebhookId'
+                ];
+                fields.forEach(f => {
+                    const el = document.getElementById(`member-${f}`);
+                    if (el) el.value = member[f] || '';
+                });
                 document.getElementById('member-admin')
                     .checked = !!member.admin;
-                this.toggleAdminPassword();
+                this._toggleAdminPassword();
             }
         }
         this.modal.show();
     }
 
     async saveMember() {
-        const id = document.getElementById(
-            'member-id'
-        ).value;
-        const isAdmin = document.getElementById(
-            'member-admin'
-        ).checked;
+        const id = document.getElementById('member-id').value;
+        const isAdmin = document.getElementById('member-admin').checked;
         const adminPassword = document.getElementById(
             'member-adminPassword'
         ).value;
 
-        const data = {
-            lastName: document.getElementById(
-                'member-lastName'
-            ).value,
-            firstName: document.getElementById(
-                'member-firstName'
-            ).value,
-            email: document.getElementById(
-                'member-email'
-            ).value,
-            phone: document.getElementById(
-                'member-phone'
-            ).value,
-            address: document.getElementById(
-                'member-address'
-            ).value,
-            address2: document.getElementById(
-                'member-address2'
-            ).value,
-            postalCode: document.getElementById(
-                'member-postalCode'
-            ).value,
-            city: document.getElementById(
-                'member-city'
-            ).value,
-            country: document.getElementById(
-                'member-country'
-            ).value,
-            admin: isAdmin
-        };
+        const fields = [
+            'lastName', 'firstName', 'email', 'phone',
+            'address', 'address2', 'postalCode', 'city', 'country',
+            'haBaseUrl', 'haWebhookId'
+        ];
+        const data = Object.fromEntries(
+            fields.map(f => [
+                f,
+                document.getElementById(`member-${f}`).value
+            ])
+        );
+        data.admin = isAdmin;
 
         // Envoyer le mot de passe seulement s'il est rempli
         if (isAdmin && adminPassword) {
@@ -428,8 +655,7 @@ class MembersView extends AbstractView {
             this.modal.hide();
             await this.loadMembers();
         } catch (error) {
-            alert(t("error_save") + ': '
-                + error.message);
+            alert(t("error_save") + ': ' + error.message);
         }
     }
 
