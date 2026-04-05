@@ -164,8 +164,11 @@ class ActionOccurrenceResolver {
         const { logs, allDoneLogs, lastLog, maxState } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
-        let generateFrom = action.date || startStr;
-        if (lastLog) generateFrom = lastLog.date;
+        // Partir du minimum entre action.date et startStr pour ne rater aucune
+        // occurrence tombant dans la plage affichée quand action.date est dans l'intervalle.
+        let generateFrom = lastLog
+            ? lastLog.date
+            : (action.date && action.date < startStr ? action.date : startStr);
 
         const occurrences = window.RecurrenceUtils
             ? RecurrenceUtils.generateOccurrences({

@@ -168,7 +168,11 @@ class ActionFormManager {
                     this.view.collectiveId, 'actions', data
                 );
 
-                if (isNow) {
+                // Action ponctuelle créée "Maintenant" : enregistrer comme commencée (state=1).
+                // Pour une action récurrente, pas de log automatique :
+                // la première occurrence doit apparaître "À faire" dans la liste et le calendrier.
+                const isRecurrent = data.recurrence && data.recurrence !== 'none';
+                if (isNow && !isRecurrent) {
                     const logData = {
                         programmeId: created.id,
                         type: 'done',
