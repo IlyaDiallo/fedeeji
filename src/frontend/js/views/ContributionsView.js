@@ -65,6 +65,8 @@ class ContributionsView extends AbstractView {
                             <th class="d-none d-md-table-cell"
                                 data-i18n="date">
                                 ${t("date")}</th>
+                            <th data-i18n="tax_receipt">
+                                ${t("tax_receipt")}</th>
                             <th data-i18n="actions">
                                 ${t("actions")}</th>
                         </tr>
@@ -266,6 +268,12 @@ class ContributionsView extends AbstractView {
                         + `${member.firstName}`
                     : t("unknown"));
 
+            const taxReceiptHtml = sub.taxReceiptUrl
+                ? `<a href="${sub.taxReceiptUrl}" target="_blank" rel="noopener">
+                       <i class="bi bi-file-earmark-text"></i>
+                   </a>`
+                : '';
+
             const actionsHtml = this.isMember ? '' : `
                 <div class="btn-group-actions">
                     <button class="btn btn-sm
@@ -290,6 +298,7 @@ class ContributionsView extends AbstractView {
                 <td>${sub.year || ''}</td>
                 <td class="d-none d-md-table-cell">
                     ${sub.date}</td>
+                <td>${taxReceiptHtml}</td>
                 <td>${actionsHtml}</td>
             `;
             tbody.appendChild(tr);

@@ -221,7 +221,8 @@ const translations = {
         "error_delete": "Erreur lors de la suppression",
         "error_load": "Erreur de chargement",
         "file_too_large": "Le fichier est trop volumineux (max 1 Mo)",
-        "error_upload_logo": "Erreur upload logo"
+        "error_upload_logo": "Erreur upload logo",
+        "tax_receipt": "Reçu fiscal"
     },
     en: {
         "app_title": "Feddeeji - Collective Management",
@@ -445,7 +446,8 @@ const translations = {
         "error_delete": "Error while deleting",
         "error_load": "Loading error",
         "file_too_large": "File is too large (max 1 MB)",
-        "error_upload_logo": "Error uploading logo"
+        "error_upload_logo": "Error uploading logo",
+        "tax_receipt": "Tax receipt"
     }
 };
 

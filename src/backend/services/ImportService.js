@@ -98,7 +98,8 @@ class ImportService {
                         date: parsed.date,
                         orderRef: parsed.orderRef,
                         bankRef: parsed.bankRef,
-                        paymentMethod: parsed.paymentMethod
+                        paymentMethod: parsed.paymentMethod,
+                        taxReceiptUrl: parsed.taxReceiptUrl
                     }
                 });
                 existingContributions.push(contribution);
@@ -171,6 +172,7 @@ class ImportService {
         const postalCode = String(row['Code postal'] || '').trim();
         const city = (row['Ville'] || '').trim();
         const country = (row['Pays'] || '').trim();
+        const taxReceiptUrl = (row['Générer le reçu fiscal'] || '').trim();
         const orderRef = (row['Référence commande'] || '').trim();
         const bankRef = (row['Référence bancaire'] || '').trim();
         const paymentMethod = (row['Moyen de paiement'] || '').trim();
@@ -215,7 +217,7 @@ class ImportService {
         return {
             lastName, firstName, email, amount, currency,
             address, postalCode, city, country,
-            date, year, orderRef, bankRef, paymentMethod
+            date, year, orderRef, bankRef, paymentMethod, taxReceiptUrl
         };
     }
 }
