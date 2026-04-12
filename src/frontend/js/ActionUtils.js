@@ -2,6 +2,8 @@
  * Utilitaires partagés pour la normalisation et le traitement des actions.
  */
 class ActionUtils {
+    static DEFAULT_DURATION_UNIT = 'minutes';
+
     /**
      * Normalise une action en convertissant les anciens formats
      * (scheduleMode=frequency, biweekly) vers le modèle récurrence unifié.

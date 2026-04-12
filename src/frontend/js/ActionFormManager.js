@@ -287,7 +287,7 @@ class ActionFormManager {
         document.getElementById('action-duration').value =
             action.duration || '';
         document.getElementById('action-durationUnit').value =
-            action.durationUnit || 'hours';
+            action.durationUnit || ActionUtils.DEFAULT_DURATION_UNIT;
 
         this._applyNormalizedRecurrence(action);
     }
@@ -372,7 +372,7 @@ class ActionFormManager {
         document.getElementById('action-duration').value =
             tpl.duration || '';
         document.getElementById('action-durationUnit').value =
-            tpl.durationUnit || 'hours';
+            tpl.durationUnit || ActionUtils.DEFAULT_DURATION_UNIT;
 
         this._applyNormalizedRecurrence(tpl);
         this.toggleExecutionType();

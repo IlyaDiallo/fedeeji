@@ -210,9 +210,11 @@ class ProgrammeView extends AbstractView {
                                             <select class="form-select"
                                                 id="action-durationUnit"
                                                 style="max-width:140px">
-                                                <option value="minutes">
+                                                <option value="minutes"
+                                                    ${ActionUtils.DEFAULT_DURATION_UNIT === 'minutes' ? 'selected' : ''}>
                                                     ${t("minutes")}</option>
-                                                <option value="hours" selected>
+                                                <option value="hours"
+                                                    ${ActionUtils.DEFAULT_DURATION_UNIT === 'hours' ? 'selected' : ''}>
                                                     ${t("hours")}</option>
                                             </select>
                                         </div>
@@ -364,9 +366,11 @@ class ProgrammeView extends AbstractView {
                                             <select class="form-select"
                                                 id="log-durationUnit"
                                                 style="max-width:120px">
-                                                <option value="minutes">
+                                                <option value="minutes"
+                                                    ${ActionUtils.DEFAULT_DURATION_UNIT === 'minutes' ? 'selected' : ''}>
                                                     ${t("minutes")}</option>
-                                                <option value="hours">
+                                                <option value="hours"
+                                                    ${ActionUtils.DEFAULT_DURATION_UNIT === 'hours' ? 'selected' : ''}>
                                                     ${t("hours")}</option>
                                             </select>
                                         </div>

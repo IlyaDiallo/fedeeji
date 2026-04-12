@@ -291,10 +291,12 @@ class LogFormManager {
         if (action?.duration) {
             document.getElementById('log-duration').value = action.duration;
             document.getElementById('log-durationUnit').value =
-                action.durationUnit || 'hours';
+                action.durationUnit
+                || ActionUtils.DEFAULT_DURATION_UNIT;
         } else {
             document.getElementById('log-duration').value = '';
-            document.getElementById('log-durationUnit').value = 'hours';
+            document.getElementById('log-durationUnit').value =
+                ActionUtils.DEFAULT_DURATION_UNIT;
         }
 
         // Charger note existante
@@ -352,7 +354,8 @@ class LogFormManager {
                 document.getElementById('log-duration').value =
                     existingLog.duration;
                 document.getElementById('log-durationUnit').value =
-                    existingLog.durationUnit || 'hours';
+                    existingLog.durationUnit
+                    || ActionUtils.DEFAULT_DURATION_UNIT;
             } else {
                 this._prefillDuration(action);
             }
@@ -389,10 +392,12 @@ class LogFormManager {
         if (action?.duration) {
             document.getElementById('log-duration').value = action.duration;
             document.getElementById('log-durationUnit').value =
-                action.durationUnit || 'hours';
+                action.durationUnit
+                || ActionUtils.DEFAULT_DURATION_UNIT;
         } else {
             document.getElementById('log-duration').value = '';
-            document.getElementById('log-durationUnit').value = 'hours';
+            document.getElementById('log-durationUnit').value =
+                ActionUtils.DEFAULT_DURATION_UNIT;
         }
     }
 
