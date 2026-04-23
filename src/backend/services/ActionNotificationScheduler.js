@@ -112,7 +112,11 @@ function resolveActionStatus({ action, actionLogs, todayStr }) {
             if (l.state == null) return true;
             return l.state === maxState;
         })
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort((a, b) => {
+            const da = a.occurrenceDate || a.date;
+            const db = b.occurrenceDate || b.date;
+            return db.localeCompare(da);
+        });
 
     const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
@@ -125,7 +129,8 @@ function resolveActionStatus({ action, actionLogs, todayStr }) {
     // Première occurrence non terminée après le dernier log
     let nextDate = null;
     if (lastLog) {
-        nextDate = occurrences.find(d => d > lastLog.date)
+        const lastLogOccDate = lastLog.occurrenceDate || lastLog.date;
+        nextDate = occurrences.find(d => d > lastLogOccDate)
             || occurrences.find(d => d >= todayStr)
             || null;
     } else {

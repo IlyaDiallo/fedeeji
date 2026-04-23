@@ -97,7 +97,7 @@ class LogFormManager {
 
         // ========== Mode "Fait" (done) dans la fenêtre ==========
         this._openDoneMode({
-            action, actionId, occDateStr,
+            action, actionId, occDateStr, todayStr,
             title, windowInfoEl, dateInput,
             saveBtn, notesTextarea
         });
@@ -157,10 +157,13 @@ class LogFormManager {
             return;
         }
 
+        const occurrenceDate = document.getElementById('log-occurrence-date').value;
+
         const data = {
             programmeId: actionId,
             type: type || 'done',
             date,
+            occurrenceDate: occurrenceDate || date,
             time: time || null,
             duration: duration ? Number(duration) : null,
             durationUnit: duration ? durationUnit : null,
@@ -323,21 +326,20 @@ class LogFormManager {
     }
 
     _openDoneMode({
-        action, actionId, occDateStr,
+        action, actionId, occDateStr, todayStr,
         title, windowInfoEl, dateInput,
         saveBtn, notesTextarea
     }) {
-        dateInput.value = occDateStr;
-        dateInput.disabled = true;
-        dateInput.min = '';
-        dateInput.max = '';
+        const windowStartStr = ActionOccurrenceResolver.computeWindowStart({
+            occDateStr, windowDays: action?.windowDays
+        });
 
         // Chercher le dernier log "done" pour cette occurrence
         const existingLog = (() => {
             const occDoneLogs = this.view.actionLogs
                 .filter(l => l.programmeId === actionId
                     && (!l.type || l.type === 'done')
-                    && l.date === occDateStr)
+                    && (l.occurrenceDate || l.date) === occDateStr)
                 .sort((a, b) =>
                     (b.timestamp || 0) - (a.timestamp || 0)
                     || (b.state || 0) - (a.state || 0)
@@ -375,6 +377,14 @@ class LogFormManager {
             saveBtn.textContent = t("mark_done");
             saveBtn.className = 'btn btn-success';
         }
+
+        // Date de réalisation : libre dans la fenêtre
+        dateInput.value = existingLog
+            ? existingLog.date
+            : (todayStr <= occDateStr ? todayStr : occDateStr);
+        dateInput.disabled = false;
+        dateInput.min = windowStartStr;
+        dateInput.max = todayStr;
 
         windowInfoEl.innerHTML = '';
         windowInfoEl.classList.add('d-none');
@@ -417,7 +427,7 @@ class LogFormManager {
                 .filter(l => l.programmeId === actionId
                     && (!l.type || l.type === 'done'));
             const occDoneLogs = allDoneLogs
-                .filter(l => l.date === occDateStr)
+                .filter(l => (l.occurrenceDate || l.date) === occDateStr)
                 .sort((a, b) =>
                     (b.timestamp || 0) - (a.timestamp || 0)
                     || (b.state || 0) - (a.state || 0)

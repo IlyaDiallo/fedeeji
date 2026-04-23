@@ -14,7 +14,11 @@ class ActionOccurrenceResolver {
     static prepareLogContext({ action, actionLogs }) {
         const logs = actionLogs
             .filter(l => l.programmeId === action.id)
-            .sort((a, b) => b.date.localeCompare(a.date));
+            .sort((a, b) => {
+                const da = a.occurrenceDate || a.date;
+                const db = b.occurrenceDate || b.date;
+                return db.localeCompare(da);
+            });
 
         const allDoneLogs = logs.filter(l => !l.type || l.type === 'done');
         const maxState = (action.states?.length > 0)
@@ -41,7 +45,7 @@ class ActionOccurrenceResolver {
      */
     static computeCurrentState({ allDoneLogs, occDateStr, maxState }) {
         const occDoneLogs = allDoneLogs
-            .filter(l => l.date === occDateStr)
+            .filter(l => (l.occurrenceDate || l.date) === occDateStr)
             .sort((a, b) =>
                 (b.timestamp || 0) - (a.timestamp || 0)
                 || (b.state || 0) - (a.state || 0)
@@ -110,7 +114,8 @@ class ActionOccurrenceResolver {
         // Chercher la prochaine occurrence non terminée
         let targetOccurrence = null;
         if (lastLog) {
-            targetOccurrence = occurrences.find(o => o.occurrenceDate > lastLog.date);
+            const lastLogOccDate = lastLog.occurrenceDate || lastLog.date;
+            targetOccurrence = occurrences.find(o => o.occurrenceDate > lastLogOccDate);
             if (!targetOccurrence && occurrences.length > 0) {
                 const lastOcc = occurrences[occurrences.length - 1];
                 if (lastOcc.occurrenceDate >= todayStr) {
