@@ -19,21 +19,18 @@ Application de gestion de collectif.
 Fonctionnalités:
 - gestion des utilisateurs et rôles admin (ajout, modification, suppression, recherche)
 - gestion des membres (ajout, modification, suppression, recherche)
-- gestion des contributions (ajout, modification, suppression, recherche)
+- gestion des contributions (ajout, modification, suppression, recherche, imoports)
 - gestion des événements (ajout, modification, suppression, recherche)
 - gestion des inscriptions aux événements (ajout, modification, suppression, recherche)
 - planning interactif des événements
+- intégration Home Assistant
 
 Fonctionnalités futures:
 
 - publications publiques et privées
-- actions (groupes de publications et d'événements)
+- projets (groupes avec membres / actions / publications / événements)
 - envois d'emails aux membres
-- intégration Home Assistant
 - gestion des groupes (ajout, modification, suppression, recherche)
-- gestion des statistiques (ajout, modification, suppression, recherche)
-- gestion des rapports (ajout, modification, suppression, recherche)
-- gestion des exports (ajout, modification, suppression, recherche)
-- gestion des imports (ajout, modification, suppression, recherche)
-- gestion des sauvegardes (ajout, modification, suppression, recherche)
-- gestion des restaurations (ajout, modification, suppression, recherche)
+- gestion des statistiques
+- gestion des exports
+- gestion des sauvegardes / restaurations
