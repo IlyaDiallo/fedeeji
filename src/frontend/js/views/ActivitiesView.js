@@ -85,6 +85,15 @@ class ActivitiesView extends AbstractView {
                                         style="max-height:160px;
                                             overflow-y:auto;"></div>
                                 </div>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input"
+                                        type="checkbox"
+                                        id="activity-track-history">
+                                    <label class="form-check-label"
+                                        for="activity-track-history"
+                                        data-i18n="track_history">
+                                        ${t("track_history")}</label>
+                                </div>
                                 <hr>
                                 <div class="d-flex justify-content-between
                                     align-items-center mb-2">
@@ -235,6 +244,7 @@ class ActivitiesView extends AbstractView {
             title: existing?.title || '',
             image: existing?.image || null,
             description: existing?.description || '',
+            trackHistory: existing?.trackHistory === true,
             assignedMembers: Array.isArray(existing?.assignedMembers)
                 ? [...existing.assignedMembers] : [],
             steps: Array.isArray(existing?.steps) && existing.steps.length
@@ -255,6 +265,8 @@ class ActivitiesView extends AbstractView {
         document.getElementById('activity-description').value =
             this.form.description;
         document.getElementById('activity-image-input').value = '';
+        document.getElementById('activity-track-history').checked =
+            this.form.trackHistory;
         this.renderActivityImage();
         this.renderMembers();
         this.renderSteps();
@@ -482,6 +494,8 @@ class ActivitiesView extends AbstractView {
             title: this.form.title,
             image: this.form.image,
             description: this.form.description,
+            trackHistory: document.getElementById(
+                'activity-track-history').checked,
             assignedMembers: this.form.assignedMembers,
             steps: this.form.steps
                 .filter(s => s.title || s.description || s.images.length)

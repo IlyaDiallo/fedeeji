@@ -9,6 +9,7 @@ const createActionsRouter = require('./actions');
 const createActionLogsRouter = require('./actionLogs');
 const createEventsRouter = require('./events');
 const createActivitiesRouter = require('./activities');
+const createActivityHistoryRouter = require('./activityHistory');
 const createNotificationsRouter = require('./notifications');
 
 /**
@@ -52,6 +53,11 @@ function createApiRouter({ dataService, trashService, scheduler }) {
     router.use('/events', createEventsRouter({ dataService }));
 
     router.use('/activities', createActivitiesRouter({ dataService }));
+
+    router.use(
+        '/activity-history',
+        createActivityHistoryRouter({ dataService })
+    );
 
     router.use(
         '/notifications',

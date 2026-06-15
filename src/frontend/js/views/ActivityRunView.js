@@ -60,6 +60,10 @@ class ActivityRunView extends AbstractView {
 
         this.render();
         this.attachEvents();
+
+        if (this.activity.trackHistory) {
+            this.loadHistory();
+        }
     }
 
     render() {
@@ -161,6 +165,19 @@ class ActivityRunView extends AbstractView {
             <div class="accordion" id="activity-steps-acc">
                 ${stepsHtml || `<p class="text-muted">${t("no_steps")}</p>`}
             </div>
+
+            ${a.trackHistory ? `
+            <div class="text-end mt-3">
+                <button class="btn btn-primary" id="btn-finish-activity">
+                    <i class="bi bi-check2-circle"></i>
+                    ${t("finish_activity")}</button>
+            </div>
+            <hr>
+            <h5 class="mt-3" data-i18n="completions_history">
+                ${t("completions_history")}</h5>
+            <div id="activity-history-list">
+                <p class="text-muted">${t("loading")}</p>
+            </div>` : ''}
         `;
 
         this.updateProgress();
@@ -188,6 +205,84 @@ class ActivityRunView extends AbstractView {
             .addEventListener('click', () => this.pauseTimer());
         document.getElementById('timer-reset')
             .addEventListener('click', () => this.resetTimer());
+
+        const finishBtn = document.getElementById('btn-finish-activity');
+        if (finishBtn) {
+            finishBtn.addEventListener('click', () => this.finishActivity());
+        }
+    }
+
+    async finishActivity() {
+        const steps = Array.isArray(this.activity.steps)
+            ? this.activity.steps : [];
+        const completedSteps =
+            Object.values(this.done).filter(Boolean).length;
+        const entry = {
+            activityId: this.activity.id,
+            activityTitle: this.activity.title,
+            memberName: api.user?.memberName || '',
+            elapsedSeconds: this.timer.elapsed,
+            completedSteps,
+            totalSteps: steps.length
+        };
+        try {
+            await api.create(
+                this.collectiveId, 'activity-history', entry
+            );
+            alert(t("completion_recorded"));
+            await this.loadHistory();
+        } catch (error) {
+            alert(t("error_save") + ': ' + error.message);
+        }
+    }
+
+    async loadHistory() {
+        const el = document.getElementById('activity-history-list');
+        if (!el) return;
+        try {
+            const all = await api.get(
+                this.collectiveId, 'activity-history'
+            );
+            const entries = all
+                .filter(e => e.activityId === this.activity.id)
+                .sort((a, b) =>
+                    new Date(b.date) - new Date(a.date));
+            this.renderHistory(entries);
+        } catch (error) {
+            el.innerHTML =
+                `<p class="text-danger">${error.message}</p>`;
+        }
+    }
+
+    renderHistory(entries) {
+        const E = ActivityRunView.escape;
+        const el = document.getElementById('activity-history-list');
+        if (!el) return;
+        if (!entries.length) {
+            el.innerHTML =
+                `<p class="text-muted">${t("no_completions")}</p>`;
+            return;
+        }
+        const isAdmin = api.getRole() !== 'member';
+        el.innerHTML = `
+            <ul class="list-group">
+                ${entries.map(e => {
+                    const d = new Date(e.date);
+                    const dateStr = isNaN(d) ? '' :
+                        d.toLocaleString(this.locale);
+                    const who = isAdmin && e.memberName
+                        ? `<strong>${E(e.memberName)}</strong> · ` : '';
+                    return `
+                        <li class="list-group-item d-flex
+                            justify-content-between align-items-center">
+                            <span>${who}${dateStr}</span>
+                            <span class="text-muted small">
+                                ${e.completedSteps}/${e.totalSteps}
+                                ${t("steps").toLowerCase()}
+                                · ${this.formatTime(e.elapsedSeconds || 0)}</span>
+                        </li>`;
+                }).join('')}
+            </ul>`;
     }
 
     updateProgress() {

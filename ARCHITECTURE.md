@@ -56,6 +56,7 @@ src/backend/
 │   ├── inscriptions.js        # /api/:collectiveId/inscriptions
 │   ├── actions.js             # /api/:collectiveId/actions
 │   ├── activities.js          # /api/:collectiveId/activities
+│   ├── activityHistory.js     # /api/:collectiveId/activity-history
 │   ├── actionLogs.js          # /api/:collectiveId/action-logs
 │   └── trash.js               # /api/:collectiveId/trash
 ├── services/
@@ -313,7 +314,8 @@ data/
 │   ├── events.json            # Événements (récurrents ou non)
 │   ├── inscriptions.json      # Inscriptions aux événements
 │   ├── actions.json           # Actions programmées
-│   ├── activities.json        # Modèles d'activités (titre, étapes, images, membres)
+│   ├── activities.json        # Modèles d'activités (titre, étapes, images, membres, trackHistory)
+│   ├── activity-history.json  # Journal des réalisations d'activités (si trackHistory)
 │   ├── action-logs.json       # Historique d'exécution des actions
 │   ├── uploads/               # Images uploadées (activités)
 │   ├── admins.json            # Comptes admin du collectif
