@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
+const fs = require('fs');
 const multer = require('multer');
 
 const createApiRouter = require('./routes/api');
@@ -113,6 +114,67 @@ app.post('/api/:collectiveId/import-contributions',
         }
     }
 );
+
+// --- Images d'activités (upload admin, service public) ---
+
+const activityImageUpload = multer({
+    storage: multer.diskStorage({
+        destination: (req, file, cb) => {
+            const dir = path.join(
+                __dirname, '../../data',
+                req.params.collectiveId, 'uploads'
+            );
+            fs.mkdirSync(dir, { recursive: true });
+            cb(null, dir);
+        },
+        filename: (req, file, cb) => {
+            const uniqueSuffix =
+                `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+            const safeName = (file.originalname || 'image')
+                .replace(/[^a-zA-Z0-9._-]/g, '_');
+            cb(null, `${uniqueSuffix}-${safeName}`);
+        }
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        if ((file.mimetype || '').startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Seules les images sont autorisées'));
+        }
+    }
+});
+
+app.post('/api/:collectiveId/activity-images',
+    authMiddleware,
+    requireRole('admin'),
+    activityImageUpload.single('file'),
+    (req, res) => {
+        if (!req.file) {
+            return res.status(400).json({
+                error: 'Aucun fichier fourni'
+            });
+        }
+        res.status(201).json({
+            filename: req.file.filename,
+            path: `/api/${req.params.collectiveId}`
+                + `/activity-images/${req.file.filename}`
+        });
+    }
+);
+
+// Service public des images (utilisé dans les balises <img>)
+app.get('/api/:collectiveId/activity-images/:filename', (req, res) => {
+    const filename = path.basename(req.params.filename);
+    const filePath = path.join(
+        __dirname, '../../data',
+        req.params.collectiveId, 'uploads', filename
+    );
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: 'Image non trouvée' });
+    }
+    res.sendFile(filePath);
+});
 
 // Route publique : version de l'application
 const { version } = require('../../package.json');

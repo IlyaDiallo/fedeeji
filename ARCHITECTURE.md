@@ -55,6 +55,7 @@ src/backend/
 │   ├── events.js              # /api/:collectiveId/events
 │   ├── inscriptions.js        # /api/:collectiveId/inscriptions
 │   ├── actions.js             # /api/:collectiveId/actions
+│   ├── activities.js          # /api/:collectiveId/activities
 │   ├── actionLogs.js          # /api/:collectiveId/action-logs
 │   └── trash.js               # /api/:collectiveId/trash
 ├── services/
@@ -110,6 +111,7 @@ graph LR
     API_R --> ACTIONS["/actions"]
     API_R --> ALOGS["/action-logs"]
     API_R --> EVENTS["/events"]
+    API_R --> ACTIVITIES["/activities"]
     API_R --> CONTRIBS["/contributions"]
     API_R --> GENERIC["/:collection (CRUD générique)"]
 ```
@@ -189,6 +191,8 @@ src/frontend/
         ├── MembersView.js            # Gestion des membres (admin)
         ├── ContributionsView.js      # Contributions / cotisations
         ├── EventsView.js             # Gestion des événements
+        ├── ActivitiesView.js         # Modèles d'activités (liste + édition admin)
+        ├── ActivityRunView.js        # Exécution d'une activité (étapes, timer)
         ├── InscriptionsView.js       # Inscriptions aux événements
         ├── InscriptionScheduleView.js # Planning d'inscriptions récurrentes
         ├── ProgrammeView.js          # Programme (actions + événements)
@@ -273,6 +277,8 @@ graph TB
 | `/:collectiveId/events`                                   | EventsView               | tous           |
 | `/:collectiveId/inscriptions`                             | InscriptionsView         | tous           |
 | `/:collectiveId/events/:eventId/inscription-schedule`     | InscriptionScheduleView  | tous           |
+| `/:collectiveId/activities`                               | ActivitiesView           | tous           |
+| `/:collectiveId/activities/:activityId`                   | ActivityRunView          | tous           |
 | `/:collectiveId/programme`                                | ProgrammeView            | tous           |
 | `/:collectiveId/action-history`                           | ActionHistoryView        | tous           |
 | `/:collectiveId/profile`                                  | ProfileView              | member         |
@@ -307,7 +313,9 @@ data/
 │   ├── events.json            # Événements (récurrents ou non)
 │   ├── inscriptions.json      # Inscriptions aux événements
 │   ├── actions.json           # Actions programmées
+│   ├── activities.json        # Modèles d'activités (titre, étapes, images, membres)
 │   ├── action-logs.json       # Historique d'exécution des actions
+│   ├── uploads/               # Images uploadées (activités)
 │   ├── admins.json            # Comptes admin du collectif
 │   ├── trash.json             # Corbeille
 │   └── logs.json              # Journal des opérations

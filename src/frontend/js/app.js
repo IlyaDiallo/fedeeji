@@ -84,6 +84,8 @@ const canAccessRoute = (path) => {
             '/:collectiveId/inscriptions',
             '/:collectiveId/events/:eventId/inscription-schedule',
             '/:collectiveId/programme',
+            '/:collectiveId/activities',
+            '/:collectiveId/activities/:activityId',
             '/:collectiveId/profile'
         ];
         if (currentOrgContributionsEnabled) {
@@ -186,6 +188,16 @@ const updateNav = () => {
                 href="/${collectiveId}/inscriptions"
                 data-link data-i18n="inscriptions">
                 ${t("inscriptions")}</a>
+        </li>
+    `;
+
+    // Activités (tous les rôles)
+    links += `
+        <li class="nav-item">
+            <a class="nav-link"
+                href="/${collectiveId}/activities"
+                data-link data-i18n="activities">
+                ${t("activities")}</a>
         </li>
     `;
 
@@ -297,6 +309,8 @@ const router = async () => {
             path: "/:collectiveId/events/:eventId/inscription-schedule",
             view: InscriptionScheduleView
         },
+        { path: "/:collectiveId/activities", view: ActivitiesView },
+        { path: "/:collectiveId/activities/:activityId", view: ActivityRunView },
         { path: "/:collectiveId/programme", view: ProgrammeView },
         { path: "/:collectiveId/action-history", view: ActionHistoryView },
         { path: "/:collectiveId/profile", view: MembersView },
