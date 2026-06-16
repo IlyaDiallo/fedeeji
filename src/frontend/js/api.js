@@ -24,8 +24,38 @@ class Api {
         }
     }
 
+    /**
+     * Décode le payload d'un JWT sans vérifier la signature.
+     * @returns {Object|null}
+     */
+    _decodeToken(token) {
+        try {
+            const payload = token.split('.')[1];
+            const json = atob(
+                payload.replace(/-/g, '+').replace(/_/g, '/')
+            );
+            return JSON.parse(json);
+        } catch (e) {
+            return null;
+        }
+    }
+
     isAuthenticated() {
-        return !!this.token;
+        if (!this.token) return false;
+
+        // Un token expiré ou malformé doit être considéré comme
+        // déconnecté, sinon l'app croit l'utilisateur authentifié
+        // et le bloque hors des pages de connexion.
+        const decoded = this._decodeToken(this.token);
+        const isValid = decoded
+            && (!decoded.exp || decoded.exp * 1000 > Date.now());
+
+        if (!isValid) {
+            this.setToken(null);
+            this.setUser(null);
+            return false;
+        }
+        return true;
     }
 
     /** Rôle de l'utilisateur connecté */
