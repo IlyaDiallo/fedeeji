@@ -189,6 +189,32 @@ class LoginView extends AbstractView {
         `;
     }
 
+    /**
+     * Retourne la page à afficher après login : la page mémorisée
+     * (avant redirection login, session expirée ou logout) si elle
+     * existe ET appartient au même utilisateur qui vient de se
+     * connecter, sinon la destination par défaut. Le router
+     * revérifie les droits d'accès.
+     */
+    postLoginTarget(defaultUrl) {
+        const raw = localStorage.getItem('redirectAfterLogin');
+        localStorage.removeItem('redirectAfterLogin');
+        if (!raw) return defaultUrl;
+        let stored;
+        try {
+            stored = JSON.parse(raw);
+        } catch {
+            return defaultUrl;
+        }
+        if (!stored || !stored.path) return defaultUrl;
+        // Si une identité a été mémorisée, ne revenir à la page que
+        // pour ce même utilisateur. Sinon (accès direct), on revient.
+        if (stored.user && stored.user !== api.getUserKey()) {
+            return defaultUrl;
+        }
+        return stored.path;
+    }
+
     showError(divId, message) {
         const div = document.getElementById(divId);
         div.textContent = message;
@@ -222,7 +248,7 @@ class LoginView extends AbstractView {
                 ).value;
                 try {
                     await api.login(password);
-                    navigateTo('/');
+                    navigateTo(this.postLoginTarget('/'));
                 } catch (error) {
                     this.showError(
                         'admin-login-error',
@@ -245,7 +271,9 @@ class LoginView extends AbstractView {
                     await api.loginMember({
                         collectiveId: this.collectiveId, email
                     });
-                    navigateTo(`/${this.collectiveId}`);
+                    navigateTo(this.postLoginTarget(
+                        `/${this.collectiveId}`
+                    ));
                 } catch (error) {
                     this.showError(
                         'member-login-error',
@@ -273,7 +301,9 @@ class LoginView extends AbstractView {
                         email,
                         password
                     });
-                    navigateTo(`/${this.collectiveId}`);
+                    navigateTo(this.postLoginTarget(
+                        `/${this.collectiveId}`
+                    ));
                 } catch (error) {
                     this.showError(
                         'admin-login-error',

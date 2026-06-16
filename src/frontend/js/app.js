@@ -360,6 +360,13 @@ const router = async () => {
 
     // Redirection si non authentifié (sauf pages login)
     if (!api.isAuthenticated() && !isLoginRoute) {
+        // Mémoriser la page demandée pour y revenir après login.
+        // Pas d'utilisateur connu ici (accès direct), donc user:null
+        // → restaurable pour le prochain utilisateur qui se connecte.
+        localStorage.setItem(
+            'redirectAfterLogin',
+            JSON.stringify({ path: location.pathname, user: null })
+        );
         if (params.collectiveId) {
             navigateTo(`/${params.collectiveId}/login`);
         } else {

@@ -73,6 +73,36 @@ class Api {
         return this.user?.memberId || null;
     }
 
+    /**
+     * Identité stable de l'utilisateur connecté, utilisée pour
+     * vérifier qu'on revient à la page mémorisée seulement si
+     * c'est bien le même utilisateur qui se reconnecte.
+     * @returns {string|null}
+     */
+    getUserKey() {
+        if (!this.user) return null;
+        if (this.user.role === 'superadmin') return 'superadmin';
+        return `${this.user.collectiveId}:${this.user.memberId}`;
+    }
+
+    /**
+     * Mémorise la page courante et l'utilisateur courant afin d'y
+     * revenir après reconnexion (logout volontaire ou session
+     * expirée). À appeler avant d'effacer le token/utilisateur.
+     */
+    rememberCurrentPage() {
+        // Ne pas mémoriser une page de login
+        if (/\/login$|\/register$|^\/login$/.test(
+            window.location.pathname
+        )) {
+            return;
+        }
+        localStorage.setItem('redirectAfterLogin', JSON.stringify({
+            path: window.location.pathname,
+            user: this.getUserKey()
+        }));
+    }
+
     async request(endpoint, options = {}) {
         const headers = {
             'Content-Type': 'application/json',
@@ -96,6 +126,7 @@ class Api {
             && endpoint !== '/auth/login/member'
         ) {
             const collectiveId = this.getUserOrgId();
+            this.rememberCurrentPage();
             this.setToken(null);
             this.setUser(null);
             if (collectiveId) {
@@ -185,6 +216,9 @@ class Api {
 
     logout() {
         const collectiveId = this.getUserOrgId();
+        // Mémoriser la page courante : si le même utilisateur se
+        // reconnecte, il y reviendra automatiquement.
+        this.rememberCurrentPage();
         this.setToken(null);
         this.setUser(null);
         if (collectiveId) {
