@@ -195,7 +195,7 @@ const translations = {
         "add_edit_activity": "Ajouter/Modifier une activité",
         "activity_title": "Titre",
         "activity_image": "Image (optionnelle)",
-        "long_description": "Libellé long",
+        "long_description": "Descriptif",
         "assigned_members": "Membres concernés",
         "steps": "Étapes",
         "step": "Étape",

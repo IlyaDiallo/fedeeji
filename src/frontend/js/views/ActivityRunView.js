@@ -78,11 +78,6 @@ class ActivityRunView extends AbstractView {
             : '';
 
         const stepsHtml = steps.map((s, i) => {
-            const durBadge = s.duration
-                ? `<span class="badge bg-info text-dark ms-2">
-                    <i class="bi bi-clock"></i>
-                    ${this.formatDuration(s.duration, s.durationUnit)}</span>`
-                : '';
             const imgs = Array.isArray(s.images) ? s.images : [];
             const imagesHtml = imgs.length ? `
                 <div class="row g-2 mt-2">
@@ -112,7 +107,6 @@ class ActivityRunView extends AbstractView {
                             data-bs-target="#step-body-${i}">
                             <span class="step-label" data-i="${i}">
                                 <strong>${i + 1}.</strong> ${E(s.title)}</span>
-                            ${durBadge}
                         </button>
                     </div>
                     <div id="step-body-${i}"
@@ -140,8 +134,15 @@ class ActivityRunView extends AbstractView {
             <div class="card mb-3">
                 <div class="card-body d-flex align-items-center
                     justify-content-between flex-wrap gap-2">
-                    <div class="fs-3 fw-bold font-monospace" id="timer-display">
-                        ${this.formatTime(this.timer.elapsed)}</div>
+                    <div>
+                        <div class="fs-3 fw-bold font-monospace"
+                            id="timer-display">
+                            ${this.formatTime(this.timer.elapsed)}</div>
+                        ${a.duration ? `<span class="badge bg-info text-dark">
+                            <i class="bi bi-clock"></i>
+                            ${this.formatDuration(a.duration, a.durationUnit)}
+                            </span>` : ''}
+                    </div>
                     <div class="btn-group">
                         <button class="btn btn-success" id="timer-start">
                             <i class="bi bi-play-fill"></i>

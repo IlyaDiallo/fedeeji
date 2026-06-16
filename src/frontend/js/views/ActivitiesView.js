@@ -78,6 +78,24 @@ class ActivitiesView extends AbstractView {
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label"
+                                        data-i18n="duration">
+                                        ${t("duration")}</label>
+                                    <div class="input-group"
+                                        style="max-width:280px;">
+                                        <input type="number" min="1"
+                                            class="form-control"
+                                            id="activity-duration">
+                                        <select class="form-select"
+                                            id="activity-duration-unit">
+                                            <option value="minutes">
+                                                ${t("minutes")}</option>
+                                            <option value="hours">
+                                                ${t("hours")}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label"
                                         data-i18n="assigned_members">
                                         ${t("assigned_members")}</label>
                                     <div id="activity-members"
@@ -230,7 +248,6 @@ class ActivitiesView extends AbstractView {
     emptyStep() {
         return {
             title: '', description: '',
-            duration: null, durationUnit: 'minutes',
             images: []
         };
     }
@@ -244,15 +261,15 @@ class ActivitiesView extends AbstractView {
             title: existing?.title || '',
             image: existing?.image || null,
             description: existing?.description || '',
-            trackHistory: existing?.trackHistory === true,
+            duration: existing?.duration ?? null,
+            durationUnit: existing?.durationUnit || 'minutes',
+            trackHistory: existing ? existing.trackHistory !== false : true,
             assignedMembers: Array.isArray(existing?.assignedMembers)
                 ? [...existing.assignedMembers] : [],
             steps: Array.isArray(existing?.steps) && existing.steps.length
                 ? existing.steps.map(s => ({
                     title: s.title || '',
                     description: s.description || '',
-                    duration: s.duration ?? null,
-                    durationUnit: s.durationUnit || 'minutes',
                     images: Array.isArray(s.images)
                         ? s.images.map(im => ({
                             path: im.path, caption: im.caption || ''
@@ -264,6 +281,10 @@ class ActivitiesView extends AbstractView {
         document.getElementById('activity-title').value = this.form.title;
         document.getElementById('activity-description').value =
             this.form.description;
+        document.getElementById('activity-duration').value =
+            this.form.duration ?? '';
+        document.getElementById('activity-duration-unit').value =
+            this.form.durationUnit;
         document.getElementById('activity-image-input').value = '';
         document.getElementById('activity-track-history').checked =
             this.form.trackHistory;
@@ -358,24 +379,6 @@ class ActivitiesView extends AbstractView {
                                 step-desc" data-step="${i}" rows="2"
                                 placeholder="${t("long_description")}">${E(s.description)}</textarea>
                         </div>
-                        <div class="input-group input-group-sm mb-2"
-                            style="max-width:280px;">
-                            <span class="input-group-text">
-                                ${t("duration")}</span>
-                            <input type="number" min="1"
-                                class="form-control step-duration"
-                                data-step="${i}"
-                                value="${s.duration ?? ''}">
-                            <select class="form-select step-duration-unit"
-                                data-step="${i}">
-                                <option value="minutes"
-                                    ${s.durationUnit === 'minutes' ? 'selected' : ''}>
-                                    ${t("minutes")}</option>
-                                <option value="hours"
-                                    ${s.durationUnit === 'hours' ? 'selected' : ''}>
-                                    ${t("hours")}</option>
-                            </select>
-                        </div>
                         <div class="step-images">${imagesHtml}</div>
                         <label class="btn btn-sm btn-outline-secondary mt-1">
                             <i class="bi bi-image"></i> ${t("add_image")}
@@ -418,6 +421,10 @@ class ActivitiesView extends AbstractView {
             document.getElementById('activity-title').value;
         this.form.description =
             document.getElementById('activity-description').value;
+        const durVal = document.getElementById('activity-duration').value;
+        this.form.duration = durVal ? Number(durVal) : null;
+        this.form.durationUnit =
+            document.getElementById('activity-duration-unit').value;
         this.form.assignedMembers = Array.from(
             document.querySelectorAll('.member-check:checked')
         ).map(cb => cb.value);
@@ -429,17 +436,6 @@ class ActivitiesView extends AbstractView {
         document.querySelectorAll('.step-desc').forEach(el => {
             const i = Number(el.dataset.step);
             if (this.form.steps[i]) this.form.steps[i].description = el.value;
-        });
-        document.querySelectorAll('.step-duration').forEach(el => {
-            const i = Number(el.dataset.step);
-            if (this.form.steps[i]) {
-                this.form.steps[i].duration =
-                    el.value ? Number(el.value) : null;
-            }
-        });
-        document.querySelectorAll('.step-duration-unit').forEach(el => {
-            const i = Number(el.dataset.step);
-            if (this.form.steps[i]) this.form.steps[i].durationUnit = el.value;
         });
         document.querySelectorAll('.step-img-caption').forEach(el => {
             const si = Number(el.dataset.step);
@@ -494,6 +490,8 @@ class ActivitiesView extends AbstractView {
             title: this.form.title,
             image: this.form.image,
             description: this.form.description,
+            duration: this.form.duration,
+            durationUnit: this.form.durationUnit,
             trackHistory: document.getElementById(
                 'activity-track-history').checked,
             assignedMembers: this.form.assignedMembers,
