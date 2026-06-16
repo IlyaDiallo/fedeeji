@@ -112,8 +112,7 @@ class ActivityRunView extends AbstractView {
                     <div id="step-body-${i}"
                         class="accordion-collapse collapse">
                         <div class="accordion-body">
-                            ${s.description ? `<p style="white-space:pre-wrap;">
-                                ${E(s.description)}</p>` : ''}
+                            ${s.description ? `<p style="white-space:pre-wrap;">${E(s.description)}</p>` : ''}
                             ${imagesHtml}
                         </div>
                     </div>
@@ -128,8 +127,7 @@ class ActivityRunView extends AbstractView {
                     <i class="bi bi-arrow-left"></i> ${t("back")}</a>
             </div>
             ${image}
-            ${a.description ? `<p style="white-space:pre-wrap;">
-                ${E(a.description)}</p>` : ''}
+            ${a.description ? `<p style="white-space:pre-wrap;">${E(a.description)}</p>` : ''}
 
             <div class="card mb-3">
                 <div class="card-body d-flex align-items-center
