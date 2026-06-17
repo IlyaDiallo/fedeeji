@@ -106,6 +106,15 @@ class ActivitiesView extends AbstractView {
                                 <div class="mb-3 form-check form-switch">
                                     <input class="form-check-input"
                                         type="checkbox"
+                                        id="activity-no-timer">
+                                    <label class="form-check-label"
+                                        for="activity-no-timer"
+                                        data-i18n="no_timer">
+                                        ${t("no_timer")}</label>
+                                </div>
+                                <div class="mb-3 form-check form-switch">
+                                    <input class="form-check-input"
+                                        type="checkbox"
                                         id="activity-track-history">
                                     <label class="form-check-label"
                                         for="activity-track-history"
@@ -263,6 +272,7 @@ class ActivitiesView extends AbstractView {
             description: existing?.description || '',
             duration: existing?.duration ?? null,
             durationUnit: existing?.durationUnit || 'minutes',
+            noTimer: existing?.noTimer === true,
             trackHistory: existing ? existing.trackHistory !== false : true,
             assignedMembers: Array.isArray(existing?.assignedMembers)
                 ? [...existing.assignedMembers] : [],
@@ -286,6 +296,8 @@ class ActivitiesView extends AbstractView {
         document.getElementById('activity-duration-unit').value =
             this.form.durationUnit;
         document.getElementById('activity-image-input').value = '';
+        document.getElementById('activity-no-timer').checked =
+            this.form.noTimer;
         document.getElementById('activity-track-history').checked =
             this.form.trackHistory;
         this.renderActivityImage();
@@ -492,6 +504,7 @@ class ActivitiesView extends AbstractView {
             description: this.form.description,
             duration: this.form.duration,
             durationUnit: this.form.durationUnit,
+            noTimer: document.getElementById('activity-no-timer').checked,
             trackHistory: document.getElementById(
                 'activity-track-history').checked,
             assignedMembers: this.form.assignedMembers,

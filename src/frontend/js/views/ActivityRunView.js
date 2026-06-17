@@ -129,6 +129,7 @@ class ActivityRunView extends AbstractView {
             ${image}
             ${a.description ? `<p style="white-space:pre-wrap;">${E(a.description)}</p>` : ''}
 
+            ${a.noTimer ? '' : `
             <div class="card mb-3">
                 <div class="card-body d-flex align-items-center
                     justify-content-between flex-wrap gap-2">
@@ -154,7 +155,7 @@ class ActivityRunView extends AbstractView {
                             ${t("reset")}</button>
                     </div>
                 </div>
-            </div>
+            </div>`}
 
             <div class="progress mb-3" style="height:20px;">
                 <div class="progress-bar" id="activity-progress"
@@ -198,12 +199,14 @@ class ActivityRunView extends AbstractView {
                 this.updateProgress();
             }));
 
-        document.getElementById('timer-start')
-            .addEventListener('click', () => this.startTimer());
-        document.getElementById('timer-pause')
-            .addEventListener('click', () => this.pauseTimer());
-        document.getElementById('timer-reset')
-            .addEventListener('click', () => this.resetTimer());
+        const startBtn = document.getElementById('timer-start');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => this.startTimer());
+            document.getElementById('timer-pause')
+                .addEventListener('click', () => this.pauseTimer());
+            document.getElementById('timer-reset')
+                .addEventListener('click', () => this.resetTimer());
+        }
 
         const finishBtn = document.getElementById('btn-finish-activity');
         if (finishBtn) {
