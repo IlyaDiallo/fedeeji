@@ -56,6 +56,7 @@ src/backend/
 │   ├── inscriptions.js        # /api/:collectiveId/inscriptions
 │   ├── actions.js             # /api/:collectiveId/actions
 │   ├── activities.js          # /api/:collectiveId/activities
+│   ├── assets.js              # /api/:collectiveId/assets (photos + illustrations locales)
 │   ├── activityHistory.js     # /api/:collectiveId/activity-history
 │   ├── actionLogs.js          # /api/:collectiveId/action-logs
 │   └── trash.js               # /api/:collectiveId/trash
@@ -64,6 +65,8 @@ src/backend/
 │   ├── CollectiveService.js   # CRUD collectifs (collectives.json)
 │   ├── DataService.js         # CRUD générique via StorageAdapter
 │   ├── ImportService.js       # Import XLSX (contributions)
+│   ├── AssetService.js        # Catalogue Wikimedia + copie locale des images
+│   ├── IllustrationService.js # Catalogue Tabler + rendu SVG dessiné
 │   ├── LogService.js          # Journal des opérations utilisateur
 │   └── TrashService.js        # Corbeille (soft delete / restore)
 └── storage/
@@ -104,6 +107,7 @@ graph LR
     SERVER --> FILES_R["/api/files — files.js"]
     SERVER --> IMPORT["/api/:id/import-contributions"]
     SERVER --> VERSION["/api/version"]
+    SERVER --> ILLUSTRATIONS["/api/:id/illustrations/:name.svg"]
     SERVER --> API_R["/api/:collectiveId — api.js"]
 
     API_R --> TRASH["/trash"]
@@ -113,6 +117,7 @@ graph LR
     API_R --> ALOGS["/action-logs"]
     API_R --> EVENTS["/events"]
     API_R --> ACTIVITIES["/activities"]
+    API_R --> ASSETS["/assets — catalogue d'images"]
     API_R --> CONTRIBS["/contributions"]
     API_R --> GENERIC["/:collection (CRUD générique)"]
 ```
@@ -122,11 +127,13 @@ graph LR
 | Service              | Responsabilité                                                    |
 |----------------------|-------------------------------------------------------------------|
 | `AuthService`        | Login (superadmin, admin, member), hash mot de passe, vérif JWT   |
-| `CollectiveService`  | CRUD sur `collectives.json`, upload de logo                       |
+| `CollectiveService`  | CRUD collectifs, type concret, logo local et palette dérivée de `primaryColor` |
 | `DataService`        | CRUD générique par collection via `StorageAdapter`, journalisation |
 | `TrashService`       | Soft delete → corbeille, restauration, suppression définitive      |
 | `LogService`         | Journal horodaté des opérations (ajout, modif, suppression)       |
 | `ImportService`      | Import de fichiers XLSX vers la collection contributions          |
+| `AssetService`       | Recherche Wikimedia Commons, validation et copie locale des images choisies |
+| `IllustrationService` | Recherche Tabler FR/EN, validation des recettes et rendu SVG `doodle-v1` |
 
 ### Stockage
 
@@ -180,6 +187,7 @@ src/frontend/
     ├── RecurrenceUtils.js          # Calcul des occurrences récurrentes
     ├── ActionUtils.js              # Normalisation des actions, nom de membre
     ├── ActionOccurrenceResolver.js # Résolution occurrences (statut, état, fenêtre)
+    ├── IllustrationPicker.js       # Catalogue local et choix d'un dessin par action
     ├── ProgrammeRenderers.js       # Rendu HTML liste/calendrier/historique
     ├── ActionFormManager.js        # Modal CRUD actions
     ├── LogFormManager.js           # Modal logs (done/note/consultation)
@@ -239,6 +247,7 @@ graph TB
         AOR["ActionOccurrenceResolver"]
         PR["ProgrammeRenderers"]
         AFM["ActionFormManager"]
+        IP["IllustrationPicker"]
         LFM["LogFormManager"]
     end
 
@@ -253,6 +262,7 @@ graph TB
     PV --> AOR
     PV --> PR
     PV --> AFM
+    AFM --> IP
     PV --> LFM
 ```
 
@@ -289,11 +299,12 @@ graph TB
 
 | Module               | Responsabilité                                                          |
 |----------------------|-------------------------------------------------------------------------|
-| `api.js`             | Client HTTP, gestion du token JWT, méthodes CRUD (`get`, `create`, `update`, `delete`) |
+| `api.js`             | Client HTTP, gestion du token JWT, CRUD et catalogue d'assets (`searchAssets`, `importAsset`) |
 | `i18n.js`            | Dictionnaires fr/en, fonction `t(key)`, événement `langChanged`         |
 | `RecurrenceUtils.js` | Génération d'occurrences (daily, weekly, monthly) avec intervalles et exceptions |
 | `ActionUtils.js`     | `normalize(action)` : conversion des anciens formats de récurrence ; `getMemberName(id, members)` |
 | `ActionOccurrenceResolver.js` | Résolution des prochaines occurrences, calcul statut (overdue/due/ok) et état courant |
+| `IllustrationPicker.js` | Suggestions et recherche locale d'illustrations pour une action |
 | `ProgrammeRenderers.js` | Rendu HTML statique : items liste, grille calendrier, historique, notes existantes |
 | `ActionFormManager.js` | Gestion du modal CRUD actions (ouverture, sauvegarde, template, récurrence) |
 | `LogFormManager.js`  | Gestion du modal logs : modes done, note, consultation hors-fenêtre     |
@@ -313,11 +324,11 @@ data/
 │   ├── contributions.json     # Cotisations / contributions
 │   ├── events.json            # Événements (récurrents ou non)
 │   ├── inscriptions.json      # Inscriptions aux événements
-│   ├── actions.json           # Actions programmées
+│   ├── actions.json           # Actions programmées + recette d'illustration
 │   ├── activities.json        # Modèles d'activités (titre, étapes, images, membres, trackHistory)
 │   ├── activity-history.json  # Journal des réalisations d'activités (si trackHistory)
 │   ├── action-logs.json       # Historique d'exécution des actions
-│   ├── uploads/               # Images uploadées (activités)
+│   ├── uploads/               # Images uploadées ou importées depuis la médiathèque
 │   ├── admins.json            # Comptes admin du collectif
 │   ├── trash.json             # Corbeille
 │   └── logs.json              # Journal des opérations
@@ -325,7 +336,28 @@ data/
 ```
 
 Le fichier `collectives.json` à la racine du projet contient la liste des collectifs
-(id, nom, label, email admin, langue par défaut, options).
+(id, nom, label, `typeLabel`, email admin, langue par défaut, options, palette
+dérivée de `primaryColor` et éventuelle recette `logoIllustration`). Le terme
+« collectif » reste réservé à l’administration globale ; l’interface interne
+emploie `typeLabel` (association, club, groupe…). Une action peut contenir une
+recette stable :
+
+```json
+{
+  "illustration": {
+    "collection": "tabler",
+    "name": "wash",
+    "style": "doodle-v1",
+    "seed": 18427
+  }
+}
+```
+
+Le SVG n'est stocké ni dans l'action ni dans le logo : il est rendu localement
+avec les couleurs courantes du collectif, puis validé par `ETag`. Changer la
+couleur recolore donc toutes les illustrations sans migration des données. Le
+superadmin recherche les logos dans le même catalogue Tabler local que les
+actions ; un aperçu générique permet aussi le choix avant la création.
 
 ---
 
@@ -357,6 +389,7 @@ graph LR
 | Backend    | Node.js, Express, JWT (jsonwebtoken), bcryptjs  |
 | Frontend   | Vanilla JS (ES6 classes), HTML5 History API     |
 | UI         | Bootstrap 5, Bootstrap Icons                    |
+| Assets     | Photos Wikimedia + 6 232 icônes Tabler locales rendues en SVG `doodle-v1` |
 | Stockage   | Fichiers JSON (extensible via StorageAdapter)   |
 | i18n       | Dictionnaire JS côté client (fr / en)           |
 | Import     | xlsx (lecture de fichiers Excel)                 |
