@@ -5,9 +5,21 @@ const asyncHandler = require('../middleware/asyncHandler');
 /**
  * @param {Object} params
  * @param {import('../services/DataService')} params.dataService
+ * @param {import('../services/IllustrationService')} params.illustrationService
  */
-function createActionsRouter({ dataService }) {
+function createActionsRouter({ dataService, illustrationService }) {
     const router = express.Router({ mergeParams: true });
+
+    const withValidatedIllustration = (body, required = false) => {
+        const data = { ...body };
+        if (required || Object.hasOwn(data, 'illustration')) {
+            data.illustration = illustrationService.normalizeRecipe(
+                data.illustration,
+                { fallbackSource: data.name || 'action' }
+            );
+        }
+        return data;
+    };
 
     router.get('/',
         requireRole('admin', 'member'),
@@ -41,7 +53,7 @@ function createActionsRouter({ dataService }) {
             const data = await dataService.create({
                 collectiveId: req.collectiveId,
                 collection: 'actions',
-                data: req.body
+                data: withValidatedIllustration(req.body, true)
             });
             res.status(201).json(data);
         })
@@ -54,7 +66,7 @@ function createActionsRouter({ dataService }) {
                 collectiveId: req.collectiveId,
                 collection: 'actions',
                 id: req.params.id,
-                data: req.body
+                data: withValidatedIllustration(req.body)
             });
             res.json(data);
         })

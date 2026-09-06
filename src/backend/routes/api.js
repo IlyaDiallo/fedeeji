@@ -11,14 +11,20 @@ const createEventsRouter = require('./events');
 const createActivitiesRouter = require('./activities');
 const createActivityHistoryRouter = require('./activityHistory');
 const createNotificationsRouter = require('./notifications');
+const createAssetsRouter = require('./assets');
 
 /**
  * @param {Object} params
  * @param {import('../services/DataService')} params.dataService
  * @param {import('../services/TrashService')} params.trashService
  * @param {import('../services/ActionNotificationScheduler')} [params.scheduler]
+ * @param {import('../services/AssetService')} params.assetService
+ * @param {import('../services/IllustrationService')} params.illustrationService
  */
-function createApiRouter({ dataService, trashService, scheduler }) {
+function createApiRouter({
+    dataService, trashService, scheduler, assetService,
+    illustrationService
+}) {
     const router = express.Router({ mergeParams: true });
 
     // Middleware : vérifie que le collectiveId est présent
@@ -43,7 +49,9 @@ function createApiRouter({ dataService, trashService, scheduler }) {
         createInscriptionsRouter({ dataService })
     );
 
-    router.use('/actions', createActionsRouter({ dataService }));
+    router.use('/actions', createActionsRouter({
+        dataService, illustrationService
+    }));
 
     router.use(
         '/action-logs',
@@ -53,6 +61,10 @@ function createApiRouter({ dataService, trashService, scheduler }) {
     router.use('/events', createEventsRouter({ dataService }));
 
     router.use('/activities', createActivitiesRouter({ dataService }));
+
+    router.use('/assets', createAssetsRouter({
+        assetService, illustrationService
+    }));
 
     router.use(
         '/activity-history',

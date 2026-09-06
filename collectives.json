@@ -2,7 +2,8 @@
   {
     "id": "default",
     "name": "Default Collective",
-    "label": "Collectif par défaut",
+    "label": "Espace par défaut",
+    "typeLabel": "groupe",
     "adminEmail": "admin@default.com",
     "defaultLanguage": "fr",
     "logo": "/favicon.svg",

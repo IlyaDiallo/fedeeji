@@ -9,8 +9,11 @@ const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
  * @param {Object} params
  * @param {import('../services/AuthService')} params.authService
  * @param {import('../services/CollectiveService')} params.collectiveService
+ * @param {import('../services/IllustrationService')} params.illustrationService
  */
-function createAuthRouter({ authService, collectiveService, dataService }) {
+function createAuthRouter({
+    authService, collectiveService, dataService, illustrationService
+}) {
     const router = express.Router();
 
     // Middleware superadmin (inline pour éviter circular deps)
@@ -110,12 +113,42 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
         res.json({ email: SUPERADMIN_EMAIL || '' });
     });
 
+    // Catalogue local pour le choix du logo (superadmin)
+    router.get('/illustrations', requireSuperadmin, (req, res) => {
+        try {
+            const theme = collectiveService.resolveTheme(req.query.color);
+            const items = illustrationService.search({
+                query: req.query.q,
+                lang: req.query.lang,
+                limit: req.query.limit
+            }).map(item => ({
+                ...item,
+                previewUrl: '/api/illustrations/'
+                    + `${item.name}.svg?seed=${item.seed}`
+                    + `&color=${encodeURIComponent(theme.primaryColor)}`
+            }));
+            res.json({ items });
+        } catch (error) {
+            res.status(error.status || 400).json({ error: error.message });
+        }
+    });
+
     // Modification d'un collectif (superadmin)
     router.put(
         '/collectives/:id',
+        requireSuperadmin,
         asyncHandler(async (req, res) => {
             const { id } = req.params;
-            const { id: _id, ...data } = req.body;
+            const allowedFields = [
+                'name', 'label', 'adminEmail', 'defaultLanguage',
+                'registrationPassword', 'contributionsEnabled',
+                'primaryColor', 'typeLabel', 'logoIllustration'
+            ];
+            const data = Object.fromEntries(
+                allowedFields
+                    .filter(key => Object.hasOwn(req.body, key))
+                    .map(key => [key, req.body[key]])
+            );
             const updated = await collectiveService.update(id, data);
             res.json(updated);
         })
@@ -141,6 +174,7 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
 
     router.post(
         '/collectives/:id/logo',
+        requireSuperadmin,
         logoUpload.single('file'),
         asyncHandler(async (req, res) => {
             if (!req.file) {
@@ -162,7 +196,8 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
         requireSuperadmin,
         asyncHandler(async (req, res) => {
             const { id, name, label, adminEmail, defaultLanguage,
-                registrationPassword } = req.body;
+                registrationPassword, contributionsEnabled,
+                primaryColor, typeLabel, logoIllustration } = req.body;
 
             if (!id || !name || !label) {
                 return res.status(400).json({
@@ -172,7 +207,9 @@ function createAuthRouter({ authService, collectiveService, dataService }) {
 
             const org = await collectiveService.create({
                 id, name, label, adminEmail,
-                defaultLanguage, registrationPassword
+                defaultLanguage, registrationPassword,
+                contributionsEnabled, primaryColor,
+                typeLabel, logoIllustration
             });
             res.status(201).json(org);
         })
