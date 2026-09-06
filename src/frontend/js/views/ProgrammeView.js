@@ -21,8 +21,9 @@ class ProgrammeView extends AbstractView {
 
     async getHtml() {
         const addBtn = this.isMember ? '' : `
-            <button class="btn btn-primary"
-                id="btn-add-action">
+            <button class="btn btn-primary" id="btn-add-action"
+                title="${t("add_action") || "Ajouter une action"}"
+                aria-label="${t("add_action") || "Ajouter une action"}">
                 <i class="bi bi-plus-circle"></i>
                 <span class="d-none d-md-inline">
                     ${t("add_action") || "Ajouter une action"}</span>
@@ -34,7 +35,8 @@ class ProgrammeView extends AbstractView {
                 <div>${addBtn}</div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="programme-toolbar d-flex justify-content-between
+                align-items-center mb-3">
                 <ul class="nav nav-tabs mb-0 border-bottom-0" id="programme-tabs">
                     <li class="nav-item">
                         <a class="nav-link active" href="#"
@@ -50,22 +52,22 @@ class ProgrammeView extends AbstractView {
                     </li>
                 </ul>
 
-                <div class="btn-group" role="group">
+                <div class="btn-group programme-view-switcher" role="group">
                     <input type="radio" class="btn-check" name="view-mode"
                         id="view-list" value="list" autocomplete="off" checked>
-                    <label class="btn btn-outline-secondary btn-sm"
+                    <label class="btn btn-outline-secondary btn-sm btn-icon"
                         for="view-list" title="Liste">
                         <i class="bi bi-list-ul"></i></label>
 
                     <input type="radio" class="btn-check" name="view-mode"
                         id="view-week" value="week" autocomplete="off">
-                    <label class="btn btn-outline-secondary btn-sm"
+                    <label class="btn btn-outline-secondary btn-sm btn-icon"
                         for="view-week" title="Semaine">
                         <i class="bi bi-calendar-week"></i></label>
 
                     <input type="radio" class="btn-check" name="view-mode"
                         id="view-month" value="month" autocomplete="off">
-                    <label class="btn btn-outline-secondary btn-sm"
+                    <label class="btn btn-outline-secondary btn-sm btn-icon"
                         for="view-month" title="Mois">
                         <i class="bi bi-calendar-month"></i></label>
                 </div>
@@ -73,12 +75,14 @@ class ProgrammeView extends AbstractView {
 
             <div id="calendar-nav"
                 class="d-flex justify-content-between align-items-center mb-3 d-none">
-                <button class="btn btn-outline-secondary btn-sm"
-                    id="btn-prev-cal">
+                <button class="btn btn-outline-secondary btn-sm btn-icon"
+                    id="btn-prev-cal" title="${t("previous_period")}"
+                    aria-label="${t("previous_period")}">
                     <i class="bi bi-chevron-left"></i></button>
                 <h5 id="calendar-label" class="mb-0"></h5>
-                <button class="btn btn-outline-secondary btn-sm"
-                    id="btn-next-cal">
+                <button class="btn btn-outline-secondary btn-sm btn-icon"
+                    id="btn-next-cal" title="${t("next_period")}"
+                    aria-label="${t("next_period")}">
                     <i class="bi bi-chevron-right"></i></button>
             </div>
 
@@ -87,7 +91,7 @@ class ProgrammeView extends AbstractView {
 
             <!-- Modal action -->
             <div class="modal fade" id="actionModal" tabindex="-1">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-lg modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="actionModalTitle">
@@ -96,6 +100,7 @@ class ProgrammeView extends AbstractView {
                                 data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body">
+                            ${IllustrationPicker.panelHtml()}
                             <form id="action-form">
                                 <input type="hidden" id="action-id">
                                 <div class="mb-3" id="action-type-container">
@@ -140,6 +145,7 @@ class ProgrammeView extends AbstractView {
                                     <input type="text" class="form-control"
                                         id="action-name" required>
                                 </div>
+                                ${IllustrationPicker.fieldHtml()}
                                 <div class="mb-3">
                                     <label class="form-label"
                                         data-i18n="intermediate_states">
@@ -301,7 +307,7 @@ class ProgrammeView extends AbstractView {
                                 </div>
                             </form>
                         </div>
-                        <div class="modal-footer">
+                        <div class="modal-footer" id="action-modal-footer">
                             <button type="button"
                                 class="btn btn-secondary"
                                 data-bs-dismiss="modal"
@@ -319,9 +325,17 @@ class ProgrammeView extends AbstractView {
             <div class="modal fade" id="logModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="logModalTitle">
-                                ${t("mark_done")}</h5>
+                        <div class="modal-header action-detail-header">
+                            <div class="action-detail-identity">
+                                <img id="log-action-illustration"
+                                    class="action-detail-illustration" alt="">
+                                <div class="action-detail-copy">
+                                    <h5 class="modal-title" id="logModalTitle">
+                                        ${t("mark_done")}</h5>
+                                    <div class="action-detail-name"
+                                        id="log-action-name"></div>
+                                </div>
+                            </div>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
@@ -403,9 +417,17 @@ class ProgrammeView extends AbstractView {
             <div class="modal fade" id="historyModal" tabindex="-1">
                 <div class="modal-dialog">
                     <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="historyModalTitle">
-                                ${t("history")}</h5>
+                        <div class="modal-header action-detail-header">
+                            <div class="action-detail-identity">
+                                <img id="history-action-illustration"
+                                    class="action-detail-illustration" alt="">
+                                <div class="action-detail-copy">
+                                    <h5 class="modal-title" id="historyModalTitle">
+                                        ${t("history")}</h5>
+                                    <div class="action-detail-name"
+                                        id="history-action-name"></div>
+                                </div>
+                            </div>
                             <button type="button" class="btn-close"
                                 data-bs-dismiss="modal"></button>
                         </div>
@@ -528,7 +550,7 @@ class ProgrammeView extends AbstractView {
         const getMemberName = id => this.getMemberName(id);
         items.forEach(item => {
             const div = document.createElement('div');
-            div.className = 'list-group-item border rounded mb-2';
+            div.className = 'programme-list-item list-group-item border rounded mb-2';
             div.innerHTML = item.type === 'event'
                 ? ProgrammeRenderers.renderEventItem({
                     item, locale: this.locale,
@@ -536,7 +558,8 @@ class ProgrammeView extends AbstractView {
                 })
                 : ProgrammeRenderers.renderActionItem({
                     item, locale: this.locale,
-                    isMember: this.isMember, getMemberName
+                    isMember: this.isMember, getMemberName,
+                    collectiveId: this.collectiveId
                 });
             container.appendChild(div);
         });
@@ -558,7 +581,8 @@ class ProgrammeView extends AbstractView {
         container.innerHTML = ProgrammeRenderers.renderCalendarGrid({
             items, startCal, endCal,
             viewMode: this.viewMode,
-            month
+            month,
+            collectiveId: this.collectiveId
         });
         ProgrammeRenderers.ensureCalendarStyles();
         this._bindCalendarEvents(container);
@@ -568,8 +592,13 @@ class ProgrammeView extends AbstractView {
 
     openHistoryModal(actionId) {
         const action = this.actions.find(a => a.id === actionId);
-        document.getElementById('historyModalTitle').textContent =
-            `${t("history")} — ${action?.name || ''}`;
+        document.getElementById('historyModalTitle').textContent = t("history");
+        document.getElementById('history-action-name').textContent =
+            action?.name || t("action_label");
+        document.getElementById('history-action-illustration').src =
+            ProgrammeRenderers.actionIllustrationUrl(
+                action, this.collectiveId, true
+            );
 
         const logs = this.actionLogs
             .filter(l => l.programmeId === actionId)

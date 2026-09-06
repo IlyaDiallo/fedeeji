@@ -18,6 +18,35 @@ class ActivityRunView extends AbstractView {
             .replace(/"/g, '&quot;');
     }
 
+    static safeUrl(value) {
+        if (!value) return '';
+        try {
+            const url = new URL(value, window.location.origin);
+            return ['http:', 'https:'].includes(url.protocol)
+                ? url.href : '';
+        } catch {
+            return '';
+        }
+    }
+
+    attributionHtml(attribution) {
+        if (!attribution) return '';
+        const E = ActivityRunView.escape;
+        const source = ActivityRunView.safeUrl(attribution.sourceUrl);
+        const licenseUrl = ActivityRunView.safeUrl(attribution.licenseUrl);
+        const author = E(attribution.author || attribution.provider || '');
+        const license = E(attribution.license || '');
+        const authorHtml = source && author
+            ? `<a href="${E(source)}" target="_blank"
+                rel="noopener noreferrer">${author}</a>` : author;
+        const licenseHtml = licenseUrl && license
+            ? `<a href="${E(licenseUrl)}" target="_blank"
+                rel="noopener noreferrer">${license}</a>` : license;
+        return `<small class="asset-attribution">
+            <i class="bi bi-info-circle"></i> ${authorHtml}
+            ${authorHtml && licenseHtml ? ' · ' : ''}${licenseHtml}</small>`;
+    }
+
     formatDuration(duration, unit) {
         if (!duration) return '';
         const label = t(unit || 'minutes', duration);
@@ -72,9 +101,10 @@ class ActivityRunView extends AbstractView {
         const steps = Array.isArray(a.steps) ? a.steps : [];
 
         const image = a.image
-            ? `<img src="${E(a.image)}" class="img-fluid rounded mb-3"
-                style="max-height:280px;object-fit:cover;width:100%;"
-                alt="${E(a.title)}">`
+            ? `<figure class="activity-cover mb-4">
+                <img src="${E(a.image)}" alt="${E(a.title)}">
+                ${this.attributionHtml(a.imageAttribution)}
+               </figure>`
             : '';
 
         const stepsHtml = steps.map((s, i) => {
@@ -85,11 +115,10 @@ class ActivityRunView extends AbstractView {
                         <div class="col-6 col-md-4">
                             <figure class="mb-0">
                                 <img src="${E(im.path)}"
-                                    class="img-fluid rounded"
-                                    style="width:100%;object-fit:cover;">
-                                ${im.caption ? `<figcaption
-                                    class="small text-muted text-center mt-1">
+                                    class="img-fluid rounded" alt="">
+                                ${im.caption ? `<figcaption>
                                     ${E(im.caption)}</figcaption>` : ''}
+                                ${this.attributionHtml(im.attribution)}
                             </figure>
                         </div>`).join('')}
                 </div>` : '';

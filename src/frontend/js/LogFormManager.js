@@ -27,6 +27,20 @@ class LogFormManager {
         return `📅 ${dateStr}${timeStr}${durationStr}`;
     }
 
+    /** Affiche l'identité visuelle de l'action dans le détail. */
+    setActionIdentity(action) {
+        const image = document.getElementById('log-action-illustration');
+        const name = document.getElementById('log-action-name');
+        if (image) {
+            image.src = ProgrammeRenderers.actionIllustrationUrl(
+                action, this.view.collectiveId, true
+            );
+        }
+        if (name) {
+            name.textContent = action?.name || t("action_label");
+        }
+    }
+
     /** Réinitialise la visibilité de tous les champs du modal log */
     resetVisibility() {
         const notesEl = document.getElementById('log-notes');
@@ -46,6 +60,7 @@ class LogFormManager {
 
     open(actionId, type = 'done', defaultDate = null) {
         const action = this.view.actions.find(a => a.id === actionId);
+        this.setActionIdentity(action);
         document.getElementById('log-actionId').value = actionId;
         document.getElementById('log-id').value = '';
         this.resetVisibility();
@@ -230,7 +245,7 @@ class LogFormManager {
         title, windowInfoEl, dateInput,
         notesTextarea, saveBtn
     }) {
-        title.textContent = action?.name || t("action_label");
+        title.textContent = t("action_label");
 
         const actionInfo = this.buildActionInfoHtml({ action, occDateStr });
         const occDateObj = new Date(`${occDateStr}T12:00:00`);
@@ -363,8 +378,7 @@ class LogFormManager {
             }
             document.getElementById('btn-delete-log')
                 .classList.remove('d-none');
-            title.textContent = t("edit") + ' — '
-                + (action?.name || t("mark_done"));
+            title.textContent = t("edit");
             saveBtn.textContent = t("save");
             saveBtn.className = 'btn btn-primary';
         } else {

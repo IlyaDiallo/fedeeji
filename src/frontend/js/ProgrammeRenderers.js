@@ -4,6 +4,24 @@
  */
 class ProgrammeRenderers {
 
+    static actionIllustrationUrl(action, collectiveId, compact = true) {
+        const safeAction = action || {};
+        const recipe = safeAction.illustration
+            || IllustrationPicker.defaultRecipe(
+                safeAction.id || safeAction.name
+            );
+        return IllustrationPicker.previewUrl(
+            collectiveId, recipe, compact
+        );
+    }
+
+    static renderActionIllustration(action, collectiveId, className) {
+        const url = ProgrammeRenderers.actionIllustrationUrl(
+            action, collectiveId, true
+        );
+        return `<img class="${className}" src="${url}" alt="" loading="lazy">`;
+    }
+
     /**
      * Rendu HTML d'un événement dans la vue liste.
      */
@@ -17,36 +35,37 @@ class ProgrammeRenderers {
         const timeStr = isAllDay ? '' : ` ⏰ ${event.time || ''}`;
         const isRecurrent = event.recurrence && event.recurrence !== 'none';
         const cancelledLabel = occ.isCancelled
-            ? ` <span class="badge bg-danger ms-1">${t("occurrence_cancelled")}</span>`
+            ? `<span class="badge bg-danger">${t("occurrence_cancelled")}</span>`
             : '';
 
         const inscLink = isRecurrent
             ? `<a href="/${collectiveId}/events/${event.id}/inscription-schedule"
-                class="btn btn-sm btn-outline-primary" data-link
+                class="btn btn-sm btn-icon btn-outline-primary" data-link
                 title="${t("plan_inscriptions")}">
                 <i class="bi bi-calendar-check"></i></a>`
             : `<a href="/${collectiveId}/inscriptions?eventId=${event.id}&date=${occ.occurrenceDate}"
-                class="btn btn-sm btn-outline-success" data-link
+                class="btn btn-sm btn-icon btn-outline-success" data-link
                 title="${t("inscriptions")}">
                 <i class="bi bi-calendar-plus"></i></a>`;
 
         return `
             <div class="d-flex w-100 flex-column flex-sm-row justify-content-between
                 align-items-start align-items-sm-center gap-2">
-                <div class="ms-2 me-auto">
-                    <div class="fw-bold text-primary d-flex align-items-center">
-                        <span class="badge bg-info me-2">📅 ${t("event")}</span>
-                        ${event.name}${cancelledLabel}
+                <div class="me-auto">
+                    <div class="fw-bold text-primary programme-title-line">
+                        <span class="badge bg-info">📅 ${t("event")}</span>
+                        <span class="programme-item-name">${event.name}</span>
+                        ${cancelledLabel}
                     </div>
-                    <div class="text-muted mt-1">
+                    <div class="text-muted mt-1 programme-meta">
                         <small>🗓️ ${dateStr}${timeStr}</small>
                     </div>
                     ${event.description
                         ? `<div class="mt-1 text-dark small">${event.description}</div>`
                         : ''}
                 </div>
-                <div class="d-flex align-items-center flex-wrap justify-content-end
-                    gap-1 mt-2 mt-sm-0 align-self-end align-self-sm-auto">
+                <div class="programme-item-actions d-flex align-items-center flex-wrap
+                    justify-content-end mt-2 mt-sm-0 align-self-end align-self-sm-auto">
                     ${inscLink}
                 </div>
             </div>`;
@@ -55,7 +74,9 @@ class ProgrammeRenderers {
     /**
      * Rendu HTML d'une action dans la vue liste.
      */
-    static renderActionItem({ item, locale, isMember, getMemberName }) {
+    static renderActionItem({
+        item, locale, isMember, getMemberName, collectiveId
+    }) {
         const action = item.data;
         const occ = item.occurrence;
         const status = item.status;
@@ -71,17 +92,17 @@ class ProgrammeRenderers {
         const isAllDay = action.allDay !== undefined ? action.allDay : !action.time;
         const timeStr = isAllDay ? '' : ` ⏰ ${action.time || ''}`;
         const cancelledLabel = occ.isCancelled
-            ? ` <span class="badge bg-danger ms-1">${t("occurrence_cancelled")}</span>`
+            ? `<span class="badge bg-danger">${t("occurrence_cancelled")}</span>`
             : '';
 
         let statusBadge;
         if (status === 'overdue') {
-            statusBadge = `<span class="badge bg-danger ms-2">🔴 ${t("overdue")}</span>`;
+            statusBadge = `<span class="badge bg-danger">🔴 ${t("overdue")}</span>`;
         } else if (status === 'due') {
-            statusBadge = `<span class="badge bg-warning text-dark ms-2">`
+            statusBadge = `<span class="badge bg-warning text-dark">`
                 + `🟡 ${t("due_now")}</span>`;
         } else {
-            statusBadge = `<span class="badge bg-success ms-2">`
+            statusBadge = `<span class="badge bg-success">`
                 + `🟢 ${t("status_ok")}</span>`;
         }
 
@@ -93,7 +114,7 @@ class ProgrammeRenderers {
             } else if (currentState === maxState) {
                 stateName = t("done") || "Fait";
             }
-            stateBadge = `<span class="badge bg-secondary ms-2">${stateName}</span>`;
+            stateBadge = `<span class="badge bg-secondary">${stateName}</span>`;
         }
 
         const lastLogStr = lastLog
@@ -101,7 +122,7 @@ class ProgrammeRenderers {
             : `⚠️ ${t("never_done")}`;
 
         const notesStr = targetNotes.length > 0
-            ? `<span class="badge bg-info text-dark ms-2">`
+            ? `<span class="badge bg-info text-dark">`
                 + `<i class="bi bi-card-text"></i> ${targetNotes.length} ${t("note")}</span>`
             : '';
 
@@ -117,7 +138,7 @@ class ProgrammeRenderers {
 
         let doneBtn;
         if (isDone) {
-            doneBtn = `<button class="btn btn-sm btn-outline-success btn-edit-log"
+            doneBtn = `<button class="btn btn-sm btn-icon btn-outline-success btn-edit-log"
                 data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-check-circle-fill"></i></button>`;
         } else if (canDo) {
@@ -125,22 +146,22 @@ class ProgrammeRenderers {
                 data-id="${action.id}" title="${t("mark_done")}">
                 ${nextStateName}</button>`;
         } else {
-            doneBtn = `<button class="btn btn-sm btn-outline-secondary btn-edit-future"
+            doneBtn = `<button class="btn btn-sm btn-icon btn-outline-secondary btn-edit-future"
                 data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-pencil-square"></i></button>`;
         }
 
         const noteBtn = canDo
-            ? `<button class="btn btn-sm btn-outline-info btn-add-note"
+            ? `<button class="btn btn-sm btn-icon btn-outline-info btn-add-note"
                 data-id="${action.id}" title="${t("add_note")}">📝</button>`
             : '';
 
         const adminBtns = isMember ? '' : `
-            <button class="btn btn-sm btn-outline-primary btn-edit-action"
+            <button class="btn btn-sm btn-icon btn-outline-primary btn-edit-action"
                 data-id="${action.id}" title="${t("edit")}">
                 <i class="bi bi-pencil"></i>
             </button>
-            <button class="btn btn-sm btn-outline-danger btn-delete-action"
+            <button class="btn btn-sm btn-icon btn-outline-danger btn-delete-action"
                 data-id="${action.id}" title="${t("delete")}">
                 <i class="bi bi-trash"></i>
             </button>`;
@@ -168,16 +189,21 @@ class ProgrammeRenderers {
         return `
             <div class="d-flex w-100 flex-column flex-sm-row justify-content-between
                 align-items-start align-items-sm-center gap-2">
-                <div class="ms-2 me-auto">
-                    <div class="fw-bold d-flex align-items-center flex-wrap">
-                        <span class="badge bg-warning text-dark me-2">
+                <div class="action-programme-main ms-2 me-auto">
+                    ${ProgrammeRenderers.renderActionIllustration(
+                        action, collectiveId, 'action-programme-illustration'
+                    )}
+                    <div class="action-programme-content">
+                    <div class="fw-bold programme-title-line">
+                        <span class="badge bg-warning text-dark">
                             🔧 ${t("action_label")}</span>
-                        ${action.name}${cancelledLabel}
+                        <span class="programme-item-name">${action.name}</span>
+                        ${cancelledLabel}
                         ${statusBadge}
                         ${stateBadge}
                         ${notesStr}
                     </div>
-                    <div class="text-muted mt-1">
+                    <div class="text-muted mt-1 programme-meta">
                         <small>
                             ${recurrenceStr}
                             📅 ${t("deadline")} ${dateStr}${timeStr}
@@ -198,12 +224,13 @@ class ProgrammeRenderers {
                     <div class="mt-1 small ${lastLog ? 'text-success' : 'text-muted'}">
                         ${lastLogStr}
                     </div>
+                    </div>
                 </div>
-                <div class="d-flex align-items-center flex-wrap justify-content-end
-                    gap-1 mt-2 mt-sm-0 align-self-end align-self-sm-auto">
+                <div class="programme-item-actions d-flex align-items-center flex-wrap
+                    justify-content-end mt-2 mt-sm-0 align-self-end align-self-sm-auto">
                     ${doneBtn}
                     ${noteBtn}
-                    <button class="btn btn-sm btn-outline-secondary btn-history"
+                    <button class="btn btn-sm btn-icon btn-outline-secondary btn-history"
                         data-id="${action.id}" title="${t("history")}">
                         <i class="bi bi-clock-history"></i>
                     </button>
@@ -215,7 +242,9 @@ class ProgrammeRenderers {
     /**
      * Rendu de la grille calendrier complète (semaine ou mois).
      */
-    static renderCalendarGrid({ items, startCal, endCal, viewMode, month }) {
+    static renderCalendarGrid({
+        items, startCal, endCal, viewMode, month, collectiveId
+    }) {
         // Construire la map date -> items
         const map = {};
         items.forEach(it => {
@@ -277,14 +306,16 @@ class ProgrammeRenderers {
                 dayItems.forEach(it => {
                     if (it.type === 'event') {
                         const isCancelled = it.occurrence.isCancelled;
-                        html += `<div class="p-1 mb-1 rounded small border bg-info-subtle`
+                        html += `<div class="calendar-event-item rounded border bg-info-subtle`
                             + `${isCancelled
                                 ? ' text-decoration-line-through text-muted' : ''}"
                             title="${it.data.name}">
                             <strong>${it.data.time || ''}</strong> ${it.data.name}
                         </div>`;
                     } else {
-                        html += ProgrammeRenderers.renderCalendarActionCell(it);
+                        html += ProgrammeRenderers.renderCalendarActionCell(
+                            it, collectiveId
+                        );
                     }
                 });
 
@@ -301,7 +332,7 @@ class ProgrammeRenderers {
     /**
      * Rendu d'une cellule action dans le calendrier.
      */
-    static renderCalendarActionCell(it) {
+    static renderCalendarActionCell(it, collectiveId) {
         const hasNotes = it.targetNotes && it.targetNotes.length > 0;
         const notesIcon = hasNotes
             ? `<i class="bi bi-card-text text-info ms-1" `
@@ -320,16 +351,20 @@ class ProgrammeRenderers {
             stateIndicator = '<i class="bi bi-arrow-right-circle text-info"></i> ';
         }
 
-        return `<div class="p-1 mb-1 rounded small border ${bgClass} action-item-cal `
+        return `<div class="rounded border ${bgClass} action-item-cal `
             + `d-flex justify-content-between align-items-center" `
             + `data-id="${it.data.id}" data-date="${it.date}" role="button" `
             + `title="${it.data.name}">
-            <div>
-                ${stateIndicator}
-                <strong>${it.data.time || ''}</strong> ${it.data.name} ${notesIcon}
+            <div class="action-calendar-copy">
+                ${ProgrammeRenderers.renderActionIllustration(
+                    it.data, collectiveId, 'action-calendar-illustration'
+                )}
+                <span>${stateIndicator}
+                    <strong>${it.data.time || ''}</strong>
+                    ${it.data.name} ${notesIcon}</span>
             </div>
-            <button class="btn btn-sm btn-link `
-                + `${isDone ? 'text-success' : 'text-info'} p-0 ms-1 btn-add-note-cal" `
+            <button class="btn btn-sm btn-icon btn-link `
+                + `${isDone ? 'text-success' : 'text-info'} p-0 btn-add-note-cal" `
                 + `data-id="${it.data.id}" data-date="${it.date}" `
                 + `title="${t("add_note")}">
                 <i class="bi bi-pencil-square"></i>

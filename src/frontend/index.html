@@ -2,9 +2,10 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0">
-    <title>Feddeeji - Gestion de collectif</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#17253f">
+    <title>Feddeeji</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
         rel="stylesheet">
     <link rel="stylesheet"
@@ -13,40 +14,55 @@
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/" data-link id="navbar-brand">Feddeeji</a>
+    <div class="app-background" aria-hidden="true">
+        <span></span><span></span><span></span>
+    </div>
+
+    <nav class="navbar navbar-expand-xl app-navbar" aria-label="Navigation principale">
+        <div class="container-fluid app-nav-container">
+            <a class="navbar-brand" href="/" data-link id="navbar-brand">
+                <span class="brand-mark" aria-hidden="true">
+                    <img id="brand-logo" class="d-none" alt="">
+                    <i class="bi bi-people-fill" id="brand-default-icon"></i>
+                </span>
+                <span class="brand-copy">
+                    <strong id="brand-name">Feddeeji</strong>
+                    <small id="brand-context">Espace</small>
+                </span>
+            </a>
             <button class="navbar-toggler" type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+                data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false"
+                aria-label="Ouvrir le menu">
+                <i class="bi bi-list"></i>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto" id="nav-links">
-                </ul>
-                <div class="d-flex align-items-center">
-                    <span id="user-info"
-                        class="text-light me-3 small d-none">
-                    </span>
-                    <select id="lang-selector"
-                        class="form-select form-select-sm me-3"
-                        style="width: auto;">
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                    </select>
-                    <button id="logout-btn"
-                        class="btn btn-outline-light btn-sm d-none"
-                        data-i18n="logout">
+                <ul class="navbar-nav me-auto" id="nav-links"></ul>
+                <div class="nav-utilities">
+                    <span id="user-info" class="user-chip d-none"></span>
+                    <label class="lang-control" for="lang-selector">
+                        <i class="bi bi-translate" aria-hidden="true"></i>
+                        <span class="visually-hidden">Langue</span>
+                        <select id="lang-selector" class="form-select form-select-sm">
+                            <option value="fr">FR</option>
+                            <option value="en">EN</option>
+                        </select>
+                    </label>
+                    <button id="logout-btn" class="btn btn-logout d-none"
+                        title="Déconnexion" data-i18n-title="logout">
+                        <i class="bi bi-box-arrow-right"></i>
+                        <span class="d-xl-none" data-i18n="logout">Déconnexion</span>
                     </button>
                 </div>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4" id="app">
-    </div>
+    <main class="container-fluid app-shell" id="app" tabindex="-1"></main>
 
-    <!-- Modals -->
+    <nav id="mobile-nav" class="mobile-nav d-none"
+        aria-label="Navigation mobile"></nav>
+
     <div id="modal-container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
@@ -55,6 +71,7 @@
     <script src="/js/RecurrenceUtils.js"></script>
     <script src="/js/ActionUtils.js"></script>
     <script src="/js/ActionOccurrenceResolver.js"></script>
+    <script src="/js/IllustrationPicker.js"></script>
     <script src="/js/ProgrammeRenderers.js"></script>
     <script src="/js/ActionFormManager.js"></script>
     <script src="/js/LogFormManager.js"></script>

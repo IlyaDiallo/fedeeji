@@ -356,6 +356,38 @@ class Api {
         );
     }
 
+    // --- Catalogue d'assets visuels ---
+
+    async searchIllustrations(collectiveId, {
+        query = '', lang = 'fr', limit = 30
+    } = {}) {
+        const params = new URLSearchParams({
+            q: query, lang, limit: String(limit)
+        });
+        return this.request(
+            `/api/${collectiveId}/assets/illustrations?${params.toString()}`
+        );
+    }
+
+    async searchAssets(collectiveId, { query, page = 1, lang = 'fr' }) {
+        const params = new URLSearchParams({
+            q: query, page: String(page), lang
+        });
+        return this.request(
+            `/api/${collectiveId}/assets/search?${params.toString()}`
+        );
+    }
+
+    async importAsset(collectiveId, asset) {
+        return this.request(
+            `/api/${collectiveId}/assets/import`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ asset })
+            }
+        );
+    }
+
     // --- Notifications Home Assistant ---
 
     /** Envoie une notification de test vers le webhook HA du membre connecté. */
@@ -371,6 +403,21 @@ class Api {
         return this.request(
             `/api/${collectiveId}/notifications/trigger`,
             { method: 'POST' }
+        );
+    }
+
+    /** Catalogue local pour choisir le logo d'un collectif (superadmin). */
+    async searchCollectiveLogos({
+        query = '', lang = 'fr', limit = 36, color = '#5b55e7'
+    } = {}) {
+        const params = new URLSearchParams({
+            q: query,
+            lang,
+            limit: String(limit),
+            color
+        });
+        return this.request(
+            `/auth/illustrations?${params.toString()}`
         );
     }
 

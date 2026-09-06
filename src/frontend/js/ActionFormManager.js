@@ -5,6 +5,8 @@
 class ActionFormManager {
     constructor({ view }) {
         this.view = view;
+        this.illustration = IllustrationPicker.defaultRecipe('new-action');
+        this.illustrationPicker = null;
     }
 
     // --- Toggles d'interface ---
@@ -50,6 +52,12 @@ class ActionFormManager {
         const form = document.getElementById('action-form');
         form.reset();
         document.getElementById('action-id').value = '';
+        this.illustration = IllustrationPicker.defaultRecipe(
+            `new-action-${Date.now()}`
+        );
+        this.illustrationPicker?.close();
+        document.getElementById('action-illustration-suggestions')
+            ?.replaceChildren();
 
         const titleEl = document.getElementById('actionModalTitle');
         const templateContainer = document.getElementById(
@@ -97,6 +105,8 @@ class ActionFormManager {
 
         if (id) {
             this._populateFromAction(id);
+        } else {
+            this.illustrationPicker?.setSelected(this.illustration);
         }
 
         this.view.actionModal.show();
@@ -115,6 +125,7 @@ class ActionFormManager {
 
         const data = {
             name: document.getElementById('action-name').value,
+            illustration: { ...this.illustration },
             states: document.getElementById('action-states').value
                 .split(',').map(s => s.trim()).filter(s => s !== ''),
             description: document.getElementById('action-description').value,
@@ -211,6 +222,14 @@ class ActionFormManager {
     // --- Listeners (appelé une seule fois dans init) ---
 
     initListeners() {
+        this.illustrationPicker = new IllustrationPicker({
+            collectiveId: this.view.collectiveId,
+            onSelect: recipe => {
+                this.illustration = recipe;
+            }
+        });
+        this.illustrationPicker.init();
+
         document.getElementById('btn-add-action')
             .addEventListener('click', () => this.open());
 
@@ -230,6 +249,10 @@ class ActionFormManager {
                 this._onRecurrenceChange(e.target.value);
             });
         }
+
+        document.getElementById('action-name')
+            ?.addEventListener('input', event =>
+                this.illustrationPicker.suggestFromName(event.target.value));
 
         const tplSel = document.getElementById('action-template-select');
         if (tplSel) {
@@ -270,6 +293,10 @@ class ActionFormManager {
             (action.states || []).join(', ');
         document.getElementById('action-description').value =
             action.description || '';
+        this.illustration = action.illustration
+            ? { ...action.illustration }
+            : IllustrationPicker.defaultRecipe(action.id || action.name);
+        this.illustrationPicker?.setSelected(this.illustration);
         document.getElementById('action-date').value =
             action.date || action.startDate || '';
         document.getElementById('action-recurrenceEndDate').value =
@@ -359,6 +386,11 @@ class ActionFormManager {
             (tpl.states || []).join(', ');
         document.getElementById('action-description').value =
             tpl.description || '';
+        this.illustration = tpl.illustration
+            ? { ...tpl.illustration }
+            : IllustrationPicker.defaultRecipe(tpl.id || tpl.name);
+        this.illustrationPicker?.setSelected(this.illustration);
+        this.illustrationPicker?.suggestFromName(tpl.name || '');
         document.getElementById('action-windowDays').value =
             tpl.windowDays || 0;
 
