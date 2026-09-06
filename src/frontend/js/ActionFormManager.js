@@ -9,6 +9,92 @@ class ActionFormManager {
         this.illustrationPicker = null;
     }
 
+    static alertFieldsHtml() {
+        return `<fieldset class="border rounded p-3 mb-3">
+            <legend class="float-none w-auto fs-6">${t('ha_section_title')}</legend>
+            <label class="form-label" for="action-responsible">${t('ha_responsible')}</label>
+            <select id="action-responsible" class="form-select mb-2"></select>
+            <div class="form-check mb-2"><input id="action-alert-enabled" type="checkbox" class="form-check-input">
+                <label for="action-alert-enabled" class="form-check-label">${t('ha_enable_alert')}</label></div>
+            <p class="small text-muted">${t('ha_alert_help')}</p>
+            <div id="action-alert-fields">
+                <label for="action-alert-time" class="form-label">${t('ha_initial_time')}</label>
+                <input id="action-alert-time" type="time" class="form-control mb-2">
+                <label for="action-alert-mode" class="form-label">${t('ha_recipients')}</label>
+                <select id="action-alert-mode" class="form-select mb-2">
+                    <option value="responsible">${t('ha_responsible')}</option>
+                    <option value="selected">${t('ha_selected')}</option>
+                </select>
+                <div id="action-alert-members" class="mb-2"></div>
+                <div id="action-alert-delays"></div>
+            </div>
+        </fieldset>`;
+    }
+
+    _populateAlert(action = {}) {
+        const responsible = document.getElementById('action-responsible');
+        responsible.replaceChildren(new Option('—', ''));
+        const recipients = document.getElementById('action-alert-members');
+        recipients.replaceChildren();
+        for (const member of this.view.members) {
+            const name = this.view.getMemberName(member.id);
+            responsible.add(new Option(name, member.id));
+            const label = document.createElement('label');
+            label.className = 'form-check d-block';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox'; checkbox.value = member.id;
+            checkbox.className = 'form-check-input';
+            checkbox.checked = action.alert?.memberIds?.includes(member.id) || false;
+            label.append(checkbox, document.createTextNode(` ${name}`));
+            recipients.append(label);
+        }
+        responsible.value = action.memberId || '';
+        document.getElementById('action-alert-enabled').checked = action.alert?.enabled === true;
+        document.getElementById('action-alert-time').value = action.alert?.initialTime || '';
+        document.getElementById('action-alert-mode').value = action.alert?.recipientMode || 'responsible';
+        this._renderAlertDelays(action.alert?.stepDelayMinutes || []);
+        this._toggleAlert();
+    }
+
+    _renderAlertDelays(values) {
+        const container = document.getElementById('action-alert-delays');
+        values ||= Array.from(container.querySelectorAll('input')).map(input => input.value);
+        container.replaceChildren();
+        const states = document.getElementById('action-states').value.split(',').map(s => s.trim()).filter(Boolean);
+        const targets = [...states.slice(1), t('ha_done')];
+        states.forEach((previous, index) => {
+            const label = document.createElement('label');
+            label.className = 'form-label d-block';
+            label.textContent = `${targets[index]} — ${t('ha_delay_after')} « ${previous} »`;
+            const input = document.createElement('input');
+            input.type = 'number'; input.min = '0'; input.max = '527040'; input.step = '1';
+            input.className = 'form-control mb-2'; input.value = values[index] ?? '';
+            label.append(input); container.append(label);
+        });
+        this._toggleAlert();
+    }
+
+    _toggleAlert() {
+        const enabled = document.getElementById('action-alert-enabled').checked;
+        const fields = document.getElementById('action-alert-fields');
+        fields.hidden = !enabled;
+        fields.querySelectorAll('input, select').forEach(input => { input.disabled = !enabled; });
+        document.getElementById('action-alert-time').required = enabled;
+        document.querySelectorAll('#action-alert-delays input').forEach(input => { input.required = enabled; });
+        document.getElementById('action-alert-members').hidden =
+            document.getElementById('action-alert-mode').value !== 'selected';
+    }
+
+    _readAlert() {
+        if (!document.getElementById('action-alert-enabled').checked) return { enabled: false };
+        return {
+            enabled: true, initialTime: document.getElementById('action-alert-time').value,
+            recipientMode: document.getElementById('action-alert-mode').value,
+            memberIds: Array.from(document.querySelectorAll('#action-alert-members input:checked')).map(input => input.value),
+            stepDelayMinutes: Array.from(document.querySelectorAll('#action-alert-delays input')).map(input => Number(input.value))
+        };
+    }
+
     // --- Toggles d'interface ---
 
     toggleAllDay() {
@@ -102,6 +188,7 @@ class ActionFormManager {
         this.toggleAllDay();
         this.toggleExecutionType();
         this._resetRecurrenceFields();
+        this._populateAlert();
 
         if (id) {
             this._populateFromAction(id);
@@ -125,6 +212,8 @@ class ActionFormManager {
 
         const data = {
             name: document.getElementById('action-name').value,
+            memberId: document.getElementById('action-responsible').value || null,
+            alert: this._readAlert(),
             illustration: { ...this.illustration },
             states: document.getElementById('action-states').value
                 .split(',').map(s => s.trim()).filter(s => s !== ''),
@@ -222,6 +311,9 @@ class ActionFormManager {
     // --- Listeners (appelé une seule fois dans init) ---
 
     initListeners() {
+        document.getElementById('action-alert-enabled').addEventListener('change', () => this._toggleAlert());
+        document.getElementById('action-alert-mode').addEventListener('change', () => this._toggleAlert());
+        document.getElementById('action-states').addEventListener('input', () => this._renderAlertDelays());
         this.illustrationPicker = new IllustrationPicker({
             collectiveId: this.view.collectiveId,
             onSelect: recipe => {
@@ -317,6 +409,7 @@ class ActionFormManager {
             action.durationUnit || ActionUtils.DEFAULT_DURATION_UNIT;
 
         this._applyNormalizedRecurrence(action);
+        this._populateAlert(action);
     }
 
     _applyNormalizedRecurrence(actionOrTemplate) {
@@ -407,6 +500,8 @@ class ActionFormManager {
             tpl.durationUnit || ActionUtils.DEFAULT_DURATION_UNIT;
 
         this._applyNormalizedRecurrence(tpl);
+        // Copy settings but require explicit opt-in for a new action made from a template.
+        this._populateAlert({ ...tpl, alert: { ...tpl.alert, enabled: false } });
         this.toggleExecutionType();
     }
 }

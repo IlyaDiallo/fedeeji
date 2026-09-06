@@ -7,7 +7,7 @@ const createMemberOwnership = require('../middleware/memberOwnership');
  * @param {Object} params
  * @param {import('../services/DataService')} params.dataService
  */
-function createActionLogsRouter({ dataService }) {
+function createActionLogsRouter({ dataService, progressService }) {
     const router = express.Router({ mergeParams: true });
 
     const memberOwnership = createMemberOwnership({
@@ -57,7 +57,12 @@ function createActionLogsRouter({ dataService }) {
                 }
             }
 
-            // Bloquer les doublons d'état pour les logs "done"
+            if ((!body.type || body.type === 'done') && progressService) {
+                const result = await progressService.create({ collectiveId: req.collectiveId, data: body });
+                return res.status(result.duplicate ? 200 : 201).json(result.data);
+            }
+
+            // Compatibilité pour les consommateurs sans service de progression injecté.
             if (body.type === 'done') {
                 const existingLogs = await dataService.list({
                     collectiveId: req.collectiveId,
@@ -98,12 +103,12 @@ function createActionLogsRouter({ dataService }) {
         requireRole('admin', 'member'),
         memberOwnership,
         asyncHandler(async (req, res) => {
-            const data = await dataService.update({
-                collectiveId: req.collectiveId,
-                collection: 'action-logs',
-                id: req.params.id,
-                data: req.body
-            });
+            const data = progressService
+                ? await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, data: req.body })
+                : await dataService.update({
+                    collectiveId: req.collectiveId, collection: 'action-logs',
+                    id: req.params.id, data: req.body
+                });
             res.json(data);
         })
     );
@@ -112,11 +117,13 @@ function createActionLogsRouter({ dataService }) {
         requireRole('admin', 'member'),
         memberOwnership,
         asyncHandler(async (req, res) => {
-            await dataService.delete({
-                collectiveId: req.collectiveId,
-                collection: 'action-logs',
-                id: req.params.id
-            });
+            if (progressService) {
+                await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, remove: true });
+            } else {
+                await dataService.delete({
+                    collectiveId: req.collectiveId, collection: 'action-logs', id: req.params.id
+                });
+            }
             res.json({ success: true });
         })
     );

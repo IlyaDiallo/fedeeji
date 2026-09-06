@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { assertPublicCollection } = require('./internalCollections');
 
 class DataService {
     /**
@@ -19,6 +20,7 @@ class DataService {
      * @param {string} params.collection
      */
     async list({ collectiveId, collection }) {
+        assertPublicCollection(collection);
         return await this.storage.read({ collectiveId, collection }) || [];
     }
 
@@ -29,6 +31,7 @@ class DataService {
      * @param {string} params.id
      */
     async get({ collectiveId, collection, id }) {
+        assertPublicCollection(collection);
         return await this.storage.read({ collectiveId, collection, id });
     }
 
@@ -39,6 +42,7 @@ class DataService {
      * @param {any} params.data
      */
     async create({ collectiveId, collection, data }) {
+        assertPublicCollection(collection);
         const id = crypto.randomUUID();
         const item = { ...data, id };
 
@@ -63,6 +67,7 @@ class DataService {
      * @param {any} params.data
      */
     async update({ collectiveId, collection, id, data }) {
+        assertPublicCollection(collection);
         const previousData = await this.storage.read({
             collectiveId, collection, id
         });
@@ -94,6 +99,7 @@ class DataService {
      * @param {string} params.id
      */
     async delete({ collectiveId, collection, id }) {
+        assertPublicCollection(collection);
         const item = await this.storage.read({
             collectiveId, collection, id
         });

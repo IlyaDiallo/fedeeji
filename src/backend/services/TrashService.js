@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { assertPublicCollection } = require('./internalCollections');
 
 class TrashService {
     /**
@@ -18,18 +19,15 @@ class TrashService {
      * @param {any} params.item
      */
     async moveToTrash({ collectiveId, sourceCollection, item }) {
+        assertPublicCollection(sourceCollection);
         const trashEntry = {
             id: crypto.randomUUID(),
             sourceCollection,
             item,
             deletedAt: Date.now()
         };
-        const entries = await this.storage.read({
-            collectiveId, collection: this.collection
-        }) || [];
-        entries.push(trashEntry);
         await this.storage.write({
-            collectiveId, collection: this.collection, data: entries
+            collectiveId, collection: this.collection, id: trashEntry.id, data: trashEntry
         });
         return trashEntry;
     }
@@ -60,6 +58,8 @@ class TrashService {
             throw new Error('Élément introuvable dans la corbeille');
         }
 
+        assertPublicCollection(entry.sourceCollection);
+
         // Restaurer dans la collection d'origine
         await this.storage.write({
             collectiveId,
@@ -69,9 +69,8 @@ class TrashService {
         });
 
         // Retirer de la corbeille
-        const remaining = entries.filter(e => e.id !== trashId);
-        await this.storage.write({
-            collectiveId, collection: this.collection, data: remaining
+        await this.storage.delete({
+            collectiveId, collection: this.collection, id: trashId
         });
         return entry;
     }
@@ -90,8 +89,8 @@ class TrashService {
         if (remaining.length === entries.length) {
             throw new Error('Élément introuvable dans la corbeille');
         }
-        await this.storage.write({
-            collectiveId, collection: this.collection, data: remaining
+        await this.storage.delete({
+            collectiveId, collection: this.collection, id: trashId
         });
     }
 

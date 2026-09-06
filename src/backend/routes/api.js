@@ -1,6 +1,7 @@
 const express = require('express');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { isInternalCollection } = require('../services/internalCollections');
 
 const createTrashRouter = require('./trash');
 const createMembersRouter = require('./members');
@@ -23,7 +24,7 @@ const createAssetsRouter = require('./assets');
  */
 function createApiRouter({
     dataService, trashService, scheduler, assetService,
-    illustrationService
+    illustrationService, progressService, notificationState
 }) {
     const router = express.Router({ mergeParams: true });
 
@@ -35,6 +36,11 @@ function createApiRouter({
             });
         }
         req.collectiveId = req.params.collectiveId;
+        next();
+    });
+
+    router.param('collection', (req, res, next, collection) => {
+        if (isInternalCollection(collection)) return res.status(404).json({ error: 'Non trouvé' });
         next();
     });
 
@@ -50,12 +56,12 @@ function createApiRouter({
     );
 
     router.use('/actions', createActionsRouter({
-        dataService, illustrationService
+        dataService, illustrationService, notificationState, progressService
     }));
 
     router.use(
         '/action-logs',
-        createActionLogsRouter({ dataService })
+        createActionLogsRouter({ dataService, progressService })
     );
 
     router.use('/events', createEventsRouter({ dataService }));
@@ -73,7 +79,7 @@ function createApiRouter({
 
     router.use(
         '/notifications',
-        createNotificationsRouter({ dataService, scheduler })
+        createNotificationsRouter({ dataService, scheduler, notificationState })
     );
 
     // --- Contributions : membres voient les leurs ---

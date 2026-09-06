@@ -391,10 +391,24 @@ class Api {
     // --- Notifications Home Assistant ---
 
     /** Envoie une notification de test vers le webhook HA du membre connecté. */
-    async testHaNotification(collectiveId) {
+    async getNotificationSettings(collectiveId) {
+        return this.request(`/api/${collectiveId}/notifications/settings`);
+    }
+
+    async saveNotificationSettings(collectiveId, settings) {
+        return this.request(`/api/${collectiveId}/notifications/settings`, {
+            method: 'PUT', body: JSON.stringify(settings)
+        });
+    }
+
+    async getNotificationDiagnostics(collectiveId) {
+        return this.request(`/api/${collectiveId}/notifications/diagnostics`);
+    }
+
+    async testHaNotification(collectiveId, memberId) {
         return this.request(
             `/api/${collectiveId}/notifications/test-ha`,
-            { method: 'POST' }
+            { method: 'POST', body: JSON.stringify(memberId ? { memberId } : {}) }
         );
     }
 

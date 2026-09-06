@@ -107,6 +107,8 @@ class MembersView extends AbstractView {
                 </table>
             </div>
 
+            ${this._getNotificationSettingsHtml()}
+
             <!-- Modal -->
             <div class="modal fade" id="memberModal"
                 tabindex="-1">
@@ -473,10 +475,86 @@ class MembersView extends AbstractView {
         setTimeout(() => el.classList.add('d-none'), delay);
     }
 
+    _getNotificationSettingsHtml() {
+        return `<details class="card p-3 my-3"><summary>${t('ha_common_settings')}</summary>
+            <form id="ha-settings-form" class="mt-3">
+                <p class="small">${t('ha_settings_help')}</p>
+                <label class="form-label" for="ha-timezone">${t('ha_timezone')}</label>
+                <input id="ha-timezone" class="form-control mb-2" placeholder="Europe/Paris" required>
+                <div class="row"><div class="col">
+                    <label class="form-label" for="ha-quiet-start">${t('ha_quiet_start')}</label>
+                    <input id="ha-quiet-start" type="time" class="form-control mb-2" required>
+                </div><div class="col">
+                    <label class="form-label" for="ha-quiet-end">${t('ha_quiet_end')}</label>
+                    <input id="ha-quiet-end" type="time" class="form-control mb-2" required>
+                </div></div>
+                <label class="form-label" for="ha-origins">${t('ha_origins')}</label>
+                <textarea id="ha-origins" class="form-control mb-2" placeholder="https://ha.example.org" required></textarea>
+                <label class="form-label" for="ha-tls-exceptions">${t('ha_tls_exceptions')}</label>
+                <textarea id="ha-tls-exceptions" class="form-control mb-2"></textarea>
+                <button class="btn btn-primary" type="submit">${t('save')}</button>
+            </form>
+            <hr><label for="ha-test-member" class="form-label">${t('ha_test_recipient')}</label>
+            <select id="ha-test-member" class="form-select mb-2"></select>
+            <div class="d-flex flex-wrap gap-2">
+                <button type="button" id="ha-admin-test" class="btn btn-outline-primary">${t('ha_test_btn')}</button>
+                <button type="button" id="ha-refresh-diagnostics" class="btn btn-outline-secondary">${t('ha_diagnostics')}</button>
+            </div>
+            <p id="ha-settings-result" class="mt-2" role="status"></p>
+            <pre id="ha-diagnostics" class="small text-wrap"></pre>
+        </details>`;
+    }
+
+    async _initNotificationSettings() {
+        const result = document.getElementById('ha-settings-result');
+        const showError = error => { result.textContent = `${t('error')}: ${error.message}`; };
+        const memberSelect = document.getElementById('ha-test-member');
+        memberSelect.replaceChildren(new Option('—', ''));
+        this.members.forEach(member => memberSelect.add(new Option(
+            `${member.firstName || ''} ${member.lastName || ''}`.trim(), member.id
+        )));
+        try {
+            const settings = await api.getNotificationSettings(this.collectiveId);
+            document.getElementById('ha-timezone').value = settings?.timeZone || '';
+            document.getElementById('ha-quiet-start').value = settings?.quietStart || '';
+            document.getElementById('ha-quiet-end').value = settings?.quietEnd || '';
+            document.getElementById('ha-origins').value = (settings?.allowedOrigins || []).join('\n');
+            document.getElementById('ha-tls-exceptions').value = (settings?.insecureTlsOrigins || []).join('\n');
+        } catch (error) { showError(error); }
+        document.getElementById('ha-settings-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const lines = id => document.getElementById(id).value.split('\n').map(line => line.trim()).filter(Boolean);
+            try {
+                await api.saveNotificationSettings(this.collectiveId, {
+                    timeZone: document.getElementById('ha-timezone').value.trim(),
+                    quietStart: document.getElementById('ha-quiet-start').value,
+                    quietEnd: document.getElementById('ha-quiet-end').value,
+                    allowedOrigins: lines('ha-origins'), insecureTlsOrigins: lines('ha-tls-exceptions')
+                });
+                result.textContent = t('ha_saved');
+            } catch (error) { showError(error); }
+        });
+        document.getElementById('ha-admin-test').addEventListener('click', async () => {
+            if (!memberSelect.value) { result.textContent = t('please_select_member'); return; }
+            try {
+                await api.testHaNotification(this.collectiveId, memberSelect.value);
+                result.textContent = t('ha_test_ok');
+            } catch (error) { showError(error); }
+        });
+        document.getElementById('ha-refresh-diagnostics').addEventListener('click', async () => {
+            try {
+                const diagnostics = await api.getNotificationDiagnostics(this.collectiveId);
+                document.getElementById('ha-diagnostics').textContent = JSON.stringify(diagnostics, null, 2);
+                result.textContent = t('ha_diagnostics_help');
+            } catch (error) { showError(error); }
+        });
+    }
+
     // ─── Logique liste membres (admin) ──────────────────────────────────
 
     async _initMembers() {
         await this.loadMembers();
+        await this._initNotificationSettings();
 
         this.modal = new bootstrap.Modal(
             document.getElementById('memberModal')

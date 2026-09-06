@@ -155,6 +155,7 @@ class ProgrammeView extends AbstractView {
                                         id="action-states"
                                         placeholder="ex: En cours, Vérifié">
                                 </div>
+                                ${ActionFormManager.alertFieldsHtml()}
                                 <div class="mb-3">
                                     <label class="form-label">
                                         Description</label>

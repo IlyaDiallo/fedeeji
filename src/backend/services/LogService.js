@@ -1,5 +1,14 @@
 const crypto = require('crypto');
 
+const SECRET_KEYS = new Set(['haWebhookId', 'haWebhookUrl', 'token', 'tokenHash', 'adminPassword']);
+function redactSecrets(value) {
+    if (Array.isArray(value)) return value.map(redactSecrets);
+    if (!value || typeof value !== 'object') return value;
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [
+        key, SECRET_KEYS.has(key) ? '[REDACTED]' : redactSecrets(item)
+    ]));
+}
+
 class LogService {
     /**
      * @param {Object} params
@@ -25,16 +34,16 @@ class LogService {
             action,
             targetCollection,
             targetId,
-            details
+            details: redactSecrets(details)
         };
 
-        const logs = await this.storage.read({ collectiveId, collection: this.collection }) || [];
-        logs.push(logEntry);
-        await this.storage.write({ collectiveId, collection: this.collection, data: logs });
+        await this.storage.write({
+            collectiveId, collection: this.collection, id: logEntry.id, data: logEntry
+        });
     }
 
     async getLogs({ collectiveId }) {
-        return await this.storage.read({ collectiveId, collection: this.collection }) || [];
+        return redactSecrets(await this.storage.read({ collectiveId, collection: this.collection }) || []);
     }
 }
 

@@ -223,4 +223,5 @@ class RecurrenceUtils {
     }
 }
 
-window.RecurrenceUtils = RecurrenceUtils;
+if (typeof window !== 'undefined') window.RecurrenceUtils = RecurrenceUtils;
+if (typeof module !== 'undefined' && module.exports) module.exports = RecurrenceUtils;

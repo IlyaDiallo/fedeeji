@@ -20,6 +20,9 @@ const ImportService = require('./services/ImportService');
 const AssetService = require('./services/AssetService');
 const IllustrationService = require('./services/IllustrationService');
 const ActionNotificationScheduler = require('./services/ActionNotificationScheduler');
+const NotificationStateService = require('./services/NotificationStateService');
+const ActionProgressService = require('./services/ActionProgressService');
+const createNotificationCallbacksRouter = require('./routes/notificationCallbacks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,9 +58,16 @@ const assetService = new AssetService({
     basePath: path.join(__dirname, '../../data')
 });
 
+const notificationState = new NotificationStateService({ storage });
+const progressService = new ActionProgressService({ dataService, notificationState });
+
 const scheduler = new ActionNotificationScheduler({
-    collectiveService, dataService
+    collectiveService, dataService, notificationState, progressService
 });
+
+app.use('/notification-callbacks', createNotificationCallbacksRouter({
+    collectiveService, notificationState, progressService
+}));
 
 const authMiddleware = createAuthMiddleware(authService);
 
@@ -302,7 +312,7 @@ app.get('/api/version', (req, res) => {
 
 const apiRouter = createApiRouter({
     dataService, trashService, scheduler, assetService,
-    illustrationService
+    illustrationService, progressService, notificationState
 });
 app.use('/api/:collectiveId', authMiddleware, apiRouter);
 

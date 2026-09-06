@@ -1,324 +1,147 @@
+const crypto = require('crypto');
 const NotificationService = require('./NotificationService');
+const NotificationStateService = require('./NotificationStateService');
+const ActionProgressService = require('./ActionProgressService');
+const RecurrenceUtils = require('../../frontend/js/RecurrenceUtils');
+const { recipientIds, buildWebhookUrl, REPEAT_MS } = require('./NotificationConfig');
 
-// ---------- Utilitaires de récurrence (version Node.js) ----------
-
-/**
- * Formate une Date en chaîne YYYY-MM-DD.
- * @param {Date} date
- * @returns {string}
- */
-function formatDateStr(date) {
-    return date.toISOString().slice(0, 10);
+function localClock(timestamp, timeZone) {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+    }).formatToParts(new Date(timestamp));
+    const p = Object.fromEntries(parts.map(part => [part.type, part.value]));
+    return { date: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
 }
-
-/**
- * Avance la date courante d'un pas de récurrence.
- * @param {Object} params
- * @param {Date}   params.current    - Date à muter
- * @param {string} params.recurrence - 'daily' | 'weekly' | 'monthly'
- * @param {number} params.interval   - Intervalle
- */
-function advanceDate({ current, recurrence, interval }) {
-    if (recurrence === 'daily') {
-        current.setDate(current.getDate() + interval);
-    } else if (recurrence === 'weekly') {
-        current.setDate(current.getDate() + 7 * interval);
-    } else if (recurrence === 'monthly') {
-        current.setMonth(current.getMonth() + interval);
-    }
+function isQuiet(time, { quietStart, quietEnd }) {
+    return quietStart < quietEnd ? time >= quietStart && time < quietEnd
+        : time >= quietStart || time < quietEnd;
 }
-
-/**
- * Génère les prochaines dates d'occurrence d'une action à partir d'une date de départ.
- * @param {Object} params
- * @param {Object} params.action   - Action (date, recurrence, recurrenceInterval, …)
- * @param {Date}   params.fromDate - Date de début (incluse)
- * @param {number} params.max      - Nombre max d'occurrences à générer
- * @returns {string[]} Tableau de dates YYYY-MM-DD triées
- */
-function generateOccurrences({ action, fromDate, max = 30 }) {
-    const actionDateStr = action.date;
-    if (!actionDateStr) return [];
-
-    const recurrence = action.recurrence || 'none';
-    const interval = Math.max(1, parseInt(action.recurrenceInterval) || 1);
-    const endDateStr = action.recurrenceEndDate || null;
-
-    // Action ponctuelle
-    if (recurrence === 'none') {
-        const fromStr = formatDateStr(fromDate);
-        return actionDateStr >= fromStr ? [actionDateStr] : [];
-    }
-
-    const fromStr = formatDateStr(fromDate);
-    const results = [];
-
-    // Partir de la date de l'action et avancer jusqu'à fromDate
-    const current = new Date(`${actionDateStr}T12:00:00`);
-    let safety = 0;
-    while (formatDateStr(current) < fromStr && safety < 50000) {
-        advanceDate({ current, recurrence, interval });
-        safety++;
-    }
-
-    let count = 0;
-    while (count < max) {
-        const dateStr = formatDateStr(current);
-        if (endDateStr && dateStr > endDateStr) break;
-
-        // Récurrence hebdomadaire avec jours spécifiques
-        if (recurrence === 'weekly' && action.recurrenceDays?.length > 0) {
-            const weekDays = action.recurrenceDays.map(Number);
-            for (let d = 0; d < 7 && count < max; d++) {
-                const day = new Date(current);
-                day.setDate(current.getDate() + d);
-                const dayStr = formatDateStr(day);
-                if (dayStr < fromStr) continue;
-                if (endDateStr && dayStr > endDateStr) break;
-                if (weekDays.includes(day.getDay())) {
-                    results.push(dayStr);
-                    count++;
-                }
-            }
-            advanceDate({ current, recurrence, interval });
-        } else {
-            results.push(dateStr);
-            count++;
-            advanceDate({ current, recurrence, interval });
-        }
-    }
-
-    return results.sort();
+function nextOccurrence(action, logs) {
+    if (!ActionProgressService.validDate(action.date)) return null;
+    if (action.recurrenceInterval != null && !(Number(action.recurrenceInterval) > 0)) return null;
+    const maxState = (action.states?.length || 0) + 1;
+    const loggedDates = [...new Set(logs.filter(l => l.programmeId === action.id)
+        .map(l => l.occurrenceDate || l.date))];
+    const completed = loggedDates.filter(date =>
+        ActionProgressService.context(action, logs, date).state === maxState).sort().at(-1);
+    const from = completed || action.date;
+    return RecurrenceUtils.generateOccurrences({
+        event: action, startDate: new Date(`${from}T12:00:00`), maxOccurrences: 1000
+    }).find(o => !o.isCancelled && (!completed || o.occurrenceDate > completed))?.occurrenceDate || null;
 }
-
-// ---------- Résolution du statut d'une action ----------
-
-/**
- * Détermine si une action est due ou en retard aujourd'hui.
- * @param {Object} params
- * @param {Object} params.action      - Action (champs date, recurrence, windowDays, states…)
- * @param {Array}  params.actionLogs  - Logs filtrés pour cette action
- * @param {string} params.todayStr    - Date du jour YYYY-MM-DD
- * @returns {{ due: boolean, status: 'overdue'|'due'|'ok', nextDate: string|null }}
- */
-function resolveActionStatus({ action, actionLogs, todayStr }) {
-    const states = action.states || [];
-    const maxState = states.length > 0 ? states.length + 1 : 1;
-
-    // Logs de type "done" complètement réalisés
-    const fullDoneLogs = actionLogs
-        .filter(l => {
-            if (l.type && l.type !== 'done') return false;
-            if (l.state == null) return true;
-            return l.state === maxState;
-        })
-        .sort((a, b) => {
-            const da = a.occurrenceDate || a.date;
-            const db = b.occurrenceDate || b.date;
-            return db.localeCompare(da);
-        });
-
-    const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
-
-    const fromDate = lastLog
-        ? new Date(`${lastLog.date}T12:00:00`)
-        : new Date(`${action.date || todayStr}T12:00:00`);
-
-    const occurrences = generateOccurrences({ action, fromDate });
-
-    // Première occurrence non terminée après le dernier log
-    let nextDate = null;
-    if (lastLog) {
-        const lastLogOccDate = lastLog.occurrenceDate || lastLog.date;
-        nextDate = occurrences.find(d => d > lastLogOccDate)
-            || occurrences.find(d => d >= todayStr)
-            || null;
-    } else {
-        nextDate = occurrences.length > 0 ? occurrences[0] : null;
-    }
-
-    if (!nextDate) return { due: false, status: 'ok', nextDate: null };
-
-    const windowDays = Math.max(0, parseInt(action.windowDays) || 0);
-    const nextDateObj = new Date(`${nextDate}T12:00:00`);
-    const windowStart = new Date(nextDateObj);
-    windowStart.setDate(windowStart.getDate() - windowDays);
-    const windowStartStr = formatDateStr(windowStart);
-
-    let status;
-    if (todayStr > nextDate) {
-        status = 'overdue';
-    } else if (todayStr >= windowStartStr) {
-        status = 'due';
-    } else {
-        status = 'ok';
-    }
-
-    return { due: status !== 'ok', status, nextDate };
-}
-
-// ---------- Scheduler ----------
 
 class ActionNotificationScheduler {
-    /**
-     * @param {Object} params
-     * @param {import('./CollectiveService')} params.collectiveService
-     * @param {import('./DataService')}       params.dataService
-     */
-    constructor({ collectiveService, dataService }) {
-        this.collectiveService = collectiveService;
-        this.dataService = dataService;
-        // Déduplication : Set de "collectiveId:actionId:nextDate" envoyés aujourd'hui
-        this._sentToday = new Set();
-        this._lastSentDate = null;
+    constructor({ collectiveService, dataService, notificationState, progressService,
+        now = () => Date.now(), send = params => NotificationService.send(params) }) {
+        Object.assign(this, { collectiveService, dataService, notificationState, progressService, now, send });
+        this.running = null;
     }
-
-    /**
-     * Démarre le scheduler.
-     * Premier check 30 s après le démarrage, puis toutes les heures.
-     */
     start() {
-        const run = () => this.checkAndNotify().catch(
-            err => console.error('[HA Scheduler] Erreur :', err)
-        );
-        setTimeout(run, 30_000);
-        setInterval(run, 60 * 60 * 1000);
-        console.log('[HA Scheduler] Démarré (1er check dans 30 s)');
+        if (this.timer) return;
+        this.timer = setInterval(() => this.checkAndNotify().catch(() => {
+            console.error('[HA Scheduler] Échec du contrôle');
+        }), 30000);
+    }
+    stop() { clearInterval(this.timer); this.timer = null; }
+
+    async checkAndNotify(collectiveId) {
+        if (this.running) return this.running;
+        this.running = this._check(collectiveId);
+        try { return await this.running; }
+        finally { this.running = null; }
     }
 
-    /**
-     * Réinitialise la déduplication si le jour a changé.
-     * @param {string} todayStr
-     */
-    _resetIfNewDay(todayStr) {
-        if (this._lastSentDate !== todayStr) {
-            this._sentToday.clear();
-            this._lastSentDate = todayStr;
-        }
-    }
-
-    /**
-     * Vérifie toutes les actions de tous les collectifs et envoie les notifications dues.
-     */
-    async checkAndNotify() {
-        const todayStr = formatDateStr(new Date());
-        this._resetIfNewDay(todayStr);
-
+    async _check(collectiveId) {
         const collectives = await this.collectiveService.getAll();
-
-        for (const collective of collectives) {
-            try {
-                await this._checkCollective({ collective, todayStr });
-            } catch (err) {
-                console.error(
-                    `[HA Scheduler] Erreur collectif ${collective.id} :`, err
-                );
-            }
+        for (const collective of collectives.filter(c => !collectiveId || c.id === collectiveId)) {
+            try { await this._checkCollective(collective); }
+            catch { console.error(`[HA Scheduler] Échec collectif ${collective.id}`); }
         }
     }
 
-    /**
-     * Vérifie les actions d'un collectif et notifie les membres concernés.
-     * @param {Object} params
-     * @param {Object} params.collective
-     * @param {string} params.todayStr
-     */
-    async _checkCollective({ collective, todayStr }) {
-        const [actions, members, actionLogs] = await Promise.all([
-            this.dataService.list({
-                collectiveId: collective.id, collection: 'actions'
-            }),
-            this.dataService.list({
-                collectiveId: collective.id, collection: 'members'
-            }),
-            this.dataService.list({
-                collectiveId: collective.id, collection: 'action-logs'
-            })
-        ]);
-
-        const membersMap = Object.fromEntries(members.map(m => [m.id, m]));
-
-        for (const action of actions) {
-            const logsForAction = actionLogs.filter(
-                l => l.programmeId === action.id
-            );
-            const { due, status, nextDate } = resolveActionStatus({
-                action, actionLogs: logsForAction, todayStr
-            });
-
-            if (!due) continue;
-
-            const dedupeKey = `${collective.id}:${action.id}:${nextDate}`;
-            if (this._sentToday.has(dedupeKey)) continue;
-
-            const membersToNotify = this._getMembersToNotify({
-                action, membersMap
-            });
-
-            for (const member of membersToNotify) {
-                const webhookUrl = this._buildWebhookUrl(member);
-                if (!webhookUrl) continue;
-
-                try {
-                    await NotificationService.send({
-                        webhookUrl,
-                        payload: {
-                            action: action.name,
-                            status,
-                            date: nextDate,
-                            collective: collective.label || collective.name,
-                            collectiveId: collective.id,
-                            description: action.description || ''
-                        }
-                    });
-                    console.log(
-                        `[HA Scheduler] Notifié membre ${member.id}`
-                        + ` — "${action.name}" (${status}, ${nextDate})`
-                    );
-                } catch (err) {
-                    console.error(
-                        `[HA Scheduler] Échec membre ${member.id}`
-                        + ` — "${action.name}" : ${err.message}`
-                    );
+    async _checkCollective(collective) {
+        const collectiveId = collective.id;
+        const settings = await this.notificationState.getSettings(collectiveId);
+        if (!settings) return;
+        const actions = await this.dataService.list({ collectiveId, collection: 'actions' });
+        const members = await this.dataService.list({ collectiveId, collection: 'members' });
+        const deliveries = await this.notificationState.listDeliveries(collectiveId);
+        const retained = new Set();
+        for (const initialAction of actions) {
+            await this.progressService.locked(collectiveId, initialAction.id, async () => {
+                const action = await this.dataService.get({ collectiveId, collection: 'actions', id: initialAction.id });
+                if (!action?.alert?.enabled) return;
+                const logs = await this.dataService.list({ collectiveId, collection: 'action-logs' });
+                const occurrenceDate = nextOccurrence(action, logs);
+                if (!occurrenceDate) return;
+                const { state, maxState, latest, revision } = ActionProgressService.context(action, logs, occurrenceDate);
+                if (state >= maxState) return;
+                const step = state + 1;
+                const timestamp = this.now();
+                const clock = localClock(timestamp, settings.timeZone);
+                const due = state === 0
+                    ? `${clock.date}T${clock.time}` >= `${occurrenceDate}T${action.alert.initialTime}`
+                    : Number.isFinite(latest?.timestamp) && timestamp >= latest.timestamp + action.alert.stepDelayMinutes[state - 1] * 60000;
+                for (const memberId of recipientIds(action)) {
+                    const member = members.find(m => m.id === memberId);
+                    const webhookUrl = buildWebhookUrl(member);
+                    if (!webhookUrl) continue;
+                    const identity = { actionId: action.id, occurrenceDate, step, memberId };
+                    const id = NotificationStateService.deliveryId(identity);
+                    const old = deliveries.find(d => d.id === id);
+                    let delivery = old?.revision === revision ? old : {
+                        ...identity, id, revision, failures: 0, nextAttemptAt: 0,
+                        notificationId: crypto.createHash('sha256').update(JSON.stringify([collectiveId, action.id, occurrenceDate, step])).digest('hex')
+                    };
+                    retained.add(id);
+                    // Once started, a fall-back DST clock must not pause the ten-minute cycle.
+                    if ((!due && !delivery.lastSuccessAt) || isQuiet(clock.time, settings) || timestamp < (delivery.nextAttemptAt || 0)) continue;
+                    const token = await this.notificationState.issueToken(collectiveId, { ...identity, revision });
+                    delivery = { ...delivery, active: true, lastAttemptAt: timestamp };
+                    // Persist before HTTP so a crash still leaves an alert that can be cleared.
+                    await this.notificationState.saveDelivery(collectiveId, delivery);
+                    try {
+                        await this.send({ webhookUrl, settings, payload: {
+                            version: 1, type: 'reminder', action: action.name,
+                            status: clock.date > occurrenceDate ? 'overdue' : 'due', date: occurrenceDate,
+                            collective: collective.label || collective.name, collectiveId,
+                            description: action.description || '', notificationId: delivery.notificationId,
+                            step, stepLabel: action.states?.[state] || 'Fait',
+                            button: { title: 'Fait', action: `FEDDEEJI_${token}` }
+                        } });
+                        delivery.lastSuccessAt = this.now();
+                        delivery.nextAttemptAt = this.now() + REPEAT_MS;
+                        delivery.failures = 0;
+                    } catch {
+                        delivery.failures = (delivery.failures || 0) + 1;
+                        delivery.nextAttemptAt = this.now() + Math.min(REPEAT_MS, 30000 * 2 ** Math.min(delivery.failures - 1, 5));
+                    }
+                    await this.notificationState.saveDelivery(collectiveId, delivery);
                 }
+            });
+        }
+        for (const delivery of deliveries) {
+            if (retained.has(delivery.id) || !delivery.active) continue;
+            await this.notificationState.revokeTokens(collectiveId, {
+                actionId: delivery.actionId, occurrenceDate: delivery.occurrenceDate, step: delivery.step,
+                memberId: delivery.memberId
+            });
+            if (delivery.clearRetryAt && this.now() < delivery.clearRetryAt) continue;
+            const webhookUrl = buildWebhookUrl(members.find(m => m.id === delivery.memberId));
+            try {
+                if (webhookUrl) await this.send({ webhookUrl, settings, payload: {
+                    version: 1, type: 'clear', collectiveId, notificationId: delivery.notificationId
+                } });
+                await this.notificationState.saveDelivery(collectiveId, { ...delivery, active: false });
+            } catch {
+                await this.notificationState.saveDelivery(collectiveId, { ...delivery, clearRetryAt: this.now() + REPEAT_MS });
             }
-
-            this._sentToday.add(dedupeKey);
         }
-    }
-
-    /**
-     * Retourne la liste des membres à notifier pour une action.
-     * Si l'action a un memberId, ne notifie que ce membre.
-     * Sinon, notifie tous les membres ayant configuré haWebhookUrl.
-     * @param {Object} params
-     * @param {Object} params.action
-     * @param {Object} params.membersMap - { memberId: member }
-     * @returns {Array}
-     */
-    _getMembersToNotify({ action, membersMap }) {
-        if (action.memberId && membersMap[action.memberId]) {
-            return [membersMap[action.memberId]];
-        }
-        return Object.values(membersMap).filter(
-            m => this._buildWebhookUrl(m)
-        );
-    }
-
-    /**
-     * Construit l'URL complète du webhook HA depuis les champs du membre.
-     * Supporte haBaseUrl + haWebhookId ou l'ancien champ haWebhookUrl.
-     * @param {Object} member
-     * @returns {string|null}
-     */
-    _buildWebhookUrl(member) {
-        if (member.haBaseUrl && member.haWebhookId) {
-            const base = member.haBaseUrl.replace(/\/$/, '');
-            return `${base}/api/webhook/${member.haWebhookId}`;
-        }
-        // Compatibilité avec l'ancien champ haWebhookUrl
-        return member.haWebhookUrl || null;
+        await this.notificationState.pruneTokens(collectiveId);
     }
 }
-
+ActionNotificationScheduler.localClock = localClock;
+ActionNotificationScheduler.isQuiet = isQuiet;
+ActionNotificationScheduler.nextOccurrence = nextOccurrence;
 module.exports = ActionNotificationScheduler;
