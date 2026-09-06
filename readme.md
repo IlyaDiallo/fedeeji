@@ -23,7 +23,7 @@ Fonctionnalités:
 - gestion des événements (ajout, modification, suppression, recherche)
 - gestion des inscriptions aux événements (ajout, modification, suppression, recherche)
 - planning interactif des événements
-- intégration Home Assistant
+- intégration Home Assistant : [alarmes par étape et bouton Fait](docs/home-assistant.md), rappels toutes les 10 minutes hors plage silencieuse
 
 Fonctionnalités futures:
 

@@ -4,6 +4,38 @@ Application web de gestion de collectifs — backend Node.js / Express, frontend
 
 ---
 
+## Alarmes Home Assistant
+
+Guide de configuration et YAML : [docs/home-assistant.md](docs/home-assistant.md).
+
+- `NotificationConfig` valide `action.alert` et les paramètres communs (fuseau IANA,
+  silence nocturne, origines HA autorisées et exceptions TLS explicites).
+- `ActionNotificationScheduler` contrôle toutes les 30 s, puis rappelle toutes les
+  10 min par destinataire, hors silence. Les transitions suivantes sont relatives
+  à l’horodatage serveur de validation de l’étape précédente.
+- `NotificationStateService` utilise directement le stockage pour `notification-state` :
+  paramètres, tentatives par destinataire, tokens aléatoires hashés/expirables/révocables.
+  Collection interdite au CRUD générique, à `DataService` et à la restauration corbeille.
+- `ActionProgressService` centralise les réalisations interface/mobile, sérialise par
+  action et compare occurrence/étape/révision avant toute validation. Le backend importe
+  le même `RecurrenceUtils` que le frontend. Les anciens logs sans état restent terminés.
+- `POST /notification-callbacks/ack` est monté avant le routeur JWT, mais authentifie
+  chaque requête avec une capacité aléatoire limitée à un destinataire/occurrence/étape.
+  POST-only, limitation globale 120 requêtes/minute, aucune URL fournie par le client.
+- `/api/:collectiveId/notifications/settings` (GET/PUT), `/diagnostics` (GET) et
+  `/trigger` (POST) sont admin et limités au collectif ; `/test-ha` permet aussi au membre
+  de tester son propre webhook. Le test ne valide aucune étape.
+- HA relaie `reminder`/`clear`/`test` vers Companion puis le bouton Fait vers Feddeeji.
+  L’effacement visuel est best effort ; le serveur reste la référence de progression.
+- Le stockage fichier sérialise les mutations par fichier dans un seul processus Node
+  et remplace les JSON par renommage atomique. Pas de transactions inter-fichiers ni
+  de garantie multi-worker ; un crash entre acceptation HA et persistance peut doubler
+  un envoi, mais un ancien bouton ne doit jamais valider l’étape suivante.
+
+**Migration :** les anciennes actions restent sans rappels insistants tant qu’un admin
+ne les active pas. L’ancien rappel quotidien implicite est remplacé ; configurer les
+origines HA et installer les automatisations v1 avant activation.
+
 ## Vue d'ensemble
 
 ```mermaid
