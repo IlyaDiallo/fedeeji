@@ -131,7 +131,7 @@ class ProgrammeRenderers {
         const canDo = status === 'due' || status === 'overdue';
         const isDone = currentState >= maxState;
         const nextState = currentState + 1;
-        let nextStateName = "✅";
+        let nextStateName = '<i class="bi bi-check-lg" aria-hidden="true"></i>';
         if (states.length > 0 && nextState <= states.length) {
             nextStateName = states[nextState - 1];
         } else if (states.length > 0) {
