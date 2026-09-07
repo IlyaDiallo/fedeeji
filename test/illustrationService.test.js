@@ -39,6 +39,46 @@ test('search ignores accents and returns a local featured library', () => {
     assert.ok(illustrations.search().length >= 12);
 });
 
+test('bathroom vocabulary finds relevant illustrations in French and English', () => {
+    const illustrations = service();
+    const cases = {
+        'salle de bains': 'bath', 'salle de bain': 'bath', bathroom: 'bath',
+        lavabo: 'feddeeji-sink', lavabos: 'feddeeji-sink',
+        'évier': 'feddeeji-sink', sink: 'feddeeji-sink',
+        robinet: 'feddeeji-faucet', robinets: 'feddeeji-faucet',
+        faucet: 'feddeeji-faucet', tap: 'feddeeji-faucet',
+        douche: 'feddeeji-shower', shower: 'feddeeji-shower',
+        'le robinet': 'feddeeji-faucet'
+    };
+    for (const [query, expected] of Object.entries(cases)) {
+        assert.equal(illustrations.search({ query })[0]?.name, expected, query);
+    }
+    assert.equal(illustrations.search({ query: 'lavabo' })[0].label, 'Lavabo / évier');
+    assert.ok(!illustrations.search({ query: 'salle de bains' })
+        .some(item => item.name === 'code'));
+});
+
+test('search ignores stop words and matches synonyms only at word boundaries', () => {
+    const illustrations = service();
+    assert.deepEqual(illustrations._expandedTerms('de la'), []);
+    assert.deepEqual(illustrations.search({ query: 'de la' }), []);
+    assert.ok(!illustrations._expandedTerms('cadeau').includes('droplet'));
+    assert.ok(!illustrations._expandedTerms('stockholm').includes('packages'));
+    assert.ok(illustrations._expandedTerms('les robinets').includes('feddeeji-faucet'));
+});
+
+test('local supplementary drawings support persisted recipes and safe rendering', () => {
+    const illustrations = service();
+    for (const name of ['feddeeji-sink', 'feddeeji-faucet', 'feddeeji-shower']) {
+        const recipe = { collection: 'tabler', name, style: 'doodle-v1', seed: 42 };
+        assert.deepEqual(illustrations.normalizeRecipe(recipe), recipe);
+        const output = illustrations.render({ recipe });
+        assert.match(output.svg, /stroke="currentColor"/);
+        assert.doesNotMatch(output.svg, /<(script|image|use|foreignObject)\b/i);
+        assert.deepEqual(service().render({ recipe }), output);
+    }
+});
+
 test('recipe validation applies a deterministic fallback', () => {
     const illustrations = service();
     const first = illustrations.normalizeRecipe(null, {

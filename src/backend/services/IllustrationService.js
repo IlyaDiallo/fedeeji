@@ -1,5 +1,12 @@
 const crypto = require('crypto');
 const tabler = require('@iconify-json/tabler/icons.json');
+const supplemental = require('../data/supplementalIllustrations');
+
+const STOP_WORDS = new Set([
+    'a', 'au', 'aux', 'avec', 'ce', 'ces', 'dans', 'de', 'des', 'du',
+    'en', 'et', 'la', 'le', 'les', 'pour', 'sur', 'un', 'une',
+    'an', 'and', 'for', 'in', 'of', 'the', 'to', 'with'
+]);
 
 const COLLECTION = 'tabler';
 const STYLE = 'doodle-v1';
@@ -16,7 +23,26 @@ const FEATURED = [
 ];
 
 const SYNONYMS = {
-    // Français
+    // Français (normalized whole words or phrases)
+    'salle de bain': ['bath', 'feddeeji-shower', 'feddeeji-sink'],
+    'salle de bains': ['bath', 'feddeeji-shower', 'feddeeji-sink'],
+    bain: ['bath'],
+    bains: ['bath'],
+    baignoire: ['bath'],
+    lavabo: ['feddeeji-sink'],
+    lavabos: ['feddeeji-sink'],
+    evier: ['feddeeji-sink'],
+    eviers: ['feddeeji-sink'],
+    robinet: ['feddeeji-faucet'],
+    robinets: ['feddeeji-faucet'],
+    robinetterie: ['feddeeji-faucet'],
+    douche: ['feddeeji-shower'],
+    douches: ['feddeeji-shower'],
+    savon: ['wash-hand'],
+    eau: ['droplet', 'feddeeji-faucet'],
+    toilettes: ['toilet-paper'],
+    wc: ['toilet-paper'],
+    serviette: ['bath'],
     lessive: ['wash', 'shirt', 'hanger'],
     linge: ['wash', 'shirt', 'hanger'],
     laver: ['wash', 'droplet', 'soap'],
@@ -78,6 +104,12 @@ const SYNONYMS = {
     ouvrir: ['door-enter'],
     cle: ['key'],
     // English task vocabulary and useful aliases
+    bathroom: ['bath', 'feddeeji-shower', 'feddeeji-sink'],
+    sink: ['feddeeji-sink'],
+    washbasin: ['feddeeji-sink'],
+    faucet: ['feddeeji-faucet'],
+    tap: ['feddeeji-faucet'],
+    shower: ['feddeeji-shower'],
     laundry: ['wash', 'shirt', 'hanger'],
     cleaning: ['sparkles', 'vacuum-cleaner', 'brush'],
     vacuum: ['vacuum-cleaner'],
@@ -101,6 +133,10 @@ const SYNONYMS = {
 
 const LOCAL_LABELS = {
     fr: {
+        bath: 'Baignoire', 'feddeeji-sink': 'Lavabo / évier',
+        'feddeeji-faucet': 'Robinet', 'feddeeji-shower': 'Douche',
+        'toilet-paper': 'Papier toilette', 'wash-hand': 'Lavage des mains',
+        droplet: 'Goutte d’eau',
         'clipboard-check': 'Liste de tâches', wash: 'Lessive',
         'vacuum-cleaner': 'Aspirateur', trash: 'Déchets', recycle: 'Recyclage',
         window: 'Fenêtres', 'tools-kitchen-2': 'Cuisine',
@@ -115,6 +151,8 @@ const LOCAL_LABELS = {
         'building-estate': 'Résidence'
     },
     en: {
+        bath: 'Bathtub', 'feddeeji-sink': 'Sink / washbasin',
+        'feddeeji-faucet': 'Faucet', 'feddeeji-shower': 'Shower',
         'clipboard-check': 'Task list', wash: 'Laundry',
         'vacuum-cleaner': 'Vacuuming', trash: 'Waste', recycle: 'Recycling',
         window: 'Windows', 'tools-kitchen-2': 'Cooking',
@@ -132,7 +170,7 @@ const LOCAL_LABELS = {
 
 class IllustrationService {
     constructor() {
-        this.icons = tabler.icons || {};
+        this.icons = { ...tabler.icons, ...supplemental };
         this.iconNames = Object.keys(this.icons).filter(name =>
             !name.startsWith('brand-')
             && !name.endsWith('-filled')
@@ -175,10 +213,12 @@ class IllustrationService {
         const normalized = this.normalizeText(query);
         if (!normalized) return [];
         const terms = new Set(
-            normalized.split(' ').filter(term => term.length >= 2)
+            normalized.split(' ').filter(term =>
+                term.length >= 2 && !STOP_WORDS.has(term)
+            )
         );
         for (const [key, values] of Object.entries(SYNONYMS)) {
-            if (normalized.includes(key)) {
+            if (` ${normalized} `.includes(` ${key} `)) {
                 values.forEach(value => terms.add(value));
             }
         }
@@ -212,7 +252,7 @@ class IllustrationService {
         let names;
 
         if (!terms.length) {
-            names = FEATURED.filter(name => this.hasIcon(name));
+            names = normalized ? [] : FEATURED.filter(name => this.hasIcon(name));
         } else {
             names = this.iconNames
                 .map(name => ({
