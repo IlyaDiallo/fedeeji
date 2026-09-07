@@ -69,7 +69,7 @@ test('search ignores stop words and matches synonyms only at word boundaries', (
 
 test('local supplementary drawings support persisted recipes and safe rendering', () => {
     const illustrations = service();
-    for (const name of ['feddeeji-sink', 'feddeeji-faucet', 'feddeeji-shower']) {
+    for (const name of ['feddeeji-sink', 'feddeeji-faucet', 'feddeeji-shower', 'feddeeji-roof']) {
         const recipe = { collection: 'tabler', name, style: 'doodle-v1', seed: 42 };
         assert.deepEqual(illustrations.normalizeRecipe(recipe), recipe);
         const output = illustrations.render({ recipe });
@@ -77,6 +77,31 @@ test('local supplementary drawings support persisted recipes and safe rendering'
         assert.doesNotMatch(output.svg, /<(script|image|use|foreignObject)\b/i);
         assert.deepEqual(service().render({ recipe }), output);
     }
+});
+
+test('common French household words and plurals find the expected drawings', () => {
+    const illustrations = service();
+    const cases = [
+        [['lit', 'lits', 'faire le lit'], 'bed', 'Lit'],
+        [['toit', 'toits', 'toiture', 'toitures'], 'feddeeji-roof', 'Toit'],
+        [['camion', 'camions'], 'truck', 'Camion'],
+        [['maison', 'maisons'], 'home', 'Maison'],
+        [['porte', 'portes'], 'door', 'Porte'],
+        [['canapé', 'canapés'], 'sofa', 'Canapé'],
+        [['fauteuil', 'fauteuils'], 'armchair', 'Fauteuil'],
+        [['lampe', 'lampes'], 'lamp', 'Lampe'],
+        [['escalier', 'escaliers'], 'stairs', 'Escalier'],
+        [['aspirateur', 'aspirateurs'], 'vacuum-cleaner', 'Aspirateur']
+    ];
+    for (const [queries, name, label] of cases) {
+        for (const query of queries) {
+            const first = illustrations.search({ query })[0];
+            assert.equal(first?.name, name, query);
+            assert.equal(first.label, label, query);
+        }
+    }
+    assert.ok(!illustrations._expandedTerms('qualité').includes('bed'));
+    assert.ok(!illustrations._expandedTerms('étoile').includes('feddeeji-roof'));
 });
 
 test('recipe validation applies a deterministic fallback', () => {

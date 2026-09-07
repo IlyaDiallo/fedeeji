@@ -6,6 +6,9 @@ const stroke = body => ({
 });
 
 module.exports = {
+    'feddeeji-roof': stroke(
+        '<path d="M2 17 12 7l10 10M4 19l8-8 8 8M16 11V5h3v9"/>'
+    ),
     'feddeeji-sink': stroke(
         '<path d="M3 11h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5z"/>'
         + '<path d="M12 11V5a2 2 0 0 1 4 0v1M9 18v3h6v-3M7 8v3M17 8v3"/>'
