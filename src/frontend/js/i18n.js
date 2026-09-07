@@ -321,7 +321,18 @@ const translations = {
         "ha_test_recipient": "Membre à tester (envoi immédiat, même pendant le silence)",
         "ha_diagnostics": "Actualiser le diagnostic",
         "ha_diagnostics_help": "lastSuccessAt = acceptation par HA, pas réception sur téléphone. Dates techniques en millisecondes Unix ; failures = échecs consécutifs.",
-        "ha_test_error": "Échec de la notification de test"
+        "ha_test_error": "Échec de la notification de test",
+        "event_type": "Type d’événement",
+        "event_collective": "Collectif",
+        "event_individual": "Individuel",
+        "event_reminder": "Rappel",
+        "event_reminder_none": "Aucun",
+        "event_reminder_notification": "Notification unique",
+        "event_reminder_alert": "Alerte jusqu’à acquittement",
+        "event_advance": "Délai avant l’événement (minutes)",
+        "event_ack": "Acquitter",
+        "event_reminder_help": "Via Home Assistant : utilisateur associé ou inscrits ayant répondu oui à cette occurrence. Les alertes se répètent toutes les 10 minutes, hors plage silencieuse.",
+        "event_reminder_time_help": "0 = à l’heure prévue. Une heure est requise ; le fuseau et la plage silencieuse du collectif s’appliquent."
     },
     en: {
         "app_title": "Feddeeji",
@@ -645,7 +656,18 @@ const translations = {
         "ha_test_recipient": "Member to test (sent immediately, even during quiet hours)",
         "ha_diagnostics": "Refresh diagnostics",
         "ha_diagnostics_help": "lastSuccessAt = accepted by HA, not received on phone. Technical dates are Unix milliseconds; failures = consecutive failures.",
-        "ha_test_error": "Test notification failed"
+        "ha_test_error": "Test notification failed",
+        "event_type": "Event type",
+        "event_collective": "Collective",
+        "event_individual": "Individual",
+        "event_reminder": "Reminder",
+        "event_reminder_none": "None",
+        "event_reminder_notification": "One-time notification",
+        "event_reminder_alert": "Alert until acknowledged",
+        "event_advance": "Minutes before the event",
+        "event_ack": "Acknowledge",
+        "event_reminder_help": "Via Home Assistant: assigned user or participants who answered yes for this occurrence. Alerts repeat every 10 minutes outside quiet hours.",
+        "event_reminder_time_help": "0 = at the scheduled time. A time is required; the collective’s time zone and quiet hours apply."
     }
 };
 

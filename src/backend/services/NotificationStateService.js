@@ -48,7 +48,23 @@ class NotificationStateService {
         });
     }
 
-    async issueToken(collectiveId, { actionId, occurrenceDate, step, memberId, revision }, ttlMs = 30 * 86400000) {
+    async listEventDeliveries(collectiveId) {
+        return (await this._read(collectiveId) || []).filter(record => record.kind === 'event-delivery');
+    }
+
+    async saveEventDelivery(collectiveId, delivery) {
+        return this._write(collectiveId, { ...delivery, kind: 'event-delivery' });
+    }
+
+    async getEventCursor(collectiveId) {
+        return (await this._read(collectiveId, 'event-cursor'))?.timestamp;
+    }
+
+    async saveEventCursor(collectiveId, timestamp) {
+        return this._write(collectiveId, { id: 'event-cursor', kind: 'event-cursor', timestamp });
+    }
+
+    async issueToken(collectiveId, { actionId, eventId, deliveryId, occurrenceDate, step, memberId, revision }, ttlMs = 30 * 86400000) {
         if (!Number.isFinite(ttlMs) || ttlMs <= 0 || ttlMs > 30 * 86400000) {
             throw new Error('Durée de validité du bouton invalide');
         }
@@ -56,7 +72,7 @@ class NotificationStateService {
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         await this._write(collectiveId, {
             id: `token-${tokenHash}`, kind: 'token', tokenHash,
-            actionId, occurrenceDate, step, memberId, revision,
+            actionId, eventId, deliveryId, occurrenceDate, step, memberId, revision,
             createdAt: this.now(), expiresAt: this.now() + ttlMs, revoked: false
         });
         return token;
@@ -92,8 +108,10 @@ class NotificationStateService {
 
     async diagnostics(collectiveId) {
         // Explicit projection: no webhook URLs, capability tokens, hashes or arbitrary error bodies.
-        return (await this.listDeliveries(collectiveId)).map(record => ({
-            actionId: record.actionId, occurrenceDate: record.occurrenceDate,
+        const records = [...await this.listDeliveries(collectiveId), ...await this.listEventDeliveries(collectiveId)];
+        return records.map(record => ({
+            ...(record.eventId ? { eventId: record.eventId, mode: record.mode, acknowledgedAt: record.acknowledgedAt ?? null }
+                : { actionId: record.actionId }), occurrenceDate: record.occurrenceDate,
             step: record.step, memberId: record.memberId,
             lastAttemptAt: record.lastAttemptAt ?? null,
             lastSuccessAt: record.lastSuccessAt ?? null,

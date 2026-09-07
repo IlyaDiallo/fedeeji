@@ -38,7 +38,9 @@ class ProgrammeRenderers {
             ? `<span class="badge bg-danger">${t("occurrence_cancelled")}</span>`
             : '';
 
-        const inscLink = isRecurrent
+        const inscLink = event.type === 'individual'
+            ? `<a href="/${collectiveId}/events" class="btn btn-sm btn-outline-primary" data-link>${t('event_individual')}</a>`
+            : isRecurrent
             ? `<a href="/${collectiveId}/events/${event.id}/inscription-schedule"
                 class="btn btn-sm btn-icon btn-outline-primary" data-link
                 title="${t("plan_inscriptions")}">
@@ -53,7 +55,7 @@ class ProgrammeRenderers {
                 align-items-start align-items-sm-center gap-2">
                 <div class="me-auto">
                     <div class="fw-bold text-primary programme-title-line">
-                        <span class="badge bg-info">📅 ${t("event")}</span>
+                        <span class="badge bg-info">📅 ${t(event.type === 'individual' ? 'event_individual' : 'event_collective')}</span>
                         <span class="programme-item-name">${event.name}</span>
                         ${cancelledLabel}
                     </div>
@@ -311,6 +313,7 @@ class ProgrammeRenderers {
                                 ? ' text-decoration-line-through text-muted' : ''}"
                             title="${it.data.name}">
                             <strong>${it.data.time || ''}</strong> ${it.data.name}
+                            <small>${t(it.data.type === 'individual' ? 'event_individual' : 'event_collective')}</small>
                         </div>`;
                     } else {
                         html += ProgrammeRenderers.renderCalendarActionCell(

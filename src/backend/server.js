@@ -20,6 +20,8 @@ const ImportService = require('./services/ImportService');
 const AssetService = require('./services/AssetService');
 const IllustrationService = require('./services/IllustrationService');
 const ActionNotificationScheduler = require('./services/ActionNotificationScheduler');
+const EventService = require('./services/EventService');
+const EventNotificationScheduler = require('./services/EventNotificationScheduler');
 const NotificationStateService = require('./services/NotificationStateService');
 const ActionProgressService = require('./services/ActionProgressService');
 const createNotificationCallbacksRouter = require('./routes/notificationCallbacks');
@@ -65,8 +67,13 @@ const scheduler = new ActionNotificationScheduler({
     collectiveService, dataService, notificationState, progressService
 });
 
+const eventService = new EventService({ dataService });
+const eventScheduler = new EventNotificationScheduler({
+    collectiveService, dataService, notificationState, eventService
+});
+
 app.use('/notification-callbacks', createNotificationCallbacksRouter({
-    collectiveService, notificationState, progressService
+    collectiveService, notificationState, progressService, eventScheduler
 }));
 
 const authMiddleware = createAuthMiddleware(authService);
@@ -311,8 +318,13 @@ app.get('/api/version', (req, res) => {
 // --- Routeur API principal ---
 
 const apiRouter = createApiRouter({
-    dataService, trashService, scheduler, assetService,
-    illustrationService, progressService, notificationState
+    dataService, trashService, scheduler: {
+        async checkAndNotify(id) {
+            await scheduler.checkAndNotify(id);
+            await eventScheduler.checkAndNotify(id);
+        }
+    }, assetService,
+    illustrationService, progressService, notificationState, eventService, eventScheduler
 });
 app.use('/api/:collectiveId', authMiddleware, apiRouter);
 
@@ -328,6 +340,7 @@ const server = app.listen(PORT, () => {
         `Serveur démarré sur http://localhost:${PORT}`
     );
     scheduler.start();
+    eventScheduler.start();
 });
 
 server.on('error', (err) => {

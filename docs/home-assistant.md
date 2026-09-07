@@ -64,6 +64,52 @@ Le silence suspend les envois, pas les délais ni les validations. À la reprise
 un seul rappel pertinent, sans rafale. Les alarmes ne contournent pas forcément
 le mode silencieux/Ne pas déranger, notamment sur iPhone.
 
+## Événements collectifs et individuels
+
+Les événements existants restent **collectifs**, sans rappel implicite. Un événement
+**individuel** associe exactement un membre du collectif, sans inscription ; seuls
+ce membre et les administrateurs le voient. La création et la modification restent
+réservées aux administrateurs. Pour convertir un événement déjà inscrit en individuel,
+supprimer d’abord ses inscriptions.
+
+Dans le formulaire Événements :
+- **Aucun**, **Notification unique** ou **Alerte jusqu’à acquittement** ;
+- délai entier de **0 à 527040 minutes avant** l’heure prévue (`0` = à l’heure) ;
+- une heure est obligatoire pour un rappel (pas de rappel « toute la journée »).
+
+```json
+{
+  "type": "individual",
+  "memberId": "identifiant-membre",
+  "date": "2026-06-01",
+  "allDay": false,
+  "time": "10:00",
+  "reminder": { "mode": "alert", "advanceMinutes": 30 }
+}
+```
+
+Le destinataire est le membre associé, ou, pour un collectif, les inscrits ayant
+répondu **oui pour cette occurrence au déclenchement**. Les récurrences ont chacune
+leur rappel et leur acquittement. Se désinscrire arrête ses rappels collectifs.
+Une alerte se répète toutes les 10 minutes et s’acquitte avec le bouton **Acquitter**
+sur le téléphone ou dans **Événements** ; l’acquittement est propre au destinataire.
+Un administrateur peut également acquitter depuis Événements. Une notification
+unique n’a pas de bouton. L’effacement des alertes acquittées est demandé au prochain
+contrôle (environ 30 secondes), même pendant la plage silencieuse.
+
+Le fuseau, le silence, les webhooks et la politique de reprise sur erreur sont communs
+aux actions. Les délais sont des durées réelles : au changement d’heure, un horaire
+ambigu utilise sa première occurrence et un horaire inexistant est décalé vers l’avant.
+Le premier démarrage ne rattrape pas les anciens événements ; ensuite, le curseur
+persisté permet de reprendre les échéances manquées pendant un arrêt. Une modification
+d’horaire ou de destinataire invalide les anciens boutons. Programmer une nouvelle
+échéance future pour réarmer un événement déjà passé.
+
+**Mettre à jour l’automatisation de réception ci-dessous** : le bouton est désormais
+facultatif. Les payloads d’événement ajoutent `eventId`, `time` et `reminderMode` et
+conservent `action` pour le titre. Comme pour les actions, un crash après acceptation
+par HA mais avant sauvegarde peut provoquer un nouvel envoi avec le même tag.
+
 ## Payload webhook v1
 
 Les champs historiques `action`, `status`, `date`, `collective`, `collectiveId`,
@@ -189,7 +235,8 @@ actions:
         data:
           title: "{{ trigger.json.collective }} — {{ trigger.json.action }}"
           message: >-
-            {{ trigger.json.stepLabel | default('Test Feddeeji') }}
+            {{ trigger.json.stepLabel | default(trigger.json.date | default('Test Feddeeji')) }}
+            {{ trigger.json.time | default('') }}
             {{ trigger.json.description | default('') }}
           data:
             tag: "{{ trigger.json.notificationId }}"
@@ -200,7 +247,7 @@ actions:
             actions: >-
               {{ [{'action': trigger.json.button.action,
                    'title': trigger.json.button.title}]
-                 if trigger.json.type == 'reminder' else [] }}
+                 if trigger.json.type == 'reminder' and trigger.json.button is defined else [] }}
 ```
 
 L’exemple utilise des boutons minimaux (`action` et `title` seulement). La recette sur

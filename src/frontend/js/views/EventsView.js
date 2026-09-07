@@ -3,6 +3,8 @@ class EventsView extends AbstractView {
         super(params);
         this.setTitle(t("events") + " - " + t("brand"));
         this.events = [];
+        this.members = [];
+        this.alerts = [];
     }
 
     // Formate la durée avec son unité pour l'affichage
@@ -36,6 +38,7 @@ class EventsView extends AbstractView {
                 ${addBtn}
             </div>
             ${searchBar}
+            <div id="event-alerts" class="mb-3"></div>
             <div class="table-responsive">
                 <table class="table table-striped table-hover">
                     <thead>
@@ -77,6 +80,31 @@ class EventsView extends AbstractView {
                             <form id="event-form">
                                 <input type="hidden"
                                     id="event-id">
+                                <div class="mb-3">
+                                    <label for="event-type" class="form-label">${t('event_type')}</label>
+                                    <select id="event-type" class="form-select">
+                                        <option value="collective">${t('event_collective')}</option>
+                                        <option value="individual">${t('event_individual')}</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="event-member-container" hidden>
+                                    <label for="event-memberId" class="form-label">${t('member')}</label>
+                                    <select id="event-memberId" class="form-select"></select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="event-reminder-mode" class="form-label">${t('event_reminder')}</label>
+                                    <select id="event-reminder-mode" class="form-select">
+                                        <option value="none">${t('event_reminder_none')}</option>
+                                        <option value="notification">${t('event_reminder_notification')}</option>
+                                        <option value="alert">${t('event_reminder_alert')}</option>
+                                    </select>
+                                    <div class="form-text">${t('event_reminder_help')}</div>
+                                </div>
+                                <div class="mb-3" id="event-advance-container" hidden>
+                                    <label for="event-advance" class="form-label">${t('event_advance')}</label>
+                                    <input id="event-advance" class="form-control" type="number" min="0" max="527040" step="1" value="0">
+                                    <div class="form-text">${t('event_reminder_time_help')}</div>
+                                </div>
                                 <div class="mb-3">
                                     <label class="form-label">
                                         ${t("name")}</label>
@@ -268,11 +296,44 @@ class EventsView extends AbstractView {
         }
     }
 
+    toggleEventOptions() {
+        const individual = document.getElementById('event-type').value === 'individual';
+        const enabled = document.getElementById('event-reminder-mode').value !== 'none';
+        document.getElementById('event-member-container').hidden = !individual;
+        document.getElementById('event-memberId').required = individual;
+        document.getElementById('event-advance-container').hidden = !enabled;
+        document.getElementById('event-advance').required = enabled;
+        if (enabled) {
+            document.getElementById('event-allDay-no').checked = true;
+            document.getElementById('event-allDay-yes').checked = false;
+        }
+        document.getElementById('event-allDay-yes').disabled = enabled;
+        this.toggleAllDay();
+    }
+
+    renderAlerts() {
+        const container = document.getElementById('event-alerts');
+        container.innerHTML = this.alerts.map(a => `<div class="alert alert-warning d-flex justify-content-between align-items-center">
+            <span>${escapeHtml(a.name)} — ${escapeHtml(a.occurrenceDate)}</span>
+            <button class="btn btn-sm btn-success btn-ack-event" data-id="${escapeHtml(a.id)}">${t('event_ack')}</button>
+        </div>`).join('');
+        container.querySelectorAll('.btn-ack-event').forEach(button => button.addEventListener('click', async () => {
+            const alertRecord = this.alerts.find(a => a.id === button.dataset.id);
+            button.disabled = true;
+            try {
+                await api.create(this.collectiveId, `events/${alertRecord.eventId}/ack`, { deliveryId: alertRecord.id });
+                await this.loadEvents();
+            } catch (error) { alert(error.message); button.disabled = false; }
+        }));
+    }
+
     async loadEvents() {
         try {
-            this.events = await api.get(
-                this.collectiveId, 'events'
-            );
+            [this.events, this.alerts] = await Promise.all([
+                api.get(this.collectiveId, 'events'),
+                api.get(this.collectiveId, 'events/alerts/active')
+            ]);
+            this.renderAlerts();
             this.renderTable();
         } catch (error) {
             alert(t("error") + ': ' + error.message);
@@ -306,7 +367,10 @@ class EventsView extends AbstractView {
                 );
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${event.name || ''}</td>
+                <td>${escapeHtml(event.name || '')}
+                    <span class="badge bg-secondary">${t(event.type === 'individual' ? 'event_individual' : 'event_collective')}</span>
+                    ${event.type === 'individual' && !this.isMember ? `<small class="d-block">${escapeHtml(this.members.filter(m => m.id === event.memberId).map(m => `${m.firstName} ${m.lastName}`).join(''))}</small>` : ''}
+                </td>
                 <td>${event.date || ''}</td>
                 <td>${timeDisplay}</td>
                 <td class="d-none d-md-table-cell">
@@ -314,7 +378,7 @@ class EventsView extends AbstractView {
                 <td class="d-none d-lg-table-cell">
                     ${event.description || ''}</td>
                 <td>
-                    ${this.isMember ? `
+                    ${this.isMember ? (event.type === 'individual' ? '' : `
                     <div class="btn-group-actions">
                         ${(event.recurrence && event.recurrence !== 'none') ? `
                         <a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-primary" data-link title="${t("plan_inscriptions")}">
@@ -324,9 +388,9 @@ class EventsView extends AbstractView {
                             <i class="bi bi-calendar-plus"></i>
                         </a>
                     </div>
-                    ` : `
+                    `) : `
                     <div class="btn-group-actions">
-                        ${(event.recurrence && event.recurrence !== 'none') ? `
+                        ${(event.type !== 'individual' && event.recurrence && event.recurrence !== 'none') ? `
                         <a href="/${this.collectiveId}/events/${event.id}/inscription-schedule" class="btn btn-sm btn-outline-info" data-link title="${t("plan_inscriptions")}">
                             <i class="bi bi-calendar-check"></i>
                         </a>` : ''}
@@ -368,6 +432,12 @@ class EventsView extends AbstractView {
     }
 
     async init() {
+        if (!this.isMember) {
+            this.members = await api.get(this.collectiveId, 'members');
+            const select = document.getElementById('event-memberId');
+            select.add(new Option(t('select_member'), ''));
+            this.members.forEach(m => select.add(new Option(`${m.firstName} ${m.lastName}`, m.id)));
+        }
         await this.loadEvents();
 
         const searchInput =
@@ -395,6 +465,10 @@ class EventsView extends AbstractView {
             .addEventListener('click', () => {
                 this.saveEvent();
             });
+
+        ['event-type', 'event-reminder-mode'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => this.toggleEventOptions());
+        });
 
         // Gestion du toggle "toute la journée" / "heure + durée"
         document.querySelectorAll(
@@ -441,6 +515,10 @@ class EventsView extends AbstractView {
             if (event) {
                 document.getElementById('event-id')
                     .value = event.id;
+                document.getElementById('event-type').value = event.type || 'collective';
+                document.getElementById('event-memberId').value = event.memberId || '';
+                document.getElementById('event-reminder-mode').value = event.reminder?.mode || 'none';
+                document.getElementById('event-advance').value = event.reminder?.advanceMinutes || 0;
                 document.getElementById('event-name')
                     .value = event.name || '';
                 document.getElementById('event-date')
@@ -516,6 +594,7 @@ class EventsView extends AbstractView {
             document.querySelectorAll('.recurrence-day')
                 .forEach(cb => cb.checked = false);
         }
+        this.toggleEventOptions();
         this.modal.show();
     }
 
@@ -529,6 +608,12 @@ class EventsView extends AbstractView {
             'event-allDay-yes'
         ).checked;
         const data = {
+            type: document.getElementById('event-type').value,
+            memberId: document.getElementById('event-memberId').value || null,
+            reminder: {
+                mode: document.getElementById('event-reminder-mode').value,
+                advanceMinutes: Number(document.getElementById('event-advance').value)
+            },
             name: document.getElementById(
                 'event-name'
             ).value,

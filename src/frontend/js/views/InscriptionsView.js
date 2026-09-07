@@ -181,7 +181,7 @@ class InscriptionsView extends AbstractView {
             }
             const results = await Promise.all(promises);
             this.inscriptions = results[0];
-            this.events = results[1];
+            this.events = results[1].filter(e => e.type !== 'individual');
             this.members = this.isMember
                 ? [] : results[2];
             this.renderTable();
@@ -383,7 +383,7 @@ class InscriptionsView extends AbstractView {
 
         const urlParams = new URLSearchParams(window.location.search);
         const eventIdParam = urlParams.get('eventId');
-        if (eventIdParam) {
+        if (eventIdParam && this.events.some(e => e.id === eventIdParam)) {
             this.openModal();
             document.getElementById('inscription-eventId').value = eventIdParam;
             const dateParam = urlParams.get('date');

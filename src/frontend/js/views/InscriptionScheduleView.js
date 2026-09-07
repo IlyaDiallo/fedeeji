@@ -121,6 +121,10 @@ class InscriptionScheduleView extends AbstractView {
             }
             const results = await Promise.all(promises);
             this.event = results[0];
+            if (this.event?.type === 'individual') {
+                window.location.assign(`/${this.collectiveId}/events`);
+                return;
+            }
             this.inscriptions = results[1];
             if (!this.isMember) {
                 this.members = results[2];

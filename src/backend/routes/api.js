@@ -9,6 +9,7 @@ const createInscriptionsRouter = require('./inscriptions');
 const createActionsRouter = require('./actions');
 const createActionLogsRouter = require('./actionLogs');
 const createEventsRouter = require('./events');
+const EventService = require('../services/EventService');
 const createActivitiesRouter = require('./activities');
 const createActivityHistoryRouter = require('./activityHistory');
 const createNotificationsRouter = require('./notifications');
@@ -24,9 +25,10 @@ const createAssetsRouter = require('./assets');
  */
 function createApiRouter({
     dataService, trashService, scheduler, assetService,
-    illustrationService, progressService, notificationState
+    illustrationService, progressService, notificationState, eventService, eventScheduler
 }) {
     const router = express.Router({ mergeParams: true });
+    eventService ||= new EventService({ dataService });
 
     // Middleware : vérifie que le collectiveId est présent
     router.use((req, res, next) => {
@@ -52,7 +54,7 @@ function createApiRouter({
 
     router.use(
         '/inscriptions',
-        createInscriptionsRouter({ dataService })
+        createInscriptionsRouter({ dataService, eventService })
     );
 
     router.use('/actions', createActionsRouter({
@@ -64,7 +66,7 @@ function createApiRouter({
         createActionLogsRouter({ dataService, progressService })
     );
 
-    router.use('/events', createEventsRouter({ dataService }));
+    router.use('/events', createEventsRouter({ dataService, eventService, eventScheduler }));
 
     router.use('/activities', createActivitiesRouter({ dataService }));
 

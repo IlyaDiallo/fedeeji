@@ -1,6 +1,6 @@
 const express = require('express');
 
-function createNotificationCallbacksRouter({ collectiveService, notificationState, progressService, now = () => Date.now() }) {
+function createNotificationCallbacksRouter({ collectiveService, notificationState, progressService, eventScheduler, now = () => Date.now() }) {
     const router = express.Router();
     let windowStart = now();
     let requests = 0;
@@ -18,6 +18,11 @@ function createNotificationCallbacksRouter({ collectiveService, notificationStat
                 if (!record) continue;
                 const settings = await notificationState.getSettings(collective.id);
                 if (!settings) return res.status(409).json({ error: 'Notifications non configurées' });
+                if (record.eventId) {
+                    if (!eventScheduler) return res.status(409).json({ error: 'Rappels indisponibles' });
+                    await eventScheduler.ack(collective.id, record.deliveryId, null, record.eventId, record);
+                    return res.json({ success: true });
+                }
                 const parts = new Intl.DateTimeFormat('en-CA', {
                     timeZone: settings.timeZone, year: 'numeric', month: '2-digit', day: '2-digit'
                 }).formatToParts(new Date(now()));

@@ -2,12 +2,13 @@ const express = require('express');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
 const createMemberOwnership = require('../middleware/memberOwnership');
+const EventService = require('../services/EventService');
 
 /**
  * @param {Object} params
  * @param {import('../services/DataService')} params.dataService
  */
-function createInscriptionsRouter({ dataService }) {
+function createInscriptionsRouter({ dataService, eventService = new EventService({ dataService }) }) {
     const router = express.Router({ mergeParams: true });
 
     const memberOwnership = createMemberOwnership({
@@ -16,11 +17,28 @@ function createInscriptionsRouter({ dataService }) {
         options: { checkPastEvent: true }
     });
 
+    // Serialize validation + writes with event conversion/deletion and reminder dispatch.
+    const inscriptionMutation = handler => asyncHandler(async (req, res) => {
+        const previous = req.params.id ? await dataService.get({
+            collectiveId: req.collectiveId, collection: 'inscriptions', id: req.params.id
+        }) : null;
+        const eventId = req.body.eventId || previous?.eventId;
+        return eventService.locked(req.collectiveId, eventId, async () => {
+            const ids = [...new Set([previous?.eventId, eventId].filter(Boolean))];
+            for (const id of ids) {
+                const event = await dataService.get({ collectiveId: req.collectiveId, collection: 'events', id });
+                if (!event) return res.status(400).json({ error: 'Événement introuvable' });
+                if (event.type === 'individual') return res.status(400).json({ error: 'Un événement individuel ne nécessite pas d’inscription' });
+            }
+            return handler(req, res);
+        });
+    });
+
     // --- Bulk upsert ---
 
     router.post('/bulk',
         requireRole('admin', 'member'),
-        asyncHandler(async (req, res) => {
+        inscriptionMutation(async (req, res) => {
             const { eventId, memberId, entries } = req.body;
             if (!eventId || !memberId || !Array.isArray(entries)) {
                 return res.status(400).json({
@@ -122,7 +140,7 @@ function createInscriptionsRouter({ dataService }) {
     router.post('/',
         requireRole('admin', 'member'),
         memberOwnership,
-        asyncHandler(async (req, res) => {
+        inscriptionMutation(async (req, res) => {
             const data = await dataService.create({
                 collectiveId: req.collectiveId,
                 collection: 'inscriptions',
@@ -135,7 +153,7 @@ function createInscriptionsRouter({ dataService }) {
     router.put('/:id',
         requireRole('admin', 'member'),
         memberOwnership,
-        asyncHandler(async (req, res) => {
+        inscriptionMutation(async (req, res) => {
             const data = await dataService.update({
                 collectiveId: req.collectiveId,
                 collection: 'inscriptions',
