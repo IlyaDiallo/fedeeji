@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const tabler = require('@iconify-json/tabler/icons.json');
-const supplemental = require('../data/supplementalIllustrations');
+const supplemental = require('./supplementalIllustrations');
 
 const STOP_WORDS = new Set([
     'a', 'au', 'aux', 'avec', 'ce', 'ces', 'dans', 'de', 'des', 'du',
