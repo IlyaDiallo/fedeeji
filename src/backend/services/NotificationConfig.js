@@ -57,7 +57,11 @@ function normalizeSettings(value) {
 }
 
 /** Missing configuration remains opt-out. Never silently enable historical actions. */
-function normalizeAlert(value, { states = [], memberId, members = [] } = {}) {
+function responsibleIds(action) {
+    return [...new Set(action.memberIds ?? (action.memberId ? [action.memberId] : []))];
+}
+
+function normalizeAlert(value, { states = [], memberId, memberIds, members = [] } = {}) {
     if (value == null) return { enabled: false };
     object(value, 'Alerte');
     if (typeof value.enabled !== 'boolean') throw invalid('Activation de l’alerte invalide');
@@ -67,9 +71,9 @@ function normalizeAlert(value, { states = [], memberId, members = [] } = {}) {
     }
     const initialTime = time(value.initialTime, 'Heure de l’alerte');
     if (!['responsible', 'selected'].includes(value.recipientMode)) {
-        throw invalid('Choisir le responsable ou une liste de destinataires');
+        throw invalid('Choisir les responsables ou une liste de destinataires');
     }
-    const ids = value.recipientMode === 'responsible' ? [memberId] : value.memberIds;
+    const ids = value.recipientMode === 'responsible' ? responsibleIds({ memberId, memberIds }) : value.memberIds;
     if (!Array.isArray(ids) || !ids.length || ids.some(id =>
         typeof id !== 'string' || !members.some(member => member.id === id))) {
         throw invalid('Destinataires absents ou étrangers au collectif');
@@ -89,7 +93,7 @@ function normalizeAlert(value, { states = [], memberId, members = [] } = {}) {
 function recipientIds(action) {
     if (!action.alert?.enabled) return [];
     return action.alert.recipientMode === 'responsible'
-        ? (action.memberId ? [action.memberId] : [])
+        ? responsibleIds(action)
         : [...new Set(action.alert.memberIds || [])];
 }
 
@@ -101,6 +105,6 @@ function buildWebhookUrl(member) {
 }
 
 module.exports = {
-    normalizeSettings, normalizeAlert, recipientIds, buildWebhookUrl,
+    normalizeSettings, normalizeAlert, responsibleIds, recipientIds, buildWebhookUrl,
     invalid, REPEAT_MS, MAX_DELAY_MINUTES
 };

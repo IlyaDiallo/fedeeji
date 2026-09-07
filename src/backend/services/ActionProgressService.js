@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 const RecurrenceUtils = require('../../frontend/js/RecurrenceUtils');
-const { recipientIds } = require('./NotificationConfig');
+const { recipientIds, responsibleIds } = require('./NotificationConfig');
 
 class ActionProgressService {
     constructor({ dataService, notificationState, now = () => Date.now() }) {
@@ -46,7 +46,7 @@ class ActionProgressService {
             date: action.date, recurrence: action.recurrence, interval: action.recurrenceInterval,
             days: action.recurrenceDays, end: action.recurrenceEndDate,
             monthlyType: action.monthlyType, cancelledDates: action.cancelledDates,
-            states: action.states, alert: action.alert, memberId: action.memberId,
+            states: action.states, alert: action.alert, memberIds: responsibleIds(action).sort(),
             latest: latest && [latest.id, latest.timestamp, latest.state]
         })).digest('hex');
         return { maxState, state, latest, revision };

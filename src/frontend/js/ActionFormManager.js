@@ -11,9 +11,11 @@ class ActionFormManager {
 
     static alertFieldsHtml() {
         return `<fieldset class="border rounded p-3 mb-3">
+            <legend class="float-none w-auto fs-6">${t('ha_responsible')}</legend>
+            <div id="action-responsible"></div>
+        </fieldset>
+        <fieldset class="border rounded p-3 mb-3">
             <legend class="float-none w-auto fs-6">${t('ha_section_title')}</legend>
-            <label class="form-label" for="action-responsible">${t('ha_responsible')}</label>
-            <select id="action-responsible" class="form-select mb-2"></select>
             <div class="form-check mb-2"><input id="action-alert-enabled" type="checkbox" class="form-check-input">
                 <label for="action-alert-enabled" class="form-check-label">${t('ha_enable_alert')}</label></div>
             <p class="small text-muted">${t('ha_alert_help')}</p>
@@ -33,12 +35,20 @@ class ActionFormManager {
 
     _populateAlert(action = {}) {
         const responsible = document.getElementById('action-responsible');
-        responsible.replaceChildren(new Option('—', ''));
+        responsible.replaceChildren();
+        const responsibleIds = action.memberIds ?? (action.memberId ? [action.memberId] : []);
         const recipients = document.getElementById('action-alert-members');
         recipients.replaceChildren();
         for (const member of this.view.members) {
             const name = this.view.getMemberName(member.id);
-            responsible.add(new Option(name, member.id));
+            const ownerLabel = document.createElement('label');
+            ownerLabel.className = 'form-check d-block';
+            const ownerCheckbox = document.createElement('input');
+            ownerCheckbox.type = 'checkbox'; ownerCheckbox.value = member.id;
+            ownerCheckbox.className = 'form-check-input';
+            ownerCheckbox.checked = responsibleIds.includes(member.id);
+            ownerLabel.append(ownerCheckbox, document.createTextNode(` ${name}`));
+            responsible.append(ownerLabel);
             const label = document.createElement('label');
             label.className = 'form-check d-block';
             const checkbox = document.createElement('input');
@@ -48,7 +58,6 @@ class ActionFormManager {
             label.append(checkbox, document.createTextNode(` ${name}`));
             recipients.append(label);
         }
-        responsible.value = action.memberId || '';
         document.getElementById('action-alert-enabled').checked = action.alert?.enabled === true;
         document.getElementById('action-alert-time').value = action.alert?.initialTime || '';
         document.getElementById('action-alert-mode').value = action.alert?.recipientMode || 'responsible';
@@ -212,7 +221,7 @@ class ActionFormManager {
 
         const data = {
             name: document.getElementById('action-name').value,
-            memberId: document.getElementById('action-responsible').value || null,
+            memberIds: Array.from(document.querySelectorAll('#action-responsible input:checked')).map(input => input.value),
             alert: this._readAlert(),
             illustration: { ...this.illustration },
             states: document.getElementById('action-states').value

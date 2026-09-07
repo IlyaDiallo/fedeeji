@@ -26,13 +26,23 @@ function createActionsRouter({ dataService, illustrationService, notificationSta
     };
 
     const validateAlert = async (req, data, previous = {}) => {
+        const members = await dataService.list({
+            collectiveId: req.collectiveId, collection: 'members'
+        });
+        if (Object.hasOwn(data, 'memberIds') || Object.hasOwn(data, 'memberId')) {
+            const ids = Object.hasOwn(data, 'memberIds')
+                ? data.memberIds : (data.memberId == null ? [] : [data.memberId]);
+            if (!Array.isArray(ids) || ids.some(id => typeof id !== 'string'
+                || !members.some(member => member.id === id))) {
+                throw new Error('Responsables invalides ou étrangers au collectif');
+            }
+            data.memberIds = [...new Set(ids)];
+            data.memberId = null;
+        }
         const merged = { ...previous, ...data };
         if (Object.hasOwn(data, 'alert') || merged.alert?.enabled) {
-            const members = await dataService.list({
-                collectiveId: req.collectiveId, collection: 'members'
-            });
             data.alert = normalizeAlert(merged.alert, {
-                states: merged.states, memberId: merged.memberId, members
+                states: merged.states, memberId: merged.memberId, memberIds: merged.memberIds, members
             });
             if (data.alert.enabled && notificationState && !await notificationState.getSettings(req.collectiveId)) {
                 throw new Error('Configurer le fuseau, le silence et les origines HA dans Membres avant activation');
