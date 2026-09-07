@@ -34,30 +34,20 @@ class ActionFormManager {
     }
 
     _populateAlert(action = {}) {
-        const responsible = document.getElementById('action-responsible');
-        responsible.replaceChildren();
-        const responsibleIds = action.memberIds ?? (action.memberId ? [action.memberId] : []);
-        const recipients = document.getElementById('action-alert-members');
-        recipients.replaceChildren();
-        for (const member of this.view.members) {
-            const name = this.view.getMemberName(member.id);
-            const ownerLabel = document.createElement('label');
-            ownerLabel.className = 'form-check d-block';
-            const ownerCheckbox = document.createElement('input');
-            ownerCheckbox.type = 'checkbox'; ownerCheckbox.value = member.id;
-            ownerCheckbox.className = 'form-check-input';
-            ownerCheckbox.checked = responsibleIds.includes(member.id);
-            ownerLabel.append(ownerCheckbox, document.createTextNode(` ${name}`));
-            responsible.append(ownerLabel);
-            const label = document.createElement('label');
-            label.className = 'form-check d-block';
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox'; checkbox.value = member.id;
-            checkbox.className = 'form-check-input';
-            checkbox.checked = action.alert?.memberIds?.includes(member.id) || false;
-            label.append(checkbox, document.createTextNode(` ${name}`));
-            recipients.append(label);
-        }
+        const pickerOptions = {
+            members: this.view.members,
+            getMemberName: id => this.view.getMemberName(id)
+        };
+        new MemberMultiSelect({
+            ...pickerOptions,
+            container: document.getElementById('action-responsible'),
+            selectedIds: action.memberIds ?? (action.memberId ? [action.memberId] : [])
+        });
+        new MemberMultiSelect({
+            ...pickerOptions,
+            container: document.getElementById('action-alert-members'),
+            selectedIds: action.alert?.memberIds || []
+        });
         document.getElementById('action-alert-enabled').checked = action.alert?.enabled === true;
         document.getElementById('action-alert-time').value = action.alert?.initialTime || '';
         document.getElementById('action-alert-mode').value = action.alert?.recipientMode || 'responsible';
@@ -87,7 +77,7 @@ class ActionFormManager {
         const enabled = document.getElementById('action-alert-enabled').checked;
         const fields = document.getElementById('action-alert-fields');
         fields.hidden = !enabled;
-        fields.querySelectorAll('input, select').forEach(input => { input.disabled = !enabled; });
+        fields.querySelectorAll('input, select, button').forEach(input => { input.disabled = !enabled; });
         document.getElementById('action-alert-time').required = enabled;
         document.querySelectorAll('#action-alert-delays input').forEach(input => { input.required = enabled; });
         document.getElementById('action-alert-members').hidden =
