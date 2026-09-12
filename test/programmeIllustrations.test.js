@@ -40,6 +40,30 @@ test('programme renderer uses stored action illustration in compact mode', () =>
     assert.match(html, /variant=compact/);
 });
 
+test('settings exposes labelled editing for admins without execution controls', () => {
+    const renderers = loadRenderers();
+    for (const isMember of [false, true]) {
+        for (const status of ['due', 'overdue', 'ok']) {
+            const html = renderers.renderActionItem({
+                item: {
+                    data: { id: 'a1', name: 'Lavabo', states: [] },
+                    occurrence: { occurrenceDate: '2026-04-20' }, status
+                },
+                locale: 'fr', isMember, getMemberName: () => '', collectiveId: 'demo'
+            });
+            assert.doesNotMatch(html, /btn-mark-done|btn-edit-log|btn-edit-future/);
+            if (isMember) {
+                assert.doesNotMatch(html, /btn-edit-action|btn-delete-action/);
+            } else {
+                assert.match(html, /btn-edit-action/);
+                assert.match(html, /bi-pencil" aria-hidden="true"><\/i> edit/);
+                const editButton = html.match(/<button[^>]*btn-edit-action[\s\S]*?<\/button>/)[0];
+                assert.doesNotMatch(editButton, /d-none|d-sm-|d-md-|btn-icon/);
+            }
+        }
+    }
+});
+
 test('programme renderer gives historical actions a stable fallback', () => {
     const renderers = loadRenderers();
     const first = renderers.renderActionIllustration(

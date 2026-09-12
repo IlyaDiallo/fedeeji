@@ -129,39 +129,15 @@ class ProgrammeRenderers {
             : '';
 
         const canDo = status === 'due' || status === 'overdue';
-        const isDone = currentState >= maxState;
-        const nextState = currentState + 1;
-        let nextStateName = '<i class="bi bi-check-lg" aria-hidden="true"></i>';
-        if (states.length > 0 && nextState <= states.length) {
-            nextStateName = states[nextState - 1];
-        } else if (states.length > 0) {
-            nextStateName = t("done") || "Fait";
-        }
-
-        let doneBtn;
-        if (isDone) {
-            doneBtn = `<button class="btn btn-sm btn-icon btn-outline-success btn-edit-log"
-                data-id="${action.id}" title="${t("edit")}">
-                <i class="bi bi-check-circle-fill"></i></button>`;
-        } else if (canDo) {
-            doneBtn = `<button class="btn btn-sm btn-success btn-mark-done"
-                data-id="${action.id}" title="${t("mark_done")}">
-                ${nextStateName}</button>`;
-        } else {
-            doneBtn = `<button class="btn btn-sm btn-icon btn-outline-secondary btn-edit-future"
-                data-id="${action.id}" title="${t("edit")}">
-                <i class="bi bi-pencil-square"></i></button>`;
-        }
-
         const noteBtn = canDo
             ? `<button class="btn btn-sm btn-icon btn-outline-info btn-add-note"
                 data-id="${action.id}" title="${t("add_note")}">📝</button>`
             : '';
 
         const adminBtns = isMember ? '' : `
-            <button class="btn btn-sm btn-icon btn-outline-primary btn-edit-action"
+            <button class="btn btn-sm btn-outline-primary btn-edit-action"
                 data-id="${action.id}" title="${t("edit")}">
-                <i class="bi bi-pencil"></i>
+                <i class="bi bi-pencil" aria-hidden="true"></i> ${t("edit")}
             </button>
             <button class="btn btn-sm btn-icon btn-outline-danger btn-delete-action"
                 data-id="${action.id}" title="${t("delete")}">
@@ -230,13 +206,12 @@ class ProgrammeRenderers {
                 </div>
                 <div class="programme-item-actions d-flex align-items-center flex-wrap
                     justify-content-end mt-2 mt-sm-0 align-self-end align-self-sm-auto">
-                    ${doneBtn}
+                    ${adminBtns}
                     ${noteBtn}
                     <button class="btn btn-sm btn-icon btn-outline-secondary btn-history"
                         data-id="${action.id}" title="${t("history")}">
                         <i class="bi bi-clock-history"></i>
                     </button>
-                    ${adminBtns}
                 </div>
             </div>`;
     }
