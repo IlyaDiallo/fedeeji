@@ -15,6 +15,7 @@ const TrashService = require('./services/TrashService');
 const DataService = require('./services/DataService');
 const LogService = require('./services/LogService');
 const AuthService = require('./services/AuthService');
+const EmailService = require('./services/EmailService');
 const CollectiveService = require('./services/CollectiveService');
 const ImportService = require('./services/ImportService');
 const AssetService = require('./services/AssetService');
@@ -30,7 +31,9 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '100kb' }));
+// Explicit trusted proxy addresses/subnets only, never trust arbitrary forwarded headers.
+if (process.env.TRUST_PROXY) app.set('trust proxy', process.env.TRUST_PROXY.split(',').map(s => s.trim()));
 
 // Servir les logos des collectifs
 app.use('/api/logos', express.static(
@@ -52,7 +55,10 @@ const logService = new LogService({ storage });
 const dataService = new DataService({
     storage, trashService, logService
 });
-const authService = new AuthService({ storage });
+const emailService = new EmailService();
+const authService = new AuthService({ storage, emailService });
+dataService.authService = authService;
+trashService.authService = authService;
 const illustrationService = new IllustrationService();
 const collectiveService = new CollectiveService({ illustrationService });
 const importService = new ImportService({ dataService });
@@ -335,22 +341,28 @@ app.use((req, res) => {
     );
 });
 
-const server = app.listen(PORT, () => {
-    console.log(
-        `Serveur démarré sur http://localhost:${PORT}`
-    );
-    scheduler.start();
-    eventScheduler.start();
-});
-
-server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-        console.error(
-            `❌ Le port ${PORT} est déjà utilisé.`
-            + ' Arrêtez le processus existant.'
-        );
-    } else {
-        console.error('Erreur serveur :', err);
+async function start() {
+    for (const collective of await collectiveService.getAll()) {
+        const issues = await authService.migrate(collective.id);
+        for (const issue of issues) console.warn('Compte à corriger avant activation', collective.id, issue.memberId, issue.reason);
     }
-    process.exit(1);
+    if (!emailService.ready) console.warn('SMTP non configuré : les liens ne pourront pas être envoyés.');
+    const server = app.listen(PORT, () => {
+        console.log(`Serveur démarré sur http://localhost:${PORT}`);
+        scheduler.start();
+        eventScheduler.start();
+    });
+
+    server.on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.error(`❌ Le port ${PORT} est déjà utilisé. Arrêtez le processus existant.`);
+        } else {
+            console.error('Erreur serveur :', err.code || 'inconnue');
+        }
+        process.exit(1);
+    });
+}
+start().catch(() => {
+    console.error('Démarrage interrompu : vérifier la configuration et la migration des identités.');
+    process.exitCode = 1;
 });

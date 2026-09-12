@@ -17,6 +17,7 @@ Application de gestion de collectif.
 - L'application doit être responsive et s'adapter à tous les écrans et un usage tactile
 
 Fonctionnalités:
+- connexion unique email + mot de passe, activation/réinitialisation et confirmation d'email : [configuration SMTP et migration](docs/authentication.md)
 - gestion des utilisateurs et rôles admin (ajout, modification, suppression, recherche)
 - gestion des membres (ajout, modification, suppression, recherche)
 - gestion des contributions (ajout, modification, suppression, recherche, imoports)
@@ -29,7 +30,7 @@ Fonctionnalités futures:
 
 - publications publiques et privées
 - projets (groupes avec membres / actions / publications / événements)
-- envois d'emails aux membres
+- envois d'emails collectifs aux membres (hors emails d'authentification déjà disponibles)
 - gestion des groupes (ajout, modification, suppression, recherche)
 - gestion des statistiques
 - gestion des exports

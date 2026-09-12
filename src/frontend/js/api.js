@@ -92,7 +92,7 @@ class Api {
      */
     rememberCurrentPage() {
         // Ne pas mémoriser une page de login
-        if (/\/login$|\/register$|^\/login$/.test(
+        if (/\/login$|\/register$|\/auth-link$/.test(
             window.location.pathname
         )) {
             return;
@@ -121,9 +121,9 @@ class Api {
 
         if (
             response.status === 401
-            && endpoint !== '/auth/login'
-            && endpoint !== '/auth/login/admin'
-            && endpoint !== '/auth/login/member'
+            && !['/auth/login', '/auth/login/collective', '/auth/password/request',
+                '/auth/password/confirm', '/auth/email/confirm', '/auth/register',
+                '/auth/verify-registration-password'].includes(endpoint)
         ) {
             const collectiveId = this.getUserOrgId();
             this.rememberCurrentPage();
@@ -159,10 +159,10 @@ class Api {
         });
     }
 
-    async registerMember({ collectiveId, password, memberData }) {
+    async registerMember({ collectiveId, password, memberData, lang = i18n.lang }) {
         return this.request('/auth/register', {
             method: 'POST',
-            body: JSON.stringify({ collectiveId, password, memberData })
+            body: JSON.stringify({ collectiveId, password, memberData, lang })
         });
     }
 
@@ -176,10 +176,10 @@ class Api {
         this.setUser({ role: res.role });
     }
 
-    /** Connexion admin (membre avec flag admin) */
-    async loginAdmin({ collectiveId, email, password }) {
+    /** Connexion unique : rôle déterminé côté serveur. */
+    async loginCollective({ collectiveId, email, password }) {
         const res = await this.request(
-            '/auth/login/admin',
+            '/auth/login/collective',
             {
                 method: 'POST',
                 body: JSON.stringify({
@@ -196,21 +196,18 @@ class Api {
         });
     }
 
-    /** Connexion membre simple (email seul) */
-    async loginMember({ collectiveId, email }) {
-        const res = await this.request(
-            '/auth/login/member',
-            {
-                method: 'POST',
-                body: JSON.stringify({ collectiveId, email })
-            }
-        );
-        this.setToken(res.token);
-        this.setUser({
-            role: res.role,
-            collectiveId: res.collectiveId,
-            memberId: res.memberId,
-            memberName: res.memberName
+    requestPassword(data) {
+        return this.request('/auth/password/request', { method: 'POST', body: JSON.stringify(data) });
+    }
+    confirmPassword(data) {
+        return this.request('/auth/password/confirm', { method: 'POST', body: JSON.stringify(data) });
+    }
+    confirmEmail(data) {
+        return this.request('/auth/email/confirm', { method: 'POST', body: JSON.stringify(data) });
+    }
+    inviteMember(collectiveId, id) {
+        return this.request(`/api/${collectiveId}/members/${id}/invite`, {
+            method: 'POST', body: JSON.stringify({ lang: i18n.lang })
         });
     }
 

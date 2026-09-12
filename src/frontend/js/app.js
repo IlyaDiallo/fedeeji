@@ -130,7 +130,7 @@ const updateNavbarBrand = () => {
  */
 const canAccessRoute = (path) => {
     // Routes de login toujours accessibles
-    if (path === '/login' || path === '/:collectiveId/login' || path === '/:collectiveId/register') {
+    if (path === '/login' || path === '/:collectiveId/login' || path === '/:collectiveId/register' || path === '/:collectiveId/auth-link') {
         return true;
     }
 
@@ -304,11 +304,14 @@ const updateTranslations = () => {
     });
 };
 
+// Link capability lives only in this tab's memory (also across language changes).
+let activeAuthLink = null;
 const router = async () => {
     const routes = [
         { path: "/login", view: LoginView },
         { path: "/:collectiveId/login", view: LoginView },
         { path: "/:collectiveId/register", view: RegisterView },
+        { path: "/:collectiveId/auth-link", view: AuthLinkView },
         { path: "/", view: CollectiveListView },
         { path: "/:collectiveId", view: HomeView },
         { path: "/:collectiveId/members", view: MembersView },
@@ -355,10 +358,22 @@ const router = async () => {
     }
 
     const params = getParams(match);
+    const isAuthLink = match.route.path === '/:collectiveId/auth-link';
+    if (isAuthLink) {
+        if (location.hash) {
+            const fragment = new URLSearchParams(location.hash.slice(1));
+            activeAuthLink = { path: location.pathname, token: fragment.get('token'), purpose: fragment.get('purpose') };
+        } else if (activeAuthLink?.path !== location.pathname) activeAuthLink = null;
+        params.authToken = activeAuthLink?.token;
+        params.authPurpose = activeAuthLink?.purpose;
+        params.authLink = activeAuthLink;
+        history.replaceState(null, '', location.pathname);
+    } else activeAuthLink = null;
     const isLoginRoute =
         match.route.path === '/login'
         || match.route.path === '/:collectiveId/login'
-        || match.route.path === '/:collectiveId/register';
+        || match.route.path === '/:collectiveId/register'
+        || isAuthLink;
     document.body.classList.toggle('auth-page', isLoginRoute);
     document.body.classList.toggle(
         'has-mobile-nav', api.isAuthenticated() && !isLoginRoute
@@ -423,7 +438,7 @@ const router = async () => {
     }
 
     // Rediriger si déjà authentifié sur une page login
-    if (api.isAuthenticated() && isLoginRoute) {
+    if (api.isAuthenticated() && isLoginRoute && !isAuthLink) {
         const role = api.getRole();
         if (role === 'superadmin') {
             navigateTo('/');

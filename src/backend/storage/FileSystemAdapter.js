@@ -65,6 +65,15 @@ class FileSystemAdapter extends StorageAdapter {
         }
     }
 
+    async mutate(params, callback) {
+        return this._mutate(params, async () => {
+            const records = await this._readAll(params);
+            const result = await callback(records);
+            await this._writeAll({ ...params, data: records });
+            return result;
+        });
+    }
+
     async read({ collectiveId, collection, id }) {
         const allData = await this._readAll({ collectiveId, collection });
         return id ? allData.find(item => item.id === id) : allData;

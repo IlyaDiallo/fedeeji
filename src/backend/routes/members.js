@@ -1,143 +1,55 @@
 const express = require('express');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
-const AuthService = require('../services/AuthService');
+const { stripSecrets, profileData } = require('../services/memberSecurity');
+const { createAuthRateLimit } = require('../middleware/authRateLimit');
 
-/**
- * Retire le champ adminPassword d'un objet membre.
- */
-function sanitizeMember(member) {
-    const { adminPassword, ...safe } = member;
-    return safe;
-}
-
-/**
- * @param {Object} params
- * @param {import('../services/DataService')} params.dataService
- */
 function createMembersRouter({ dataService }) {
     const router = express.Router({ mergeParams: true });
-
-    // --- Accès membre à sa propre fiche ---
-
-    router.get('/me',
-        requireRole('member'),
-        asyncHandler(async (req, res) => {
-            const data = await dataService.get({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                id: req.user.memberId
-            });
-            if (!data) {
-                return res.status(404).json({ error: 'Non trouvé' });
-            }
-            res.json(sanitizeMember(data));
-        }, 500)
-    );
-
-    router.put('/me',
-        requireRole('member'),
-        asyncHandler(async (req, res) => {
-            const body = { ...req.body };
-            // Champs interdits pour un membre
-            delete body.admin;
-            delete body.adminPassword;
-            delete body.id;
-
-            const data = await dataService.update({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                id: req.user.memberId,
-                data: body
-            });
-            res.json(sanitizeMember(data));
-        })
-    );
-
-    // --- Admin : liste (sans adminPassword) ---
-
-    router.get('/',
-        requireRole('admin'),
-        asyncHandler(async (req, res) => {
-            const data = await dataService.list({
-                collectiveId: req.collectiveId,
-                collection: 'members'
-            });
-            res.json(data.map(sanitizeMember));
-        }, 500)
-    );
-
-    router.get('/:id',
-        requireRole('admin'),
-        asyncHandler(async (req, res) => {
-            const data = await dataService.get({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                id: req.params.id
-            });
-            if (!data) {
-                return res.status(404).json({ error: 'Non trouvé' });
-            }
-            res.json(sanitizeMember(data));
-        }, 500)
-    );
-
-    // Création avec hash du mot de passe admin
-    router.post('/',
-        requireRole('admin'),
-        asyncHandler(async (req, res) => {
-            const body = { ...req.body };
-            if (body.admin && body.adminPassword) {
-                body.adminPassword =
-                    await AuthService.hashPassword(body.adminPassword);
-            } else {
-                delete body.adminPassword;
-            }
-            const data = await dataService.create({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                data: body
-            });
-            res.status(201).json(sanitizeMember(data));
-        })
-    );
-
-    // Mise à jour avec hash si nouveau mot de passe
-    router.put('/:id',
-        requireRole('admin'),
-        asyncHandler(async (req, res) => {
-            const body = { ...req.body };
-            if (body.admin && body.adminPassword) {
-                body.adminPassword =
-                    await AuthService.hashPassword(body.adminPassword);
-            } else if (!body.admin) {
-                body.adminPassword = undefined;
-            } else {
-                delete body.adminPassword;
-            }
-            const data = await dataService.update({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                id: req.params.id,
-                data: body
-            });
-            res.json(sanitizeMember(data));
-        })
-    );
-
-    router.delete('/:id',
-        requireRole('admin'),
-        asyncHandler(async (req, res) => {
-            await dataService.delete({
-                collectiveId: req.collectiveId,
-                collection: 'members',
-                id: req.params.id
-            });
-            res.json({ success: true });
-        })
-    );
-
+    const limit = createAuthRateLimit()({ name: 'member-edit', ip: 50, windowMs: 3600000 });
+    const params = req => ({ collectiveId: req.collectiveId, collection: 'members' });
+    const view = (req, member) => dataService.authService
+        ? dataService.authService.memberView(req.collectiveId, member) : stripSecrets(member);
+    router.get('/me', requireRole('member', 'admin'), asyncHandler(async (req, res) => {
+        if (!req.user.memberId) return res.status(404).json({ error: 'Non trouvé' });
+        const member = await dataService.get({ ...params(req), id: req.user.memberId });
+        if (!member) return res.status(404).json({ error: 'Non trouvé' });
+        res.json(await view(req, member));
+    }));
+    router.put('/me', requireRole('member', 'admin'), limit, asyncHandler(async (req, res) => {
+        if (!req.user.memberId) return res.status(404).json({ error: 'Non trouvé' });
+        const data = { ...profileData(req.body) };
+        for (const key of ['email', 'currentPassword', 'lang']) if (Object.hasOwn(req.body, key)) data[key] = req.body[key];
+        res.json(await dataService.update({ ...params(req), id: req.user.memberId, data, actor: req.user }));
+    }));
+    router.get('/', requireRole('admin'), asyncHandler(async (req, res) => {
+        const members = await dataService.list(params(req));
+        res.json(await Promise.all(members.map(member => view(req, member))));
+    }));
+    router.get('/:id', requireRole('admin'), asyncHandler(async (req, res) => {
+        const member = await dataService.get({ ...params(req), id: req.params.id });
+        if (!member) return res.status(404).json({ error: 'Non trouvé' });
+        res.json(await view(req, member));
+    }));
+    router.post('/', requireRole('admin'), limit, asyncHandler(async (req, res) => {
+        const member = await dataService.create({ ...params(req), data: req.body });
+        res.status(201).json(stripSecrets(member));
+    }));
+    router.put('/:id', requireRole('admin'), limit, asyncHandler(async (req, res) => {
+        res.json(await dataService.update({ ...params(req), id: req.params.id, data: req.body, actor: req.user }));
+    }));
+    router.post('/:id/invite', requireRole('admin'), limit, asyncHandler(async (req, res) => {
+        const member = await dataService.get({ ...params(req), id: req.params.id });
+        if (!member) return res.status(404).json({ error: 'Non trouvé' });
+        await dataService.authService.requestPassword({ collectiveId: req.collectiveId, email: member.email, lang: req.body?.lang });
+        res.json({ success: true });
+    }));
+    router.delete('/:id', requireRole('admin'), asyncHandler(async (req, res) => {
+        await dataService.delete({ ...params(req), id: req.params.id });
+        res.json({ success: true });
+    }));
+    // Never let an unhandled /members path fall through to generic CRUD.
+    router.use((req, res) => res.status(404).json({ error: 'Non trouvé' }));
     return router;
 }
-
 module.exports = createMembersRouter;

@@ -142,20 +142,7 @@ class MembersView extends AbstractView {
                                         ${t("is_admin")}
                                     </label>
                                 </div>
-                                <div class="mb-3 d-none"
-                                    id="admin-password-group">
-                                    <label class="form-label"
-                                        data-i18n="admin_password">
-                                        ${t("admin_password")}
-                                    </label>
-                                    <input type="password"
-                                        class="form-control"
-                                        id="member-adminPassword">
-                                    <div class="form-text"
-                                        data-i18n="admin_password_hint">
-                                        ${t("admin_password_hint")}
-                                    </div>
-                                </div>
+                                <button type="button" id="member-invite" class="btn btn-outline-primary mb-3">${t('auth_invite')}</button>
                                 <hr>
                                 <h6 class="mb-2">
                                     <i class="bi bi-phone me-1"></i>
@@ -224,6 +211,10 @@ class MembersView extends AbstractView {
                         class="form-control"
                         id="${prefix}-email"
                         required>
+                    <div id="${prefix}-pending-email" class="form-text"></div>
+                    <label for="${prefix}-current-password" class="form-label mt-2">${t('auth_current_password')}</label>
+                    <input type="password" id="${prefix}-current-password" class="form-control" autocomplete="current-password">
+                    <div class="form-text">${t('auth_email_change_hint')}</div>
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label"
@@ -387,6 +378,8 @@ class MembersView extends AbstractView {
             const el = document.getElementById(`profile-${f}`);
             if (el) el.value = m[f] || '';
         });
+        document.getElementById('profile-pending-email').textContent = m.pendingEmail
+            ? `${t('auth_email_pending')} ${m.pendingEmail}` : '';
     }
 
     /** Collecte les champs personnels du formulaire profil. */
@@ -406,9 +399,12 @@ class MembersView extends AbstractView {
     async saveProfile() {
         try {
             this.member = await api.updateMyProfile(
-                this.collectiveId, this._readProfileFields()
+                this.collectiveId, { ...this._readProfileFields(),
+                    currentPassword: document.getElementById('profile-current-password').value, lang: i18n.lang }
             );
-            this._showAlert({ elId: 'profile-alert', type: 'success', msg: t('profile_saved') });
+            document.getElementById('profile-current-password').value = '';
+            this._fillProfileForm();
+            this._showAlert({ elId: 'profile-alert', type: 'success', msg: t(this.member.pendingEmail ? 'auth_email_requested' : 'profile_saved') });
         } catch (error) {
             this._showAlert({
                 elId: 'profile-alert',
@@ -571,11 +567,15 @@ class MembersView extends AbstractView {
                 this.renderTable(e.target.value);
             });
 
-        // Toggle affichage mot de passe admin
-        document.getElementById('member-admin')
-            .addEventListener('change', () => {
-                this._toggleAdminPassword();
-            });
+        document.getElementById('member-invite').addEventListener('click', async () => {
+            const button = document.getElementById('member-invite');
+            button.disabled = true;
+            try {
+                await api.inviteMember(this.collectiveId, document.getElementById('member-id').value);
+                alert(t('auth_link_sent'));
+            } catch (error) { alert(error.message); }
+            finally { button.disabled = false; }
+        });
     }
 
     async loadMembers() {
@@ -611,10 +611,11 @@ class MembersView extends AbstractView {
                     text-dark">Admin</span>`
                 : '';
             tr.innerHTML = `
-                <td>${member.lastName}</td>
-                <td>${member.firstName}</td>
+                <td>${escapeHtml(member.lastName || '')}</td>
+                <td>${escapeHtml(member.firstName || '')}</td>
                 <td class="d-none d-md-table-cell">
-                    ${member.email}</td>
+                    ${escapeHtml(member.email || '')}
+                    ${member.pendingEmail ? `<small class="d-block text-muted">${t('auth_email_pending')} ${escapeHtml(member.pendingEmail)}</small>` : ''}</td>
                 <td class="d-none d-md-table-cell">
                     ${adminBadge}</td>
                 <td>
@@ -656,23 +657,13 @@ class MembersView extends AbstractView {
             });
     }
 
-    /** Affiche/masque le champ mot de passe admin. */
-    _toggleAdminPassword() {
-        const isAdmin = document.getElementById(
-            'member-admin'
-        ).checked;
-        const group = document.getElementById(
-            'admin-password-group'
-        );
-        group.classList.toggle('d-none', !isAdmin);
-    }
-
     openModal(id = null) {
         const form = document.getElementById('member-form');
         form.reset();
         document.getElementById('member-id').value = '';
         document.getElementById('member-admin').checked = false;
-        this._toggleAdminPassword();
+        document.getElementById('member-invite').classList.toggle('d-none', !id);
+        document.getElementById('member-pending-email').textContent = '';
 
         if (id) {
             const member = this.members.find(m => m.id === id);
@@ -689,7 +680,8 @@ class MembersView extends AbstractView {
                 });
                 document.getElementById('member-admin')
                     .checked = !!member.admin;
-                this._toggleAdminPassword();
+                document.getElementById('member-pending-email').textContent = member.pendingEmail
+                    ? `${t('auth_email_pending')} ${member.pendingEmail}` : '';
             }
         }
         this.modal.show();
@@ -698,9 +690,7 @@ class MembersView extends AbstractView {
     async saveMember() {
         const id = document.getElementById('member-id').value;
         const isAdmin = document.getElementById('member-admin').checked;
-        const adminPassword = document.getElementById(
-            'member-adminPassword'
-        ).value;
+        const currentPassword = document.getElementById('member-current-password').value;
 
         const fields = [
             'lastName', 'firstName', 'email', 'phone',
@@ -715,20 +705,23 @@ class MembersView extends AbstractView {
         );
         data.admin = isAdmin;
 
-        // Envoyer le mot de passe seulement s'il est rempli
-        if (isAdmin && adminPassword) {
-            data.adminPassword = adminPassword;
-        }
+        data.currentPassword = currentPassword;
+        data.lang = i18n.lang;
 
         try {
             if (id) {
-                await api.update(
+                const updated = await api.update(
                     this.collectiveId, 'members', id, data
                 );
+                if (updated.pendingEmail) alert(t('auth_email_requested'));
             } else {
-                await api.create(
+                const created = await api.create(
                     this.collectiveId, 'members', data
                 );
+                if (confirm(t('auth_invite_question'))) {
+                    await api.inviteMember(this.collectiveId, created.id);
+                    alert(t('auth_link_sent'));
+                }
             }
             this.modal.hide();
             await this.loadMembers();

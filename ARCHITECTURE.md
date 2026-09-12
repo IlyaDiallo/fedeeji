@@ -93,7 +93,9 @@ src/backend/
 │   ├── actionLogs.js          # /api/:collectiveId/action-logs
 │   └── trash.js               # /api/:collectiveId/trash
 ├── services/
-│   ├── AuthService.js         # Authentification JWT, hash bcrypt
+│   ├── AuthService.js         # Connexion unique, liens et révocation JWT
+│   ├── AuthStateService.js    # Identités/hashes/jetons privés, mutations atomiques
+│   ├── EmailService.js        # SMTP injectable (Nodemailer), liens FR/EN
 │   ├── CollectiveService.js   # CRUD collectifs (collectives.json)
 │   ├── DataService.js         # CRUD générique via StorageAdapter
 │   ├── ImportService.js       # Import XLSX (contributions)
@@ -158,7 +160,7 @@ graph LR
 
 | Service              | Responsabilité                                                    |
 |----------------------|-------------------------------------------------------------------|
-| `AuthService`        | Login (superadmin, admin, member), hash mot de passe, vérif JWT   |
+| `AuthService`        | Connexion unique par collectif, liens email, migration des identités et JWT révocables ; superadmin distinct |
 | `CollectiveService`  | CRUD collectifs, type concret, logo local et palette dérivée de `primaryColor` |
 | `DataService`        | CRUD générique par collection via `StorageAdapter`, journalisation |
 | `TrashService`       | Soft delete → corbeille, restauration, suppression définitive      |
@@ -196,7 +198,7 @@ La couche d'abstraction permet d'ajouter un adaptateur MongoDB ou S3 sans modifi
 
 | Middleware            | Rôle                                                                                  |
 |-----------------------|---------------------------------------------------------------------------------------|
-| `auth.js`             | Vérifie le JWT, injecte `req.user`. `requireRole(...)` restreint par rôle.            |
+| `auth.js`             | Vérifie le JWT et l'état courant du compte de manière asynchrone, injecte `req.user`. `requireRole(...)` restreint par rôle. |
 | `asyncHandler.js`     | Enveloppe un handler async et renvoie une erreur HTTP en cas d'exception.             |
 | `memberOwnership.js`  | Force `memberId` pour les membres, vérifie la propriété des ressources, gère les cas spéciaux (événements passés, accès aux notes). |
 

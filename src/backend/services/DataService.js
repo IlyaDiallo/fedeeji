@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { assertPublicCollection } = require('./internalCollections');
+const { stripSecrets } = require('./memberSecurity');
 
 class DataService {
     /**
@@ -21,7 +22,7 @@ class DataService {
      */
     async list({ collectiveId, collection }) {
         assertPublicCollection(collection);
-        return await this.storage.read({ collectiveId, collection }) || [];
+        return stripSecrets(await this.storage.read({ collectiveId, collection }) || []);
     }
 
     /**
@@ -32,7 +33,7 @@ class DataService {
      */
     async get({ collectiveId, collection, id }) {
         assertPublicCollection(collection);
-        return await this.storage.read({ collectiveId, collection, id });
+        return stripSecrets(await this.storage.read({ collectiveId, collection, id }));
     }
 
     /**
@@ -44,15 +45,19 @@ class DataService {
     async create({ collectiveId, collection, data }) {
         assertPublicCollection(collection);
         const id = crypto.randomUUID();
-        const item = { ...data, id };
+        const item = collection === 'members' && this.authService
+            ? await this.authService.createMember({ collectiveId, data })
+            : { ...data, id };
 
-        await this.storage.write({ collectiveId, collection, id, data: item });
+        if (!(collection === 'members' && this.authService)) {
+            await this.storage.write({ collectiveId, collection, id, data: item });
+        }
 
         await this.logService.log({
             collectiveId,
             action: 'CREATE',
             targetCollection: collection,
-            targetId: id,
+            targetId: item.id,
             details: { item }
         });
 
@@ -66,7 +71,7 @@ class DataService {
      * @param {string} params.id
      * @param {any} params.data
      */
-    async update({ collectiveId, collection, id, data }) {
+    async update({ collectiveId, collection, id, data, actor }) {
         assertPublicCollection(collection);
         const previousData = await this.storage.read({
             collectiveId, collection, id
@@ -75,10 +80,12 @@ class DataService {
             throw new Error('Élément introuvable');
         }
 
-        const updatedItem = { ...previousData, ...data, id };
-        await this.storage.write({
-            collectiveId, collection, id, data: updatedItem
-        });
+        const updatedItem = collection === 'members' && this.authService
+            ? await this.authService.updateMember({ collectiveId, id, data, actor })
+            : { ...previousData, ...data, id };
+        if (!(collection === 'members' && this.authService)) {
+            await this.storage.write({ collectiveId, collection, id, data: updatedItem });
+        }
 
         await this.logService.log({
             collectiveId,
@@ -100,6 +107,14 @@ class DataService {
      */
     async delete({ collectiveId, collection, id }) {
         assertPublicCollection(collection);
+        if (collection === 'members' && this.authService) {
+            return this.authService.deleteMember({ collectiveId, id,
+                remove: () => this._delete({ collectiveId, collection, id }) });
+        }
+        return this._delete({ collectiveId, collection, id });
+    }
+
+    async _delete({ collectiveId, collection, id }) {
         const item = await this.storage.read({
             collectiveId, collection, id
         });

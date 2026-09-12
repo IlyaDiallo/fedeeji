@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { assertPublicCollection } = require('./internalCollections');
+const { stripSecrets } = require('./memberSecurity');
 
 class TrashService {
     /**
@@ -23,7 +24,7 @@ class TrashService {
         const trashEntry = {
             id: crypto.randomUUID(),
             sourceCollection,
-            item,
+            item: stripSecrets(item),
             deletedAt: Date.now()
         };
         await this.storage.write({
@@ -38,9 +39,9 @@ class TrashService {
      * @param {string} params.collectiveId
      */
     async list({ collectiveId }) {
-        return await this.storage.read({
+        return stripSecrets(await this.storage.read({
             collectiveId, collection: this.collection
-        }) || [];
+        }) || []);
     }
 
     /**
@@ -60,13 +61,13 @@ class TrashService {
 
         assertPublicCollection(entry.sourceCollection);
 
-        // Restaurer dans la collection d'origine
-        await this.storage.write({
-            collectiveId,
-            collection: entry.sourceCollection,
-            id: entry.item.id,
-            data: entry.item
-        });
+        entry.item = stripSecrets(entry.item);
+        if (entry.sourceCollection === 'members' && this.authService) {
+            entry.item = await this.authService.restoreMember({ collectiveId, item: entry.item });
+        } else {
+            await this.storage.write({ collectiveId, collection: entry.sourceCollection,
+                id: entry.item.id, data: entry.item });
+        }
 
         // Retirer de la corbeille
         await this.storage.delete({

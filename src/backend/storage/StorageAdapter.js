@@ -7,6 +7,11 @@ class StorageAdapter {
      * @param {string} [params.id]
      * @returns {Promise<any>}
      */
+    /** Atomically read/modify a collection. Callback mutates records and returns a result. */
+    async mutate(params, callback) {
+        throw new Error('Non implémenté');
+    }
+
     async read({ collectiveId, collection, id }) {
         throw new Error('Non implémenté');
     }

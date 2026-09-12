@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { requireRole } = require('../middleware/auth');
 const asyncHandler = require('../middleware/asyncHandler');
+const { createAuthRateLimit } = require('../middleware/authRateLimit');
 
 const SUPERADMIN_EMAIL = process.env.SUPERADMIN_EMAIL;
 
@@ -15,16 +16,42 @@ function createAuthRouter({
     authService, collectiveService, dataService, illustrationService
 }) {
     const router = express.Router();
+    const limit = createAuthRateLimit();
+    const emailLimit = limit({ name: 'email', ip: 20, email: 3, windowMs: 3600000, neutral: true });
+    const confirmationLimit = limit({ name: 'confirm', ip: 30, windowMs: 15 * 60000 });
+    const collectiveBody = async (req, res, next) => {
+        if (typeof req.body?.collectiveId !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(req.body.collectiveId)) {
+            return res.status(400).json({ error: 'Collectif invalide' });
+        }
+        if (!await collectiveService.getById(req.body.collectiveId)) {
+            return res.status(400).json({ error: 'Collectif invalide' });
+        }
+        next();
+    };
+    router.use((req, res, next) => {
+        res.set('Cache-Control', 'no-store');
+        req.body ||= {};
+        next();
+    });
+    router.post('/password/request', emailLimit, collectiveBody, asyncHandler(async (req, res) => {
+        res.json(await authService.requestPassword(req.body));
+    }));
+    router.post('/password/confirm', confirmationLimit, collectiveBody, asyncHandler(async (req, res) => {
+        res.json(await authService.confirmPassword(req.body));
+    }));
+    router.post('/email/confirm', confirmationLimit, collectiveBody, asyncHandler(async (req, res) => {
+        res.json(await authService.confirmEmail(req.body));
+    }));
 
     // Middleware superadmin (inline pour éviter circular deps)
-    const requireSuperadmin = (req, res, next) => {
+    const requireSuperadmin = async (req, res, next) => {
         const authHeader = req.headers.authorization;
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
             return res.status(401).json({ error: 'Token manquant' });
         }
         const token = authHeader.split(' ')[1];
         try {
-            const decoded = authService.verifyToken(token);
+            const decoded = await authService.verifyToken(token);
             if (decoded.role !== 'superadmin') {
                 return res.status(403).json({ error: 'Accès interdit' });
             }
@@ -36,7 +63,7 @@ function createAuthRouter({
     };
 
     // Vérification du mot de passe d'enregistrement
-    router.post('/verify-registration-password', asyncHandler(async (req, res) => {
+    router.post('/verify-registration-password', limit({ name: 'registration-code', ip: 30, windowMs: 15 * 60000 }), collectiveBody, asyncHandler(async (req, res) => {
         const { collectiveId, password } = req.body;
         const org = await collectiveService.getById(collectiveId);
         if (!org) throw new Error('Collectif non trouvé');
@@ -47,7 +74,7 @@ function createAuthRouter({
     }, 401));
 
     // Enregistrement d'un membre
-    router.post('/register', asyncHandler(async (req, res) => {
+    router.post('/register', limit({ name: 'registration', ip: 20, email: 3, windowMs: 3600000, neutral: true }), collectiveBody, asyncHandler(async (req, res) => {
         const { collectiveId, password, memberData } = req.body;
         const org = await collectiveService.getById(collectiveId);
         if (!org) throw new Error('Collectif non trouvé');
@@ -55,6 +82,7 @@ function createAuthRouter({
             throw new Error('Mot de passe d\'enregistrement incorrect');
         }
 
+        if (!memberData || typeof memberData !== 'object' || Array.isArray(memberData)) throw new Error('Fiche invalide');
         const safeData = {
             lastName: memberData.lastName,
             firstName: memberData.firstName,
@@ -68,44 +96,44 @@ function createAuthRouter({
             admin: false
         };
 
-        const newMember = await dataService.create({
-            collectiveId: collectiveId,
-            collection: 'members',
-            data: safeData
-        });
-
-        res.status(201).json({ success: true, memberId: newMember.id });
+        try {
+            await dataService.create({ collectiveId, collection: 'members', data: safeData });
+        } catch (error) {
+            // Existing identity must never be overwritten or exposed by registration.
+            if (error.message !== 'Adresse email indisponible') throw error;
+        }
+        await authService.requestPassword({ collectiveId, email: safeData.email, lang: req.body.lang });
+        res.status(201).json({ success: true });
     }));
 
     // Connexion superadmin
-    router.post('/login', asyncHandler((req, res) => {
+    router.post('/login', limit({ name: 'superadmin', ip: 10, windowMs: 15 * 60000 }), asyncHandler((req, res) => {
         const { password } = req.body;
         const result = authService.loginSuperadmin({ password });
         res.json(result);
     }, 401));
 
-    // Connexion admin (membre avec flag admin)
-    router.post('/login/admin', asyncHandler(async (req, res) => {
-        const { collectiveId, email, password } = req.body;
-        const result = await authService.loginAdmin({
-            collectiveId, email, password
-        });
-        res.json(result);
-    }, 401));
+    router.post('/login/collective', limit({ name: 'login', ip: 50, email: 10, windowMs: 15 * 60000 }),
+        collectiveBody, asyncHandler(async (req, res) => {
+            res.json(await authService.loginCollective(req.body));
+        }, 401));
 
-    // Connexion membre simple (email seul)
-    router.post('/login/member', asyncHandler(async (req, res) => {
-        const { collectiveId, email } = req.body;
-        const result = await authService.loginMember({
-            collectiveId, email
-        });
-        res.json(result);
-    }, 401));
+    router.all(['/login/admin', '/login/member'], (req, res) => {
+        res.status(410).json({ error: 'Utilisez la connexion email et mot de passe' });
+    });
 
     // Liste des collectifs (publique)
     router.get('/collectives', asyncHandler(async (req, res) => {
         const orgs = await collectiveService.getAll();
-        res.json(orgs);
+        let superadmin = false;
+        try {
+            const token = req.headers.authorization?.replace(/^Bearer /, '');
+            superadmin = !!token && (await authService.verifyToken(token)).role === 'superadmin';
+        } catch { /* Public theme listing remains available without authentication. */ }
+        res.json(superadmin ? orgs : orgs.map(org => {
+            const { registrationPassword, ...publicOrg } = org;
+            return publicOrg;
+        }));
     }, 500));
 
     // Email de contact du superadmin (publique)

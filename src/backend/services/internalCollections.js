@@ -1,7 +1,9 @@
 const NOTIFICATION_STATE = 'notification-state';
+const AUTH_STATE = 'auth-state';
 
 function isInternalCollection(collection) {
-    return typeof collection === 'string' && collection.toLowerCase() === NOTIFICATION_STATE;
+    return typeof collection === 'string'
+        && [NOTIFICATION_STATE, AUTH_STATE].includes(collection.toLowerCase());
 }
 
 function assertPublicCollection(collection) {
@@ -10,4 +12,4 @@ function assertPublicCollection(collection) {
     }
 }
 
-module.exports = { NOTIFICATION_STATE, isInternalCollection, assertPublicCollection };
+module.exports = { NOTIFICATION_STATE, AUTH_STATE, isInternalCollection, assertPublicCollection };

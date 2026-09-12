@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 
-const SECRET_KEYS = new Set(['haWebhookId', 'haWebhookUrl', 'token', 'tokenHash', 'adminPassword']);
+const SECRET_KEYS = new Set(['haWebhookId', 'haWebhookUrl', 'token', 'tokenHash', 'adminPassword', 'password', 'passwordHash', 'currentPassword']);
 function redactSecrets(value) {
     if (Array.isArray(value)) return value.map(redactSecrets);
     if (!value || typeof value !== 'object') return value;

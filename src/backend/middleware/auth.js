@@ -3,7 +3,7 @@
  * @param {import('../services/AuthService')} authService
  */
 function createAuthMiddleware(authService) {
-    return (req, res, next) => {
+    return async (req, res, next) => {
         const authHeader = req.headers.authorization;
 
         if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -14,7 +14,7 @@ function createAuthMiddleware(authService) {
 
         const token = authHeader.split(' ')[1];
         try {
-            const decoded = authService.verifyToken(token);
+            const decoded = await authService.verifyToken(token);
             req.user = decoded;
             next();
         } catch (error) {
