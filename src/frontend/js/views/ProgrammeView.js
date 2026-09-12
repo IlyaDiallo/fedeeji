@@ -14,7 +14,7 @@ class ProgrammeView extends AbstractView {
         this.actions = [];
         this.actionLogs = [];
         this.members = [];
-        this.viewMode = 'list';
+        this.viewMode = 'agenda';
         this.currentDate = new Date();
         this.activeTab = 'all';
     }
@@ -54,9 +54,9 @@ class ProgrammeView extends AbstractView {
 
                 <div class="btn-group programme-view-switcher" role="group">
                     <input type="radio" class="btn-check" name="view-mode"
-                        id="view-list" value="list" autocomplete="off" checked>
+                        id="view-agenda" value="agenda" autocomplete="off" checked>
                     <label class="btn btn-outline-secondary btn-sm btn-icon"
-                        for="view-list" title="Liste">
+                        for="view-agenda" title="Agenda" aria-label="Agenda">
                         <i class="bi bi-list-ul"></i></label>
 
                     <input type="radio" class="btn-check" name="view-mode"
@@ -70,6 +70,12 @@ class ProgrammeView extends AbstractView {
                     <label class="btn btn-outline-secondary btn-sm btn-icon"
                         for="view-month" title="Mois">
                         <i class="bi bi-calendar-month"></i></label>
+
+                    <input type="radio" class="btn-check" name="view-mode"
+                        id="view-list" value="list" autocomplete="off">
+                    <label class="btn btn-outline-secondary btn-sm btn-icon"
+                        for="view-list" title="Paramétrage" aria-label="Paramétrage">
+                        <i class="bi bi-sliders"></i></label>
                 </div>
             </div>
 
@@ -578,6 +584,14 @@ class ProgrammeView extends AbstractView {
         const items = this._collectCalendarItems({
             filter, startCal, endCal
         });
+
+        if (this.viewMode === 'agenda') {
+            container.innerHTML = ProgrammeRenderers.renderAgenda({
+                items, locale: this.locale, collectiveId: this.collectiveId
+            });
+            this._bindCalendarEvents(container);
+            return;
+        }
 
         container.innerHTML = ProgrammeRenderers.renderCalendarGrid({
             items, startCal, endCal,

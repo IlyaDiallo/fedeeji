@@ -241,6 +241,59 @@ class ProgrammeRenderers {
             </div>`;
     }
 
+    /** Liste d'exécution : mêmes occurrences que la semaine, sans réglages. */
+    static renderAgenda({ items, locale, collectiveId }) {
+        if (!items.length) return `<p class="text-muted">${t('no_programme_items')}</p>`;
+        const escape = value => String(value ?? '').replace(/[&<>"']/g,
+            char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
+                '"': '&quot;', "'": '&#39;' }[char]));
+        const days = new Map();
+        [...items].sort((a, b) => a.date.localeCompare(b.date)
+            || (a.data.time || '').localeCompare(b.data.time || ''))
+            .forEach(item => {
+                if (!days.has(item.date)) days.set(item.date, []);
+                days.get(item.date).push(item);
+            });
+        return [...days].map(([date, entries]) => {
+            const label = new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+            return `<section class="mb-3 programme-agenda">
+                <h3 class="h6 text-muted">${escape(label)}</h3>
+                <div class="list-group">${entries.map(it => {
+                    const time = it.data.allDay ? '' : (it.data.time || '');
+                    const name = `${time ? escape(time) + ' · ' : ''}${escape(it.data.name)}`;
+                    if (it.type === 'event') {
+                        return `<a class="list-group-item list-group-item-action" data-link
+                            href="/${encodeURIComponent(collectiveId)}/events">
+                            <i class="bi bi-calendar-event me-2"></i>${name}
+                            ${it.occurrence.isCancelled
+                                ? `<span class="badge bg-danger">${t('occurrence_cancelled')}</span>` : ''}
+                        </a>`;
+                    }
+                    const state = it.isDone ? t('done')
+                        : (it.currentState > 0 ? it.data.states?.[it.currentState - 1] : '');
+                    return `<div class="list-group-item d-flex align-items-center gap-2">
+                        <button type="button" class="btn text-start p-0 flex-grow-1 action-item-cal"
+                            data-id="${escape(it.data.id)}" data-date="${date}">
+                            <span class="action-calendar-copy">
+                                ${ProgrammeRenderers.renderActionIllustration(
+                                    it.data, collectiveId, 'action-calendar-illustration')}
+                                <span>${name}${state ? `<small class="d-block text-success">${escape(state)}</small>` : ''}</span>
+                                <i class="bi ${it.isDone ? 'bi-check-circle-fill text-success' : 'bi-circle'} ms-auto"></i>
+                            </span>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-icon btn-outline-secondary btn-add-note-cal"
+                            data-id="${escape(it.data.id)}" data-date="${date}"
+                            aria-label="${escape(t('add_note'))}" title="${escape(t('add_note'))}">
+                            <i class="bi bi-card-text"></i>${it.targetNotes?.length || ''}
+                        </button>
+                    </div>`;
+                }).join('')}</div>
+            </section>`;
+        }).join('');
+    }
+
     /**
      * Rendu de la grille calendrier complète (semaine ou mois).
      */
