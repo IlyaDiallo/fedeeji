@@ -98,18 +98,18 @@ class ActionOccurrenceResolver {
      * @param {string} params.todayStr   - Date du jour (YYYY-MM-DD)
      * @returns {Object|null} Item enrichi prêt à afficher, ou null
      */
-    static resolveNextOccurrence({ action, actionLogs, todayStr }) {
+    static resolveNextOccurrence({ action, actionLogs, todayStr, excludeCancelled = false }) {
         const { logs, allDoneLogs, lastLog, maxState } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
         let generateFrom = action.date || todayStr;
         if (lastLog) generateFrom = lastLog.date;
 
-        const occurrences = window.RecurrenceUtils
+        const occurrences = (window.RecurrenceUtils
             ? RecurrenceUtils.generateOccurrences({
                 event: action,
                 startDate: new Date(`${generateFrom}T12:00:00`)
-            }) : [action];
+            }) : [action]).filter(occ => !excludeCancelled || !occ.isCancelled);
 
         // Chercher la prochaine occurrence non terminée
         let targetOccurrence = null;

@@ -1356,13 +1356,28 @@ a {
 }
 
 .action-programme-illustration {
-    width: 68px;
-    height: 68px;
-    flex: 0 0 68px;
+    width: 84px;
+    height: 84px;
+    flex: 0 0 84px;
     object-fit: contain;
     background: #fff;
     border: 1px solid var(--fd-border);
     border-radius: 15px;
+}
+
+.programme-now .action-item-cal {
+    min-width: 0;
+    margin-bottom: 0;
+    font-size: 1rem;
+}
+
+.programme-now .action-calendar-copy > span {
+    overflow-wrap: anywhere;
+}
+
+.programme-now-event-icon {
+    font-size: 2rem;
+    vertical-align: middle;
 }
 
 .calendar-event-item,
@@ -1908,9 +1923,9 @@ a {
     }
 
     .action-programme-illustration {
-        width: 54px;
-        height: 54px;
-        flex-basis: 54px;
+        width: 68px;
+        height: 68px;
+        flex-basis: 68px;
         border-radius: 12px;
     }
 

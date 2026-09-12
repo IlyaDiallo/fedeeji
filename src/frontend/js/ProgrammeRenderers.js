@@ -241,46 +241,54 @@ class ProgrammeRenderers {
             </div>`;
     }
 
-    /** Liste d'exécution : mêmes occurrences que la semaine, sans réglages. */
-    static renderAgenda({ items, locale, collectiveId }) {
-        if (!items.length) return `<p class="text-muted">${t('no_programme_items')}</p>`;
+    /** Actions disponibles maintenant et événements du jour, sans réglages. */
+    static renderNow({ items, locale, collectiveId }) {
+        if (!items.length) return `<p class="text-muted">${t('nothing_now')}</p>`;
         const escape = value => String(value ?? '').replace(/[&<>"']/g,
             char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
                 '"': '&quot;', "'": '&#39;' }[char]));
-        const days = new Map();
-        [...items].sort((a, b) => a.date.localeCompare(b.date)
-            || (a.data.time || '').localeCompare(b.data.time || ''))
-            .forEach(item => {
-                if (!days.has(item.date)) days.set(item.date, []);
-                days.get(item.date).push(item);
-            });
-        return [...days].map(([date, entries]) => {
-            const label = new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
-                weekday: 'long', day: 'numeric', month: 'long'
-            });
-            return `<section class="mb-3 programme-agenda">
-                <h3 class="h6 text-muted">${escape(label)}</h3>
+        const groups = [
+            ['available_actions', items.filter(it => it.type === 'action')
+                .sort((a, b) => a.date.localeCompare(b.date)
+                    || (a.data.time || '').localeCompare(b.data.time || ''))],
+            ['today_events', items.filter(it => it.type === 'event')
+                .sort((a, b) => (a.data.time || '').localeCompare(b.data.time || ''))]
+        ];
+        return groups.filter(([, entries]) => entries.length).map(([label, entries]) => {
+            return `<section class="mb-3 programme-now">
+                <h3 class="h6 text-muted">${t(label)}</h3>
                 <div class="list-group">${entries.map(it => {
+                    const date = it.date;
                     const time = it.data.allDay ? '' : (it.data.time || '');
                     const name = `${time ? escape(time) + ' · ' : ''}${escape(it.data.name)}`;
                     if (it.type === 'event') {
                         return `<a class="list-group-item list-group-item-action" data-link
                             href="/${encodeURIComponent(collectiveId)}/events">
-                            <i class="bi bi-calendar-event me-2"></i>${name}
+                            <i class="bi bi-calendar-event programme-now-event-icon me-2"></i>${name}
                             ${it.occurrence.isCancelled
                                 ? `<span class="badge bg-danger">${t('occurrence_cancelled')}</span>` : ''}
                         </a>`;
                     }
-                    const state = it.isDone ? t('done')
-                        : (it.currentState > 0 ? it.data.states?.[it.currentState - 1] : '');
+                    const state = it.currentState > 0
+                        ? it.data.states?.[it.currentState - 1] : '';
+                    const nextState = it.data.states?.[it.currentState] || t('mark_done');
+                    const deadline = new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
+                        day: 'numeric', month: 'short'
+                    });
                     return `<div class="list-group-item d-flex align-items-center gap-2">
                         <button type="button" class="btn text-start p-0 flex-grow-1 action-item-cal"
-                            data-id="${escape(it.data.id)}" data-date="${date}">
+                            data-id="${escape(it.data.id)}" data-date="${date}"
+                            title="${escape(nextState)}">
                             <span class="action-calendar-copy">
                                 ${ProgrammeRenderers.renderActionIllustration(
-                                    it.data, collectiveId, 'action-calendar-illustration')}
-                                <span>${name}${state ? `<small class="d-block text-success">${escape(state)}</small>` : ''}</span>
-                                <i class="bi ${it.isDone ? 'bi-check-circle-fill text-success' : 'bi-circle'} ms-auto"></i>
+                                    it.data, collectiveId, 'action-programme-illustration')}
+                                <span>${name}
+                                    <small class="d-block ${it.status === 'overdue' ? 'text-danger' : 'text-muted'}">
+                                        ${it.status === 'overdue' ? t('overdue') + ' · ' : ''}${escape(deadline)}
+                                        ${state ? ' · ' + escape(state) : ''}
+                                    </small>
+                                </span>
+                                <span class="ms-auto text-success small">${escape(nextState)}</span>
                             </span>
                         </button>
                         <button type="button" class="btn btn-sm btn-icon btn-outline-secondary btn-add-note-cal"
