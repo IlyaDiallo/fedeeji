@@ -23,8 +23,10 @@ function nextOccurrence(action, logs) {
     const maxState = (action.states?.length || 0) + 1;
     const loggedDates = [...new Set(logs.filter(l => l.programmeId === action.id)
         .map(l => l.occurrenceDate || l.date))];
-    const completed = loggedDates.filter(date =>
-        ActionProgressService.context(action, logs, date).state === maxState).sort().at(-1);
+    const completed = loggedDates.flatMap(date => {
+        const context = ActionProgressService.context(action, logs, date);
+        return context.state === maxState ? [date, context.latest?.date || date] : [];
+    }).sort().at(-1);
     const from = completed || action.date;
     return RecurrenceUtils.generateOccurrences({
         event: action, startDate: new Date(`${from}T12:00:00`), maxOccurrences: 1000

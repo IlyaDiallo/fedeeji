@@ -82,7 +82,6 @@ class ProgrammeRenderers {
         const action = item.data;
         const occ = item.occurrence;
         const status = item.status;
-        const lastLog = item.lastLog;
         const targetNotes = item.targetNotes || [];
         const currentState = item.currentState || 0;
         const states = action.states || [];
@@ -118,10 +117,6 @@ class ProgrammeRenderers {
             }
             stateBadge = `<span class="badge bg-secondary">${stateName}</span>`;
         }
-
-        const lastLogStr = lastLog
-            ? `✅ ${t("last_done")} ${lastLog.date} ${getMemberName(lastLog.memberId)}`
-            : `⚠️ ${t("never_done")}`;
 
         const notesStr = targetNotes.length > 0
             ? `<span class="badge bg-info text-dark">`
@@ -199,9 +194,6 @@ class ProgrammeRenderers {
                             `<div><i class="bi bi-card-text"></i> ${n.notes}</div>`
                         ).join('')}
                     </div>` : ''}
-                    <div class="mt-1 small ${lastLog ? 'text-success' : 'text-muted'}">
-                        ${lastLogStr}
-                    </div>
                     </div>
                 </div>
                 <div class="programme-item-actions d-flex align-items-center flex-wrap

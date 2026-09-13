@@ -28,11 +28,18 @@ class ActionOccurrenceResolver {
             // Ancien log sans état : considéré comme complètement fait
             if (l.state == null) return true;
             return l.state === maxState;
-        });
+        }).filter(l => ActionOccurrenceResolver.computeCurrentState({
+            allDoneLogs, occDateStr: l.occurrenceDate || l.date, maxState
+        }) === maxState);
 
         const lastLog = fullDoneLogs.length > 0 ? fullDoneLogs[0] : null;
 
-        return { logs, allDoneLogs, fullDoneLogs, lastLog, maxState };
+        // Une réalisation solde aussi les échéances antérieures, même si elle
+        // est enregistrée en retard pour une ancienne occurrence.
+        const completedThrough = fullDoneLogs.reduce((latest, log) =>
+            [latest, log.occurrenceDate || log.date, log.date].filter(Boolean).sort().at(-1), null);
+
+        return { logs, allDoneLogs, fullDoneLogs, lastLog, maxState, completedThrough };
     }
 
     /**
@@ -99,11 +106,10 @@ class ActionOccurrenceResolver {
      * @returns {Object|null} Item enrichi prêt à afficher, ou null
      */
     static resolveNextOccurrence({ action, actionLogs, todayStr, excludeCancelled = false }) {
-        const { logs, allDoneLogs, lastLog, maxState } =
+        const { logs, allDoneLogs, lastLog, maxState, completedThrough } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
-        let generateFrom = action.date || todayStr;
-        if (lastLog) generateFrom = lastLog.date;
+        const generateFrom = completedThrough || action.date || todayStr;
 
         const occurrences = (window.RecurrenceUtils
             ? RecurrenceUtils.generateOccurrences({
@@ -112,19 +118,8 @@ class ActionOccurrenceResolver {
             }) : [action]).filter(occ => !excludeCancelled || !occ.isCancelled);
 
         // Chercher la prochaine occurrence non terminée
-        let targetOccurrence = null;
-        if (lastLog) {
-            const lastLogOccDate = lastLog.occurrenceDate || lastLog.date;
-            targetOccurrence = occurrences.find(o => o.occurrenceDate > lastLogOccDate);
-            if (!targetOccurrence && occurrences.length > 0) {
-                const lastOcc = occurrences[occurrences.length - 1];
-                if (lastOcc.occurrenceDate >= todayStr) {
-                    targetOccurrence = lastOcc;
-                }
-            }
-        } else {
-            targetOccurrence = occurrences[0];
-        }
+        const targetOccurrence = occurrences.find(o =>
+            !completedThrough || o.occurrenceDate > completedThrough);
 
         if (!targetOccurrence) return null;
 
@@ -166,14 +161,10 @@ class ActionOccurrenceResolver {
      * @returns {Array} Items enrichis prêts à afficher
      */
     static resolveOccurrencesInRange({ action, actionLogs, startStr, endStr }) {
-        const { logs, allDoneLogs, lastLog, maxState } =
+        const { logs, allDoneLogs, lastLog, maxState, completedThrough } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
-        // Partir du minimum entre action.date et startStr pour ne rater aucune
-        // occurrence tombant dans la plage affichée quand action.date est dans l'intervalle.
-        let generateFrom = lastLog
-            ? lastLog.date
-            : (action.date && action.date < startStr ? action.date : startStr);
+        const generateFrom = startStr;
 
         const occurrences = window.RecurrenceUtils
             ? RecurrenceUtils.generateOccurrences({
@@ -193,6 +184,9 @@ class ActionOccurrenceResolver {
                     allDoneLogs, occDateStr, maxState
                 });
                 const isDone = currentState === maxState;
+                // Ne pas proposer de rattrapage des anciennes instances ;
+                // conserver les réalisations dans le calendrier.
+                if (!isDone && completedThrough && occDateStr <= completedThrough) return;
 
                 results.push({
                     type: 'action',
