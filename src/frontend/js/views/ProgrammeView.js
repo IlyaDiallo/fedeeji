@@ -307,10 +307,19 @@ class ProgrammeView extends AbstractView {
                                         <input type="number"
                                             class="form-control"
                                             id="action-windowDays"
-                                            min="0" value="0">
+                                            aria-label="${t('days_before')}"
+                                            min="0" max="36500" step="1" value="0">
                                         <span class="input-group-text">
                                             ${t("days_before")}</span>
                                     </div>
+                                    <div class="input-group mt-2">
+                                        <input type="number" class="form-control"
+                                            id="action-windowAfterDays"
+                                            aria-label="${t('days_after')}"
+                                            min="0" max="36500" step="1" value="0">
+                                        <span class="input-group-text">${t('days_after')}</span>
+                                    </div>
+                                    <small class="text-muted">${t('action_window_help')}</small>
                                 </div>
                             </form>
                         </div>
@@ -549,7 +558,7 @@ class ProgrammeView extends AbstractView {
                 const item = ActionOccurrenceResolver.resolveNextOccurrence({
                     action,
                     actionLogs: this.actionLogs,
-                    todayStr
+                    todayStr, includeExpired: true
                 });
                 if (item) items.push(item);
             });

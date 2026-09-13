@@ -16,6 +16,13 @@ function createActionsRouter({ dataService, illustrationService, notificationSta
 
     const withValidatedIllustration = (body, required = false) => {
         const data = { ...body };
+        for (const key of ['windowDays', 'windowAfterDays']) {
+            if (Object.hasOwn(data, key)) {
+                if (!Number.isSafeInteger(data[key]) || data[key] < 0 || data[key] > 36500) {
+                    throw new Error('Fenêtre invalide : nombre entier de jours entre 0 et 36500 attendu');
+                }
+            } else if (required) data[key] = 0;
+        }
         if (required || Object.hasOwn(data, 'illustration')) {
             data.illustration = illustrationService.normalizeRecipe(
                 data.illustration,

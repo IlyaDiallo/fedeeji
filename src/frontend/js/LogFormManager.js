@@ -78,13 +78,9 @@ class LogFormManager {
         const occDateStr = defaultDate || todayStr;
 
         if (type === 'done') {
-            const occDateObj = new Date(`${occDateStr}T12:00:00`);
-            const windowStart = new Date(occDateObj);
-            windowStart.setDate(
-                windowStart.getDate() - (action?.windowDays || 0)
-            );
-            const windowStartStr = RecurrenceUtils.formatDateStr(windowStart);
-            canMarkDone = todayStr >= windowStartStr;
+            canMarkDone = RecurrenceUtils.isInActionWindow(action || {}, occDateStr, todayStr)
+                || (!this.view.isMember && occDateStr <= todayStr);
+            if (action?.cancelledDates?.includes(occDateStr)) canMarkDone = false;
         }
 
         document.getElementById('log-type').value = type;
@@ -248,12 +244,12 @@ class LogFormManager {
         title.textContent = t("action_label");
 
         const actionInfo = this.buildActionInfoHtml({ action, occDateStr });
-        const occDateObj = new Date(`${occDateStr}T12:00:00`);
-        const wsObj = new Date(occDateObj);
-        wsObj.setDate(wsObj.getDate() - (action?.windowDays || 0));
-        const wsFormatted = wsObj.toLocaleDateString(locale, {
+        const bounds = RecurrenceUtils.actionWindow(action || {}, occDateStr);
+        const format = date => new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
             weekday: 'long', day: 'numeric', month: 'long'
         });
+        const wsFormatted = format(bounds.start);
+        const weFormatted = format(bounds.end);
         windowInfoEl.innerHTML = `
             <div class="alert alert-info py-2 mb-2">
                 ${actionInfo}
@@ -263,7 +259,8 @@ class LogFormManager {
                 : ''}
             <div class="alert alert-warning py-2 mb-3">
                 <i class="bi bi-calendar-event"></i>
-                ${t("from_date")} ${wsFormatted}
+                ${t("action_window_closed")}<br>
+                ${t("from_date")} ${wsFormatted} ${t("through_date")} ${weFormatted}
             </div>`;
         windowInfoEl.classList.remove('d-none');
 
@@ -345,9 +342,8 @@ class LogFormManager {
         title, windowInfoEl, dateInput,
         saveBtn, notesTextarea
     }) {
-        const windowStartStr = ActionOccurrenceResolver.computeWindowStart({
-            occDateStr, windowDays: action?.windowDays
-        });
+        const bounds = RecurrenceUtils.actionWindow(action || {}, occDateStr);
+        const adminCorrection = !this.view.isMember && occDateStr <= todayStr;
 
         // Chercher le dernier log "done" pour cette occurrence
         const existingLog = (() => {
@@ -393,15 +389,15 @@ class LogFormManager {
         }
 
         // Date de réalisation : libre dans la fenêtre
-        dateInput.value = existingLog
-            ? existingLog.date
-            : (todayStr <= occDateStr ? todayStr : occDateStr);
+        dateInput.value = existingLog ? existingLog.date
+            : (todayStr <= bounds.end ? todayStr : occDateStr);
         dateInput.disabled = false;
-        dateInput.min = windowStartStr;
-        dateInput.max = todayStr;
+        dateInput.min = adminCorrection ? '' : bounds.start;
+        dateInput.max = adminCorrection ? todayStr : (todayStr < bounds.end ? todayStr : bounds.end);
 
-        windowInfoEl.innerHTML = '';
-        windowInfoEl.classList.add('d-none');
+        windowInfoEl.innerHTML = adminCorrection
+            ? `<div class="alert alert-info py-2">${t('action_admin_correction')}</div>` : '';
+        windowInfoEl.classList.toggle('d-none', !adminCorrection);
 
         // Gestion des états intermédiaires
         this._setupStateSelect({ action, actionId, occDateStr });

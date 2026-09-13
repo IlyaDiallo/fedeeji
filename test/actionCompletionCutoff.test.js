@@ -11,7 +11,8 @@ for (const name of ['RecurrenceUtils', 'ActionOccurrenceResolver', 'ProgrammeRen
         + `;this.${name} = ${name};`, context);
 }
 const resolver = context.ActionOccurrenceResolver;
-const action = { id: 'task', name: 'Task', date: '2026-05-01', recurrence: 'weekly' };
+const action = { id: 'task', name: 'Task', date: '2026-05-01', recurrence: 'weekly', windowAfterDays: 1 };
+const next = (task, logs) => Scheduler.nextOccurrence(task, logs, '2026-05-09');
 const resolve = (actionLogs, todayStr = '2026-05-09', task = action) =>
     resolver.resolveNextOccurrence({ action: task, actionLogs, todayStr });
 const log = extra => ({ programmeId: 'task', type: 'done', date: '2026-05-08', ...extra });
@@ -23,10 +24,10 @@ for (const occurrenceDate of ['2026-05-01', '2026-05-08']) {
         assert.equal(item.nextDate, '2026-05-15');
         assert.equal(item.status, 'ok');
         assert.equal(resolve(logs, '2026-05-16').status, 'overdue');
-        assert.equal(Scheduler.nextOccurrence(action, logs), '2026-05-15');
+        assert.equal(next(action, logs), '2026-05-15');
         const range = resolver.resolveOccurrencesInRange({ action, actionLogs: logs,
             startStr: '2026-05-01', endStr: '2026-05-15' });
-        assert.ok(range.every(it => it.isDone || it.date > '2026-05-08'));
+        assert.equal(range.length, 3); // Historical instances remain consultable.
         assert.ok(range.some(it => it.date === occurrenceDate && it.isDone));
     });
 }
@@ -34,20 +35,20 @@ for (const occurrenceDate of ['2026-05-01', '2026-05-08']) {
 test('completion in advance skips the completed instance, not the next one', () => {
     const logs = [log({ date: '2026-05-06', occurrenceDate: '2026-05-08' })];
     assert.equal(resolve(logs).nextDate, '2026-05-15');
-    assert.equal(Scheduler.nextOccurrence(action, logs), '2026-05-15');
+    assert.equal(next(action, logs), '2026-05-15');
 });
 
 test('notes and intermediate states do not clear overdue instances', () => {
     const task = { ...action, states: ['Started'] };
     const logs = [log({ type: 'note' }), log({ state: 1 })];
-    assert.equal(resolve(logs, undefined, task).nextDate, '2026-05-01');
-    assert.equal(Scheduler.nextOccurrence(task, logs), '2026-05-01');
+    assert.equal(resolve(logs, undefined, task).nextDate, '2026-05-08');
+    assert.equal(next(task, logs), '2026-05-08');
 });
 
 test('a reverted completion no longer clears older instances', () => {
     const logs = [log({ state: 1, timestamp: 1 }), log({ state: 0, timestamp: 2 })];
-    assert.equal(resolve(logs).nextDate, '2026-05-01');
-    assert.equal(Scheduler.nextOccurrence(action, logs), '2026-05-01');
+    assert.equal(resolve(logs).nextDate, '2026-05-08');
+    assert.equal(next(action, logs), '2026-05-08');
 });
 
 test('completed one-off and last recurring instances are not proposed again', () => {

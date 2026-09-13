@@ -18,7 +18,7 @@ const action = (id, date, extra = {}) => ({ id, name: id, date, recurrence: 'non
 const collect = (actions, actionLogs = [], events = [], filter = 'all') =>
     context.ProgrammeView.prototype._collectNowItems.call({ actions, actionLogs, events }, filter, today);
 
-test('now includes opened windows and old overdue actions, excludes future, done and cancelled', () => {
+test('now includes opened windows, excludes expired, future, done and cancelled', () => {
     const items = collect([
         action('open', '2026-04-23', { windowDays: 3 }),
         action('closed', '2026-04-24', { windowDays: 3 }),
@@ -30,8 +30,8 @@ test('now includes opened windows and old overdue actions, excludes future, done
         { programmeId: 'done', date: today, type: 'done' },
         { programmeId: 'partial', date: today, type: 'done', state: 1 }
     ]);
-    assert.deepEqual(Array.from(items, it => it.data.id), ['open', 'old', 'partial']);
-    assert.equal(items[2].currentState, 1);
+    assert.deepEqual(Array.from(items, it => it.data.id), ['open', 'partial']);
+    assert.equal(items[1].currentState, 1);
 });
 
 test('now keeps one overdue occurrence per recurring action and skips cancelled occurrences', () => {
@@ -39,7 +39,55 @@ test('now keeps one overdue occurrence per recurring action and skips cancelled 
         recurrence: 'daily', cancelledDates: ['2026-04-01']
     })]);
     assert.equal(items.length, 1);
-    assert.equal(items[0].date, '2026-04-02');
+    assert.equal(items[0].date, today);
+    assert.equal(items[0].status, 'due');
+});
+
+test('now selects the immediately previous instance, never the oldest missed one', () => {
+    const weekly = action('weekly', '2020-04-17', { recurrence: 'weekly', windowAfterDays: 3 });
+    const items = collect([weekly]);
+    assert.equal(items[0].date, '2026-04-17');
+    assert.equal(items[0].status, 'overdue');
+    assert.equal(collect([weekly], [{ programmeId: 'weekly', date: '2026-04-17' }]).length, 0);
+});
+
+test('now prioritizes an open window over missed past instances', () => {
+    const weekly = action('weekly', '2026-04-03', { recurrence: 'weekly', windowDays: 4 });
+    const items = collect([weekly]);
+    assert.equal(items[0].date, '2026-04-24');
+    assert.equal(items[0].status, 'due');
+    assert.equal(collect([weekly], [{ programmeId: 'weekly', date: today,
+        occurrenceDate: '2026-04-24' }]).length, 0);
+});
+
+test('now skips a cancelled latest instance and uses the preceding one', () => {
+    const items = collect([action('weekly', '2026-04-03', {
+        recurrence: 'weekly', cancelledDates: ['2026-04-17'], windowAfterDays: 10
+    })]);
+    assert.equal(items[0].date, '2026-04-10');
+    assert.equal(items[0].status, 'overdue');
+});
+
+test('default window closes on deadline; an explicit extension is inclusive', () => {
+    const previous = action('previous', '2026-04-19');
+    assert.equal(collect([previous]).length, 0);
+    const extended = { ...previous, windowAfterDays: 1 };
+    assert.equal(collect([extended])[0].status, 'overdue');
+    assert.equal(collect([{ ...previous, date: '2026-04-18', windowAfterDays: 1 }]).length, 0);
+    assert.equal(collect([{ ...previous, states: ['Started'] }], [
+        { programmeId: 'previous', date: previous.date, state: 1 }
+    ]).length, 0);
+    assert.equal(collect([extended], [{ programmeId: 'previous', date: previous.date }]).length, 0);
+});
+
+test('expired recurring instances do not hide the next available instance', () => {
+    const weekly = action('weekly', '2026-04-03', { recurrence: 'weekly' });
+    assert.equal(collect([weekly]).length, 0);
+    const resolved = context.ActionOccurrenceResolver.resolveNextOccurrence({
+        action: weekly, actionLogs: [], todayStr: today
+    });
+    assert.equal(resolved.nextDate, '2026-04-24');
+    assert.equal(resolved.status, 'ok');
 });
 
 test('now includes only today events, including old recurring and cancelled events, respects filters', () => {
@@ -54,7 +102,7 @@ test('now includes only today events, including old recurring and cancelled even
 });
 
 test('now renders sections by type, not date, and keeps occurrence-specific controls', () => {
-    const items = collect([action('Lavabo <test>', today), action('old', '2026-03-01')], [],
+    const items = collect([action('Lavabo <test>', today), action('old', '2026-03-01', { windowAfterDays: 50 })], [],
         [action('Réunion', today, { time: '10:00', cancelledDates: [today] })]);
     const html = renderers.renderNow({ items, locale: 'fr', collectiveId: 'demo' });
     assert.equal((html.match(/<section/g) || []).length, 2);
@@ -65,6 +113,8 @@ test('now renders sections by type, not date, and keeps occurrence-specific cont
     assert.match(html, /occurrence_cancelled/);
     assert.match(html, /10:00/);
     assert.match(html, /overdue/);
+    const visibleText = html.replace(/<[^>]*>/g, '');
+    assert.doesNotMatch(visibleText, /2026|mars|avr\./);
     assert.doesNotMatch(html, /btn-edit-action|btn-delete-action|last_done|window_days/);
     assert.match(renderers.renderNow({ items: [] }), /nothing_now/);
 });

@@ -70,16 +70,13 @@ class ActionOccurrenceResolver {
      * @param {string} params.todayStr   - Date du jour (YYYY-MM-DD)
      * @param {string} params.occDateStr - Date de l'occurrence
      * @param {number} params.windowDays - Jours avant la date limite
-     * @returns {'overdue'|'due'|'ok'}
+     * @returns {'overdue'|'due'|'ok'|'expired'}
      */
-    static computeStatus({ todayStr, occDateStr, windowDays }) {
-        const occDateObj = new Date(`${occDateStr}T12:00:00`);
-        const windowStartObj = new Date(occDateObj);
-        windowStartObj.setDate(windowStartObj.getDate() - (windowDays || 0));
-        const windowStartStr = RecurrenceUtils.formatDateStr(windowStartObj);
-
+    static computeStatus({ todayStr, occDateStr, windowDays, windowAfterDays = 0 }) {
+        const { start, end } = RecurrenceUtils.actionWindow({ windowDays, windowAfterDays }, occDateStr);
+        if (todayStr > end) return 'expired';
         if (todayStr > occDateStr) return 'overdue';
-        if (todayStr >= windowStartStr) return 'due';
+        if (todayStr >= start) return 'due';
         return 'ok';
     }
 
@@ -91,10 +88,7 @@ class ActionOccurrenceResolver {
      * @returns {string} Date de début de fenêtre (YYYY-MM-DD)
      */
     static computeWindowStart({ occDateStr, windowDays }) {
-        const occDateObj = new Date(`${occDateStr}T12:00:00`);
-        const windowStartObj = new Date(occDateObj);
-        windowStartObj.setDate(windowStartObj.getDate() - (windowDays || 0));
-        return RecurrenceUtils.formatDateStr(windowStartObj);
+        return RecurrenceUtils.actionWindow({ windowDays }, occDateStr).start;
     }
 
     /**
@@ -105,21 +99,13 @@ class ActionOccurrenceResolver {
      * @param {string} params.todayStr   - Date du jour (YYYY-MM-DD)
      * @returns {Object|null} Item enrichi prêt à afficher, ou null
      */
-    static resolveNextOccurrence({ action, actionLogs, todayStr, excludeCancelled = false }) {
+    static resolveNextOccurrence({ action, actionLogs, todayStr, excludeCancelled = true, includeExpired = false }) {
         const { logs, allDoneLogs, lastLog, maxState, completedThrough } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
-        const generateFrom = completedThrough || action.date || todayStr;
-
-        const occurrences = (window.RecurrenceUtils
-            ? RecurrenceUtils.generateOccurrences({
-                event: action,
-                startDate: new Date(`${generateFrom}T12:00:00`)
-            }) : [action]).filter(occ => !excludeCancelled || !occ.isCancelled);
-
-        // Chercher la prochaine occurrence non terminée
-        const targetOccurrence = occurrences.find(o =>
-            !completedThrough || o.occurrenceDate > completedThrough);
+        const targetOccurrence = RecurrenceUtils.nextActionOccurrence({
+            action, todayStr, completedThrough, excludeCancelled, includeExpired
+        });
 
         if (!targetOccurrence) return null;
 
@@ -129,7 +115,8 @@ class ActionOccurrenceResolver {
         );
 
         const status = ActionOccurrenceResolver.computeStatus({
-            todayStr, occDateStr, windowDays: action.windowDays
+            todayStr, occDateStr, windowDays: action.windowDays,
+            windowAfterDays: action.windowAfterDays
         });
         const windowStartStr = ActionOccurrenceResolver.computeWindowStart({
             occDateStr, windowDays: action.windowDays
@@ -161,7 +148,7 @@ class ActionOccurrenceResolver {
      * @returns {Array} Items enrichis prêts à afficher
      */
     static resolveOccurrencesInRange({ action, actionLogs, startStr, endStr }) {
-        const { logs, allDoneLogs, lastLog, maxState, completedThrough } =
+        const { logs, allDoneLogs, lastLog, maxState } =
             ActionOccurrenceResolver.prepareLogContext({ action, actionLogs });
 
         const generateFrom = startStr;
@@ -184,9 +171,7 @@ class ActionOccurrenceResolver {
                     allDoneLogs, occDateStr, maxState
                 });
                 const isDone = currentState === maxState;
-                // Ne pas proposer de rattrapage des anciennes instances ;
-                // conserver les réalisations dans le calendrier.
-                if (!isDone && completedThrough && occDateStr <= completedThrough) return;
+                // Conserver les instances expirées pour consultation/correction admin.
 
                 results.push({
                     type: 'action',

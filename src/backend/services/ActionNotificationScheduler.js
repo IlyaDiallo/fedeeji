@@ -17,7 +17,7 @@ function isQuiet(time, { quietStart, quietEnd }) {
     return quietStart < quietEnd ? time >= quietStart && time < quietEnd
         : time >= quietStart || time < quietEnd;
 }
-function nextOccurrence(action, logs) {
+function nextOccurrence(action, logs, todayStr = RecurrenceUtils.formatDateStr(new Date())) {
     if (!ActionProgressService.validDate(action.date)) return null;
     if (action.recurrenceInterval != null && !(Number(action.recurrenceInterval) > 0)) return null;
     const maxState = (action.states?.length || 0) + 1;
@@ -27,10 +27,9 @@ function nextOccurrence(action, logs) {
         const context = ActionProgressService.context(action, logs, date);
         return context.state === maxState ? [date, context.latest?.date || date] : [];
     }).sort().at(-1);
-    const from = completed || action.date;
-    return RecurrenceUtils.generateOccurrences({
-        event: action, startDate: new Date(`${from}T12:00:00`), maxOccurrences: 1000
-    }).find(o => !o.isCancelled && (!completed || o.occurrenceDate > completed))?.occurrenceDate || null;
+    return RecurrenceUtils.nextActionOccurrence({
+        action, todayStr, completedThrough: completed
+    })?.occurrenceDate || null;
 }
 
 class ActionNotificationScheduler {
@@ -75,13 +74,13 @@ class ActionNotificationScheduler {
                 const action = await this.dataService.get({ collectiveId, collection: 'actions', id: initialAction.id });
                 if (!action?.alert?.enabled) return;
                 const logs = await this.dataService.list({ collectiveId, collection: 'action-logs' });
-                const occurrenceDate = nextOccurrence(action, logs);
-                if (!occurrenceDate) return;
+                const timestamp = this.now();
+                const clock = localClock(timestamp, settings.timeZone);
+                const occurrenceDate = nextOccurrence(action, logs, clock.date);
+                if (!occurrenceDate || !RecurrenceUtils.isInActionWindow(action, occurrenceDate, clock.date)) return;
                 const { state, maxState, latest, revision } = ActionProgressService.context(action, logs, occurrenceDate);
                 if (state >= maxState) return;
                 const step = state + 1;
-                const timestamp = this.now();
-                const clock = localClock(timestamp, settings.timeZone);
                 const due = state === 0
                     ? `${clock.date}T${clock.time}` >= `${occurrenceDate}T${action.alert.initialTime}`
                     : Number.isFinite(latest?.timestamp) && timestamp >= latest.timestamp + action.alert.stepDelayMinutes[state - 1] * 60000;

@@ -97,7 +97,9 @@ class ProgrammeRenderers {
             : '';
 
         let statusBadge;
-        if (status === 'overdue') {
+        if (status === 'expired') {
+            statusBadge = `<span class="badge bg-secondary">${t('action_expired')}</span>`;
+        } else if (status === 'overdue') {
             statusBadge = `<span class="badge bg-danger">🔴 ${t("overdue")}</span>`;
         } else if (status === 'due') {
             statusBadge = `<span class="badge bg-warning text-dark">`
@@ -180,10 +182,9 @@ class ProgrammeRenderers {
                         <small>
                             ${recurrenceStr}
                             📅 ${t("deadline")} ${dateStr}${timeStr}
-                            ${action.windowDays > 0
-                                ? `&nbsp;|&nbsp; 🪟 ${t("window")} `
-                                    + `${action.windowDays}${t("days_short")}`
-                                : ''}
+                            &nbsp;|&nbsp; 🪟 ${t("window")}
+                            ${action.windowDays || 0} ${t('days_before')} ·
+                            ${action.windowAfterDays || 0} ${t('days_after')}
                         </small>
                     </div>
                     ${action.description
@@ -239,9 +240,8 @@ class ProgrammeRenderers {
                     const state = it.currentState > 0
                         ? it.data.states?.[it.currentState - 1] : '';
                     const nextState = it.data.states?.[it.currentState] || t('mark_done');
-                    const deadline = new Date(`${date}T12:00:00`).toLocaleDateString(locale, {
-                        day: 'numeric', month: 'short'
-                    });
+                    const details = [it.status === 'overdue' ? t('overdue') : '', state]
+                        .filter(Boolean).map(escape).join(' · ');
                     return `<div class="list-group-item d-flex align-items-center gap-2">
                         <button type="button" class="btn text-start p-0 flex-grow-1 action-item-cal"
                             data-id="${escape(it.data.id)}" data-date="${date}"
@@ -250,10 +250,9 @@ class ProgrammeRenderers {
                                 ${ProgrammeRenderers.renderActionIllustration(
                                     it.data, collectiveId, 'action-programme-illustration')}
                                 <span>${name}
-                                    <small class="d-block ${it.status === 'overdue' ? 'text-danger' : 'text-muted'}">
-                                        ${it.status === 'overdue' ? t('overdue') + ' · ' : ''}${escape(deadline)}
-                                        ${state ? ' · ' + escape(state) : ''}
-                                    </small>
+                                    ${details ? `<small class="d-block ${it.status === 'overdue' ? 'text-danger' : 'text-muted'}">
+                                        ${details}
+                                    </small>` : ''}
                                 </span>
                                 <span class="ms-auto text-success small">${escape(nextState)}</span>
                             </span>
@@ -371,9 +370,12 @@ class ProgrammeRenderers {
                 + `${t("instructions").toLowerCase()}"></i>`
             : '';
         const isDone = it.isDone;
+        const expired = RecurrenceUtils.formatDateStr(new Date())
+            > RecurrenceUtils.actionWindow(it.data, it.date).end;
         const bgClass = isDone
             ? 'bg-success-subtle'
-            : (it.currentState > 0 ? 'bg-info-subtle' : 'bg-warning-subtle');
+            : (expired ? 'bg-light text-muted'
+                : (it.currentState > 0 ? 'bg-info-subtle' : 'bg-warning-subtle'));
 
         let stateIndicator = '';
         if (isDone) {
@@ -392,7 +394,8 @@ class ProgrammeRenderers {
                 )}
                 <span>${stateIndicator}
                     <strong>${it.data.time || ''}</strong>
-                    ${it.data.name} ${notesIcon}</span>
+                    ${it.data.name} ${notesIcon}
+                    ${expired && !isDone ? `<small>${t('action_expired')}</small>` : ''}</span>
             </div>
             <button class="btn btn-sm btn-icon btn-link `
                 + `${isDone ? 'text-success' : 'text-info'} p-0 btn-add-note-cal" `

@@ -46,6 +46,7 @@ class ActionProgressService {
             date: action.date, recurrence: action.recurrence, interval: action.recurrenceInterval,
             days: action.recurrenceDays, end: action.recurrenceEndDate,
             monthlyType: action.monthlyType, cancelledDates: action.cancelledDates,
+            windowDays: action.windowDays || 0, windowAfterDays: action.windowAfterDays || 0,
             states: action.states, alert: action.alert, memberIds: responsibleIds(action).sort(),
             latest: latest && [latest.id, latest.timestamp, latest.state]
         })).digest('hex');
@@ -59,13 +60,31 @@ class ActionProgressService {
         return { action, logs, ...ActionProgressService.context(action, logs, occurrenceDate) };
     }
 
-    async create({ collectiveId, data, capability }) {
+    async assertWindow({ collectiveId, action, occurrenceDate, date, role }) {
+        const settings = await this.notificationState.getSettings(collectiveId);
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: settings?.timeZone, year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date(this.now()));
+        const p = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        const today = `${p.year}-${p.month}-${p.day}`;
+        if (!ActionProgressService.validDate(date) || date > today) throw new Error('Date de réalisation invalide');
+        // Role comes exclusively from the authenticated route, never the body.
+        if (['admin', 'superadmin'].includes(role) && occurrenceDate <= today) return;
+        if (!RecurrenceUtils.isInActionWindow(action, occurrenceDate, today)
+            || !RecurrenceUtils.isInActionWindow(action, occurrenceDate, date)) {
+            throw new Error('Fenêtre de réalisation fermée : correction réservée aux administrateurs');
+        }
+    }
+
+    async create({ collectiveId, data, capability, role = 'member' }) {
         return this.locked(collectiveId, data.programmeId, async () => {
             const occurrenceDate = data.occurrenceDate || data.date;
             const context = await this.load(collectiveId, data.programmeId, occurrenceDate);
             const { action, state, maxState, revision, latest } = context;
             if (!ActionProgressService.isOccurrence(action, occurrenceDate)) throw new Error('Occurrence invalide');
             if (!ActionProgressService.validDate(data.date)) throw new Error('Date de réalisation invalide');
+            await this.assertWindow({ collectiveId, action, occurrenceDate, date: data.date,
+                role: capability ? 'member' : role });
             const target = data.state == null ? maxState : data.state;
             if (!Number.isInteger(target) || target < 0 || target > maxState) throw new Error('Étape invalide');
             if (capability) {
@@ -92,12 +111,17 @@ class ActionProgressService {
         });
     }
 
-    async change({ collectiveId, id, data, remove = false }) {
+    async change({ collectiveId, id, data, remove = false, role = 'member' }) {
         const original = await this.dataService.get({ collectiveId, collection: 'action-logs', id });
         if (!original) throw new Error('Réalisation introuvable');
         return this.locked(collectiveId, original.programmeId, async () => {
             const current = await this.dataService.get({ collectiveId, collection: 'action-logs', id });
             if (!current) throw new Error('Réalisation introuvable');
+            if (!current.type || current.type === 'done') {
+                const occurrenceDate = current.occurrenceDate || current.date;
+                const { action } = await this.load(collectiveId, current.programmeId, occurrenceDate);
+                await this.assertWindow({ collectiveId, action, occurrenceDate, date: current.date, role });
+            }
             let progressionChanged = remove && (!current.type || current.type === 'done');
             if (remove) {
                 await this.dataService.delete({ collectiveId, collection: 'action-logs', id });
@@ -110,6 +134,7 @@ class ActionProgressService {
                 if (!merged.type || merged.type === 'done') {
                     const occ = merged.occurrenceDate || merged.date;
                     const { action, maxState } = await this.load(collectiveId, current.programmeId, occ);
+                    await this.assertWindow({ collectiveId, action, occurrenceDate: occ, date: merged.date, role });
                     if (!ActionProgressService.isOccurrence(action, occ) || !ActionProgressService.validDate(merged.date)
                         || (merged.state != null && (!Number.isInteger(merged.state) || merged.state < 0 || merged.state > maxState))) {
                         throw new Error('Réalisation invalide');

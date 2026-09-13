@@ -23,6 +23,45 @@ class RecurrenceUtils {
         return `${y}-${m}-${d}`;
     }
 
+    /** Inclusive action window, in calendar days (not 24-hour durations). */
+    static actionWindow(action, occurrenceDate) {
+        const start = new Date(`${occurrenceDate}T12:00:00`);
+        const end = new Date(start);
+        start.setDate(start.getDate() - (action.windowDays || 0));
+        end.setDate(end.getDate() + (action.windowAfterDays || 0));
+        return { start: this.formatDateStr(start), end: this.formatDateStr(end) };
+    }
+
+    static isInActionWindow(action, occurrenceDate, date) {
+        const { start, end } = this.actionWindow(action, occurrenceDate);
+        return date >= start && date <= end;
+    }
+
+    /** One actionable instance, or the next future one for the settings list. */
+    static nextActionOccurrence({ action, todayStr, completedThrough = null, excludeCancelled = true, includeExpired = false }) {
+        let from = completedThrough || action.date || todayStr;
+        const occurrences = [];
+        // generateOccurrences has a one-year horizon; walk old schedules too.
+        while (true) {
+            const batch = this.generateOccurrences({ event: action,
+                startDate: new Date(`${from}T12:00:00`), maxOccurrences: Infinity });
+            occurrences.push(...batch);
+            const last = batch.at(-1)?.occurrenceDate;
+            if (!last || last >= todayStr || !action.recurrence
+                || action.recurrence === 'none' || last < from) break;
+            const next = new Date(`${last}T12:00:00`);
+            next.setDate(next.getDate() + 1);
+            from = this.formatDateStr(next);
+        }
+        const available = occurrences.filter(o => (!excludeCancelled || !o.isCancelled)
+            && (!completedThrough || o.occurrenceDate > completedThrough));
+        const upcoming = available.find(o => o.occurrenceDate >= todayStr);
+        const previous = available.filter(o => o.occurrenceDate < todayStr).at(-1);
+        if (upcoming && this.isInActionWindow(action, upcoming.occurrenceDate, todayStr)) return upcoming;
+        if (previous && this.isInActionWindow(action, previous.occurrenceDate, todayStr)) return previous;
+        return upcoming || (includeExpired ? previous : null) || null;
+    }
+
     static generateOccurrences({ event, maxOccurrences = 1000, startDate = new Date() }) {
         if (!event || !event.date) return [];
         

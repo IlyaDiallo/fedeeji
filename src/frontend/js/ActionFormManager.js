@@ -224,6 +224,7 @@ class ActionFormManager {
             windowDays: Number(
                 document.getElementById('action-windowDays').value
             ),
+            windowAfterDays: Number(document.getElementById('action-windowAfterDays').value),
 
             allDay: isAllDay,
             time: isAllDay
@@ -394,6 +395,7 @@ class ActionFormManager {
             action.recurrenceEndDate || '';
         document.getElementById('action-windowDays').value =
             action.windowDays || 0;
+        document.getElementById('action-windowAfterDays').value = action.windowAfterDays || 0;
 
         const isAllDay = action.allDay !== undefined
             ? action.allDay : !action.time;
@@ -485,6 +487,7 @@ class ActionFormManager {
         this.illustrationPicker?.suggestFromName(tpl.name || '');
         document.getElementById('action-windowDays').value =
             tpl.windowDays || 0;
+        document.getElementById('action-windowAfterDays').value = tpl.windowAfterDays || 0;
 
         const isAllDay = tpl.allDay !== undefined
             ? tpl.allDay : !tpl.time;

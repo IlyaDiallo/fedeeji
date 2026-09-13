@@ -58,7 +58,7 @@ function createActionLogsRouter({ dataService, progressService }) {
             }
 
             if ((!body.type || body.type === 'done') && progressService) {
-                const result = await progressService.create({ collectiveId: req.collectiveId, data: body });
+                const result = await progressService.create({ collectiveId: req.collectiveId, data: body, role: req.user.role });
                 return res.status(result.duplicate ? 200 : 201).json(result.data);
             }
 
@@ -104,7 +104,7 @@ function createActionLogsRouter({ dataService, progressService }) {
         memberOwnership,
         asyncHandler(async (req, res) => {
             const data = progressService
-                ? await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, data: req.body })
+                ? await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, data: req.body, role: req.user.role })
                 : await dataService.update({
                     collectiveId: req.collectiveId, collection: 'action-logs',
                     id: req.params.id, data: req.body
@@ -118,7 +118,7 @@ function createActionLogsRouter({ dataService, progressService }) {
         memberOwnership,
         asyncHandler(async (req, res) => {
             if (progressService) {
-                await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, remove: true });
+                await progressService.change({ collectiveId: req.collectiveId, id: req.params.id, remove: true, role: req.user.role });
             } else {
                 await dataService.delete({
                     collectiveId: req.collectiveId, collection: 'action-logs', id: req.params.id

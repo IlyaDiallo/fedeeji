@@ -56,12 +56,16 @@ test('initial hour, ten-minute repetitions and persistence across restart', asyn
 
 test('failure retries only the failed recipient; quiet hours suppress reminders without a catch-up burst', async () => {
     const f = await fixture(); f.setNow('2026-06-01T07:00:00Z'); f.fail(true);
+    const action = await f.storage.read({ collectiveId: 'demo', collection: 'actions', id: 'a' });
+    await f.storage.write({ collectiveId: 'demo', collection: 'actions', id: 'a', data: { ...action, windowAfterDays: 1 } });
     await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 2);
     f.setNow('2026-06-01T07:00:30Z'); f.fail(false);
     await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 3);
     assert.ok(f.sent[2].webhookUrl.endsWith('/n'));
     f.setNow('2026-06-01T21:00:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 3);
     f.setNow('2026-06-02T06:00:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 5);
+    assert.equal(f.sent.at(-1).payload.type, 'reminder');
+    assert.equal(f.sent.at(-1).payload.status, 'overdue');
 });
 
 test('progression clears everyone and next step is relative to previous validation', async () => {
@@ -103,6 +107,24 @@ test('disabled or historical actions never broadcast to configured members', asy
     await f.storage.write({ collectiveId: 'demo', collection: 'actions', id: 'a', data: action });
     await f.scheduler.checkAndNotify();
     assert.equal(f.sent.length, 0);
+});
+
+test('closing the window clears notifications and revokes buttons, even for partial actions', async () => {
+    const f = await fixture();
+    await f.storage.write({ collectiveId: 'demo', collection: 'action-logs', id: 'log1', data: {
+        id: 'log1', programmeId: 'a', date: '2026-06-01', state: 1, timestamp: Date.parse('2026-06-01T07:00:00Z')
+    } });
+    f.setNow('2026-06-01T08:00:00Z');
+    await f.scheduler.checkAndNotify();
+    const token = f.sent[0].payload.button.action.slice(9);
+    assert.ok(await f.state.resolveToken('demo', token));
+    f.setNow('2026-06-01T22:00:00Z'); // Midnight in Paris, during quiet hours.
+    await f.scheduler.checkAndNotify();
+    assert.equal(f.sent.filter(s => s.payload.type === 'clear').length, 2);
+    assert.equal(await f.state.resolveToken('demo', token), null);
+    f.setNow('2026-06-02T08:00:00Z');
+    await f.scheduler.checkAndNotify();
+    assert.equal(f.sent.length, 4);
 });
 
 test('timezone and quiet-hour boundaries are explicit across DST', () => {
