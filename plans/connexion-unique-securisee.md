@@ -68,8 +68,10 @@
 - [x] Brancher création, changement d'email, rôle, suppression/restauration sur les contrôles d'identité.
 - [x] Adapter les écrans FR/EN et le routeur sans changer le parcours superadmin.
 - [ ] Exécuter tests, vérifier les parcours en SMTP de test puis réel, documenter migration et exploitation.
-  - Fait : **84 tests réussis**, contrôles de syntaxe JS et `git diff --check`, parcours HTTP, formulaires VM, SMTP local de capture avec Nodemailer ; documentation `docs/authentication.md` et `.env.example`.
-  - Bloqué : SMTP réel et vérification navigateur de déploiement. `SMTP_HOST`, `SMTP_FROM` et `PUBLIC_APP_URL` absents de l'environnement actuel ; aucun email externe envoyé, aucune migration des données réelles exécutée.
+  - Fait : **86 tests réussis** après les retours utilisateur sur les emails et la confirmation de demande, contrôles de syntaxe JS et `git diff --check`, parcours HTTP, formulaires VM, SMTP local de capture avec Nodemailer ; documentation `docs/authentication.md` et `.env.example`.
+  - SMTP réel validé : connexion TLS et authentification Infomaniak réussies depuis l'environnement local ; email de test accepté par le relais et réception confirmée par l'utilisateur sur Gmail. Aucun lien d'activation envoyé ni compte modifié pendant ce test.
+  - Parcours de définition du mot de passe et connexion sur l'hébergement : utilisateur satisfait du test, avec deux retours d'interface. Corrections locales : lien d'email distinct du titre, nom du collectif dans l'objet et le corps, confirmation de demande bien visible (états attente/succès/erreur). Couverture FR/EN, échappement du nom et tests de non-régression.
+  - Reste à vérifier après déploiement des corrections : présentation du nouvel email et de la confirmation ; parcours distinct de changement d'adresse email. Aucun nouveau message réel envoyé lors des tests automatisés.
   - Audit : 8 vulnérabilités préexistantes hors Nodemailer, documentées ; pas de mise à niveau générale ou incompatible des dépendances.
 
 ### Notes d'implémentation

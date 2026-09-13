@@ -3,7 +3,8 @@
 ## Parcours
 
 - `/<collectif>/login` : email + mot de passe, rôle membre/admin choisi par le serveur, sans onglets.
-- Membres existants sans mot de passe : **Définir / mot de passe oublié**, sans campagne d'envoi automatique.
+- Membres existants sans mot de passe : **Définir / mot de passe oublié**, sans campagne d'envoi automatique. La page affiche une alerte visible pendant la demande, puis une confirmation neutre ou une erreur. La confirmation indique la prise en compte de la demande, pas la réception effective de l'email.
+- Emails FR/EN : nom du collectif dans l'objet et le corps, lu côté serveur ; lien **Choisir mon mot de passe** distinct du titre **Définir votre mot de passe**. Les emails de confirmation et d'avis de changement d'adresse identifient aussi le collectif.
 - Inscription protégée par le code partagé du collectif : création sans droits admin puis envoi d'un lien. Une demande sur un email existant ne modifie jamais sa fiche.
 - Création par un admin : proposition d'envoi après création ; bouton de renvoi sur la fiche. Import XLSX : activation à demander depuis la connexion (pas de campagne automatique).
 - Changement d'email : l'ancienne adresse reste active ; confirmer la nouvelle via le lien reçu. Pour modifier sa propre adresse, fournir le mot de passe actuel. Un admin peut initier le changement d'un autre membre ; la confirmation reste obligatoire. L'ancienne adresse reçoit un avis.
@@ -36,6 +37,29 @@ Configuration :
 | `TRUST_PROXY` | Liste explicite des adresses/sous-réseaux des proxies de confiance. Vide si accès direct. Ne pas mettre `true` ni un nombre de sauts générique. |
 
 L'application ne fournit ni serveur mail ni compte chez un prestataire. Aucun mot de passe, contenu SMTP ou lien brut n'est journalisé. En cas de panne SMTP, le serveur produit un diagnostic générique et la demande publique reste neutre. La fiche est conservée ; redemander un lien après correction (et expiration du quota si nécessaire). Les envois sont asynchrones, sans file durable : un arrêt juste après la demande peut nécessiter un renvoi.
+
+### Hébergement Node.js et SMTP Infomaniak
+
+Sur l'hébergement, placer `.env` à la racine de l'application (dossier de lancement contenant `package.json`), jamais dans `src/frontend` ni dans Git. Préserver `JWT_SECRET`, `SUPERADMIN_PASSWORD` et le port existants. Après modification, **redémarrer l'application Node.js** depuis l'outil de gestion de l'hébergement.
+
+Exemple à adapter :
+
+```dotenv
+NODE_ENV=production
+SMTP_HOST=mail.infomaniak.com
+SMTP_PORT=465
+SMTP_SECURE=true
+SMTP_USER=boite@votre-domaine.fr
+SMTP_PASSWORD="mot_de_passe_de_cette_boite"
+SMTP_FROM=Feddeeji <boite@votre-domaine.fr>
+PUBLIC_APP_URL=https://votre-application.fr
+```
+
+`SMTP_USER` est l'adresse complète d'une **vraie boîte hébergée chez Infomaniak**, avec le mot de passe propre à cette boîte : pas l'identifiant ni le mot de passe du Manager. Un alias autorisé peut servir d'expéditeur, pas nécessairement d'identifiant SMTP. Dans `.env`, les guillemets évitent notamment qu'un `#` soit interprété comme un commentaire.
+
+Une erreur SMTP **535 / EAUTH** signifie que l'authentification a été refusée, avant tout envoi. Vérifier les identifiants de la boîte et leur chargement ; ne jamais les copier dans des logs ou une conversation. Si des variables existent déjà dans l'environnement du processus, elles prennent priorité sur `.env`.
+
+Valider séparément : connexion TLS/authentification, acceptation d'un email de test par le relais, réception réelle (y compris indésirables), puis parcours de définition du mot de passe sur l'application. La vérification SMTP seule ne prouve ni la réception ni l'autorisation de l'expéditeur.
 
 ## Migration et exploitation
 
@@ -74,7 +98,9 @@ L'application ne fournit ni serveur mail ni compte chez un prestataire. Aucun mo
 
 Tests couverts : migration rejouable/récupération après panne, unicité concurrente, usages/expiration des liens, rôles, ancien JWT, réinitialisation, confirmation email, suppression/restauration, injection de champs, routes HTTP, absence de secrets d'authentification dans les réponses, quotas, MIME SMTP et formulaires FR/EN.
 
-**À réaliser sur l'environnement de déploiement (nécessite SMTP réel) :**
+Validation réalisée : connexion TLS et authentification Infomaniak, email de test reçu dans une boîte Gmail (réception confirmée par l'utilisateur), puis test de définition du mot de passe et connexion sur l'hébergement confirmé par l'utilisateur. Les retours sur le doublon du titre et la visibilité de la confirmation ont été corrigés ; leur présentation reste à recontrôler après déploiement. **86 tests automatisés réussis** avec ces corrections.
+
+**Checklist complémentaire sur l'environnement de déploiement (ne pas déduire ces résultats du seul test SMTP) :**
 
 - [ ] Ouvrir l'application en HTTPS ; activer un ancien membre depuis sa boîte réelle.
 - [ ] Se connecter comme admin avec son ancien mot de passe et vérifier les droits ; vérifier le superadmin séparé.

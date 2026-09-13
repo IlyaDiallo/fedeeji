@@ -9,7 +9,8 @@ function fixture() {
         if (!elements.has(id)) elements.set(id, { value: '', textContent: '', handlers: {}, disabled: false,
             classList: { add() {} }, addEventListener(name, fn) { this.handlers[name] = fn; },
             querySelector() { return get('submit'); }, querySelectorAll() { return [get('submit')]; },
-            reset() { this.resetDone = true; }, reportValidity() { return true; } });
+            reset() { this.resetDone = true; }, reportValidity() { return true; },
+            focus() { this.focused = true; }, scrollIntoView() { this.scrolled = true; } });
         return elements.get(id);
     };
     const calls = [];
@@ -38,9 +39,31 @@ test('one collective form, no role tabs, setup request does not need password', 
     await get('request-password').handlers.click();
     assert.equal(calls[0][0], 'request');
     assert.equal(get('login-message').textContent, 'auth_link_sent');
+    assert.match(get('login-message').className, /alert-success/);
+    assert.equal(get('login-message').focused, true);
+    assert.equal(get('login-message').scrolled, true);
+    assert.ok(html.indexOf('id="login-message"') < html.indexOf('id="login-email"'));
     const globalHtml = await new context.LoginView({}).getHtml();
     assert.doesNotMatch(globalHtml, /id="login-email"|id="request-password"/);
     assert.match(globalHtml, /login_superadmin_title/);
+});
+
+test('request status is visible while pending and errors replace it without claiming success', async () => {
+    const { context, get } = fixture();
+    let reject;
+    context.api.requestPassword = () => new Promise((resolve, fail) => { reject = fail; });
+    const view = new context.LoginView({ collectiveId: 'demo' });
+    await view.init();
+    get('login-email').value = 'a@example.org';
+    const pending = get('request-password').handlers.click();
+    assert.equal(get('login-message').textContent, 'auth_request_pending');
+    assert.match(get('login-message').className, /alert-info/);
+    assert.equal(get('submit').disabled, true);
+    reject(new Error('Network unavailable'));
+    await pending;
+    assert.equal(get('login-message').textContent, 'Network unavailable');
+    assert.match(get('login-message').className, /alert-danger/);
+    assert.equal(get('submit').disabled, false);
 });
 
 test('password confirmation validates matching fields then clears session without auto login', async () => {

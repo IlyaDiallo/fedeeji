@@ -166,7 +166,7 @@ class AuthService {
             await this.projectMember(collectiveId, projection);
             if (message) {
                 void this.deliver(message);
-                if (oldEmail) void this.deliver({ to: oldEmail, lang: data.lang }, true);
+                if (oldEmail) void this.deliver({ to: oldEmail, collectiveId, lang: data.lang }, true);
             }
             return this.memberView(collectiveId, { ...member, ...changes });
         });

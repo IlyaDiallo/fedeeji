@@ -37,6 +37,32 @@ test('email transport uses configured origin and escaped templates without netwo
     assert.throws(() => new EmailService({ env: { NODE_ENV: 'production' } }), /Configuration/);
 });
 
+test('emails identify the collective and use a distinct link label in both languages', async () => {
+    const sent = [];
+    const mail = new EmailService({ transport: { async sendMail(message) { sent.push(message); } },
+        publicUrl: 'https://app.example.org', from: 'app@example.org', env: {},
+        collectiveService: { async getById(id) {
+            assert.equal(id, 'demo');
+            return { name: 'Maison <A> & B', label: 'Other label' };
+        } } });
+    for (const lang of ['fr', 'en']) {
+        for (const purpose of ['password', 'email']) {
+            await mail.sendLink({ to: 'user@example.org', collectiveId: 'demo', token: 'abc', purpose, lang });
+            const message = sent.at(-1);
+            assert.match(message.subject, /^\[Maison <A> & B\]/);
+            assert.match(message.text, /Maison <A> & B/);
+            assert.match(message.html, /Maison &lt;A&gt; &amp; B/);
+            const title = message.html.match(/^<p>(.*?)<\/p>/)[1];
+            const label = message.html.match(/<a [^>]+>(.*?)<\/a>/)[1];
+            assert.notEqual(title, label);
+            assert.equal(message.html.split(title).length - 1, 1);
+        }
+        await mail.sendNotice({ to: 'user@example.org', collectiveId: 'demo', lang });
+        assert.match(sent.at(-1).text, /Maison <A> & B/);
+        assert.match(sent.at(-1).subject, /^\[Maison <A> & B\]/);
+    }
+});
+
 test('limiter has neutral email quota, independent IP quota and expiration', () => {
     let now = 0;
     const limit = createAuthRateLimit({ now: () => now })({ name: 'email', ip: 3, email: 1, windowMs: 100, neutral: true });

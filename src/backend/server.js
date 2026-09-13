@@ -55,12 +55,12 @@ const logService = new LogService({ storage });
 const dataService = new DataService({
     storage, trashService, logService
 });
-const emailService = new EmailService();
+const illustrationService = new IllustrationService();
+const collectiveService = new CollectiveService({ illustrationService });
+const emailService = new EmailService({ collectiveService });
 const authService = new AuthService({ storage, emailService });
 dataService.authService = authService;
 trashService.authService = authService;
-const illustrationService = new IllustrationService();
-const collectiveService = new CollectiveService({ illustrationService });
 const importService = new ImportService({ dataService });
 const assetService = new AssetService({
     basePath: path.join(__dirname, '../../data')

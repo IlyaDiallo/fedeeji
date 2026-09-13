@@ -34,7 +34,7 @@ test('Nodemailer delivers a MIME message to an isolated local SMTP capture', asy
         await service.sendLink({ collectiveId: 'demo', to: 'member@example.org', purpose: 'password', token: 'a'.repeat(43), lang: 'en' });
         assert.ok(envelopes.includes('RCPT TO:<member@example.org>'));
         assert.equal(messages.length, 1);
-        assert.match(messages[0], /Subject: Set your password/);
+        assert.match(messages[0], /Subject: \[demo\] Set your password/);
         assert.match(messages[0], /\/demo\/auth-link/);
         assert.match(messages[0], /multipart\/alternative/);
         transport.close();

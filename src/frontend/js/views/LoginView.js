@@ -12,6 +12,7 @@ class LoginView extends AbstractView {
             <div class="card mt-5"><div class="card-body">
                 <h5 class="card-title text-center mb-4">${t(this.collectiveId ? 'login_title' : 'login_superadmin_title')}</h5>
                 <form id="form-login">
+                    <div id="login-message" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" class="d-none"></div>
                     ${this.collectiveId ? `<div class="mb-3"><label for="login-email" class="form-label">${t('email')}</label>
                         <input type="email" id="login-email" class="form-control" autocomplete="username" maxlength="254" required></div>` : ''}
                     <div class="mb-3"><label for="login-password" class="form-label">${t('password')}</label>
@@ -20,7 +21,6 @@ class LoginView extends AbstractView {
                     ${this.collectiveId ? `<button type="button" id="request-password" class="btn btn-link w-100 mt-2">${t('auth_password_request')}</button>
                         <p class="text-muted small">${t('auth_first_login')}</p>
                         <div class="text-center"><a href="/${encodeURIComponent(this.collectiveId)}/register" data-link>${t('register_request')}</a></div>` : ''}
-                    <div id="login-message" role="status" aria-live="polite" class="mt-3"></div>
                 </form>
             </div>${version ? `<div class="card-footer text-center text-muted small">v${escapeHtml(version)}</div>` : ''}</div>
         </div></div>`;
@@ -41,8 +41,14 @@ class LoginView extends AbstractView {
         const form = document.getElementById('form-login');
         const message = document.getElementById('login-message');
         const busy = value => form.querySelectorAll('button').forEach(button => { button.disabled = value; });
+        const showMessage = (text, type) => {
+            message.className = `alert alert-${type} mb-3`;
+            message.textContent = text;
+            message.focus?.({ preventScroll: true });
+            message.scrollIntoView?.({ block: 'nearest' });
+        };
         form.addEventListener('submit', async event => {
-            event.preventDefault(); message.textContent = ''; busy(true);
+            event.preventDefault(); message.textContent = ''; message.className = 'd-none'; busy(true);
             try {
                 const password = document.getElementById('login-password').value;
                 if (this.collectiveId) {
@@ -50,17 +56,17 @@ class LoginView extends AbstractView {
                         email: document.getElementById('login-email').value, password });
                 } else await api.login(password);
                 navigateTo(this.postLoginTarget(this.collectiveId ? `/${this.collectiveId}` : '/'));
-            } catch (error) { message.textContent = error.message; }
+            } catch (error) { showMessage(error.message, 'danger'); }
             finally { busy(false); }
         });
         document.getElementById('request-password')?.addEventListener('click', async () => {
             const email = document.getElementById('login-email');
             if (!email.reportValidity()) return;
-            message.textContent = ''; busy(true);
+            showMessage(t('auth_request_pending'), 'info'); busy(true);
             try {
                 await api.requestPassword({ collectiveId: this.collectiveId, email: email.value, lang: i18n.lang });
-                message.textContent = t('auth_link_sent');
-            } catch (error) { message.textContent = error.message; }
+                showMessage(t('auth_link_sent'), 'success');
+            } catch (error) { showMessage(error.message, 'danger'); }
             finally { busy(false); }
         });
     }
