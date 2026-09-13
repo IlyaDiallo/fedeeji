@@ -65,7 +65,7 @@ class EventsView extends AbstractView {
             <!-- Modal -->
             <div class="modal fade" id="eventModal"
                 tabindex="-1">
-                <div class="modal-dialog">
+                <div class="modal-dialog modal-dialog-scrollable">
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title"

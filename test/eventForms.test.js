@@ -26,6 +26,13 @@ test('event form offers type, assigned user, reminder mode and bounded advance',
     assert.ok(html.includes('min="0" max="527040" step="1"'));
 });
 
+test('event modal enables body scrolling while keeping its footer accessible', async () => {
+    const c = context();
+    const html = await new c.EventsView({}).getHtml();
+    assert.match(html, /id="eventModal"\s+tabindex="-1">\s*<div class="modal-dialog modal-dialog-scrollable">/);
+    assert.match(html, /<\/form>\s*<\/div>\s*<div class="modal-footer">/);
+});
+
 test('individual programme entries have no registration link; legacy events retain it', () => {
     const c = context();
     const render = data => c.ProgrammeRenderers.renderEventItem({
