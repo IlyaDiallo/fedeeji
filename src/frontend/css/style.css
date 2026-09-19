@@ -1411,6 +1411,32 @@ a {
     object-fit: contain;
 }
 
+.action-ownership-illustration {
+    position: relative;
+    display: inline-block;
+    border: 0;
+    background: transparent;
+}
+
+.action-ownership-illustration > img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.action-ownership-marker {
+    position: absolute;
+    bottom: 1px;
+    right: 1px;
+    width: 14px;
+    height: 14px;
+    font-size: 12px;
+    line-height: 14px;
+    text-align: center;
+    color: var(--fd-primary);
+    text-shadow: 0 0 2px #fff, 1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff;
+}
+
 .btn-add-note-cal.btn-icon.btn-sm {
     width: 38px;
     min-width: 38px;

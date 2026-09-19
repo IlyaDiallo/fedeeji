@@ -483,6 +483,11 @@ class ProgrammeView extends AbstractView {
         this.renderContent();
     }
 
+    get currentMemberId() {
+        return api.getUserOrgId() === this.collectiveId
+            ? api.getMemberId() : null;
+    }
+
     // --- Routage liste / calendrier ---
 
     renderContent(filter = 'all') {
@@ -499,6 +504,7 @@ class ProgrammeView extends AbstractView {
             document.getElementById('calendar-nav').classList.add('d-none');
             container.innerHTML = ProgrammeRenderers.renderNow({
                 items: this._collectNowItems(currentFilter),
+                currentMemberId: this.currentMemberId,
                 locale: this.locale, collectiveId: this.collectiveId
             });
             this._bindCalendarEvents(container);
@@ -585,6 +591,7 @@ class ProgrammeView extends AbstractView {
                 : ProgrammeRenderers.renderActionItem({
                     item, locale: this.locale,
                     isMember: this.isMember, getMemberName,
+                    currentMemberId: this.currentMemberId,
                     collectiveId: this.collectiveId
                 });
             container.appendChild(div);
@@ -637,6 +644,7 @@ class ProgrammeView extends AbstractView {
 
         container.innerHTML = ProgrammeRenderers.renderCalendarGrid({
             items, startCal, endCal,
+            currentMemberId: this.currentMemberId,
             viewMode: this.viewMode,
             month,
             collectiveId: this.collectiveId

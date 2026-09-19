@@ -22,6 +22,24 @@ class ProgrammeRenderers {
         return `<img class="${className}" src="${url}" alt="" loading="lazy">`;
     }
 
+    static renderOwnedActionIllustration(action, collectiveId, className, currentMemberId) {
+        const illustration = ProgrammeRenderers.renderActionIllustration(
+            action, collectiveId, className
+        );
+        const ids = action.memberIds ?? (action.memberId ? [action.memberId] : []);
+        const owners = new Set(Array.isArray(ids) ? ids.filter(Boolean) : []);
+        if (!currentMemberId || !owners.has(currentMemberId)) return illustration;
+
+        const shared = owners.size > 1;
+        const label = t(shared ? 'action_you_coown' : 'action_you_own');
+        return `<span class="action-ownership-illustration ${className}">
+            ${illustration}
+            <span class="action-ownership-marker" role="img" aria-label="${label}" title="${label}">
+                <i class="bi ${shared ? 'bi-people-fill' : 'bi-person-fill'}" aria-hidden="true"></i>
+            </span>
+        </span>`;
+    }
+
     /**
      * Rendu HTML d'un événement dans la vue liste.
      */
@@ -77,7 +95,7 @@ class ProgrammeRenderers {
      * Rendu HTML d'une action dans la vue liste.
      */
     static renderActionItem({
-        item, locale, isMember, getMemberName, collectiveId
+        item, locale, isMember, getMemberName, collectiveId, currentMemberId = null
     }) {
         const action = item.data;
         const occ = item.occurrence;
@@ -163,8 +181,8 @@ class ProgrammeRenderers {
             <div class="d-flex w-100 flex-column flex-sm-row justify-content-between
                 align-items-start align-items-sm-center gap-2">
                 <div class="action-programme-main ms-2 me-auto">
-                    ${ProgrammeRenderers.renderActionIllustration(
-                        action, collectiveId, 'action-programme-illustration'
+                    ${ProgrammeRenderers.renderOwnedActionIllustration(
+                        action, collectiveId, 'action-programme-illustration', currentMemberId
                     )}
                     <div class="action-programme-content">
                     <div class="fw-bold programme-title-line">
@@ -208,7 +226,7 @@ class ProgrammeRenderers {
     }
 
     /** Actions disponibles maintenant et événements du jour, sans réglages. */
-    static renderNow({ items, locale, collectiveId }) {
+    static renderNow({ items, locale, collectiveId, currentMemberId = null }) {
         if (!items.length) return `<p class="text-muted">${t('nothing_now')}</p>`;
         const escape = value => String(value ?? '').replace(/[&<>"']/g,
             char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
@@ -243,8 +261,8 @@ class ProgrammeRenderers {
                             data-id="${escape(it.data.id)}" data-date="${date}"
                             title="${escape(it.data.name)}">
                             <span class="action-calendar-copy">
-                                ${ProgrammeRenderers.renderActionIllustration(
-                                    it.data, collectiveId, 'action-programme-illustration')}
+                                ${ProgrammeRenderers.renderOwnedActionIllustration(
+                                    it.data, collectiveId, 'action-programme-illustration', currentMemberId)}
                                 <span>${name}
                                     ${details ? `<small class="d-block ${it.status === 'overdue' ? 'text-danger' : 'text-muted'}">
                                         ${details}
@@ -268,7 +286,7 @@ class ProgrammeRenderers {
      * Rendu de la grille calendrier complète (semaine ou mois).
      */
     static renderCalendarGrid({
-        items, startCal, endCal, viewMode, month, collectiveId
+        items, startCal, endCal, viewMode, month, collectiveId, currentMemberId = null
     }) {
         // Construire la map date -> items
         const map = {};
@@ -340,7 +358,7 @@ class ProgrammeRenderers {
                         </div>`;
                     } else {
                         html += ProgrammeRenderers.renderCalendarActionCell(
-                            it, collectiveId
+                            it, collectiveId, currentMemberId
                         );
                     }
                 });
@@ -358,7 +376,7 @@ class ProgrammeRenderers {
     /**
      * Rendu d'une cellule action dans le calendrier.
      */
-    static renderCalendarActionCell(it, collectiveId) {
+    static renderCalendarActionCell(it, collectiveId, currentMemberId = null) {
         const hasNotes = it.targetNotes && it.targetNotes.length > 0;
         const notesIcon = hasNotes
             ? `<i class="bi bi-card-text text-info ms-1" `
@@ -385,8 +403,8 @@ class ProgrammeRenderers {
             + `data-id="${it.data.id}" data-date="${it.date}" role="button" `
             + `title="${it.data.name}">
             <div class="action-calendar-copy">
-                ${ProgrammeRenderers.renderActionIllustration(
-                    it.data, collectiveId, 'action-calendar-illustration'
+                ${ProgrammeRenderers.renderOwnedActionIllustration(
+                    it.data, collectiveId, 'action-calendar-illustration', currentMemberId
                 )}
                 <span>${stateIndicator}
                     <strong>${it.data.time || ''}</strong>
