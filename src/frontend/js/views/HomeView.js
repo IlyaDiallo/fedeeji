@@ -44,6 +44,9 @@ class HomeView extends AbstractView {
             console.error('Erreur lors de la récupération du collectif', error);
         }
 
+        let version;
+        try { version = (await api.getVersion()).version; } catch { /* optional */ }
+
         const E = HomeView.escape;
         const name = org?.label || org?.name || t('brand');
         const typeLabel = org?.typeLabel
@@ -158,6 +161,7 @@ class HomeView extends AbstractView {
                         ${management.map(card => this.linkCard(card)).join('')}
                     </div>
                 </section>` : ''}
+            ${version ? `<footer class="text-center text-muted small py-3">Feddeeji v${E(version)}</footer>` : ''}
         `;
     }
 }
