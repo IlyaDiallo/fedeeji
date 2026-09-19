@@ -34,7 +34,7 @@ class ProgrammeRenderers {
         const label = t(shared ? 'action_you_coown' : 'action_you_own');
         return `<span class="action-ownership-illustration ${className}">
             ${illustration}
-            <span class="action-ownership-marker" role="img" aria-label="${label}" title="${label}">
+            <span class="action-ownership-marker ${shared ? 'action-ownership-shared' : 'action-ownership-sole'}" role="img" aria-label="${label}" title="${label}">
                 <i class="bi ${shared ? 'bi-people-fill' : 'bi-person-fill'}" aria-hidden="true"></i>
             </span>
         </span>`;

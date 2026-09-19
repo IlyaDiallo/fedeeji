@@ -49,6 +49,7 @@ for (const [name, owners, currentMemberId, icon, label] of cases) {
         for (const html of results) {
             if (icon) {
                 assert.match(html, new RegExp(`bi-${icon}-fill`));
+                assert.match(html, new RegExp(`action-ownership-${icon === 'people' ? 'shared' : 'sole'}`));
                 assert.match(html, new RegExp(`role="img" aria-label="${label}" title="${label}"`));
                 assert.equal((html.match(/action-ownership-marker/g) || []).length, 1);
                 assert.doesNotMatch(html, new RegExp(`>\\s*${label}\\s*<`));

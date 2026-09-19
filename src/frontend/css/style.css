@@ -1433,8 +1433,15 @@ a {
     font-size: 12px;
     line-height: 14px;
     text-align: center;
-    color: var(--fd-primary);
     text-shadow: 0 0 2px #fff, 1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff;
+}
+
+.action-ownership-sole {
+    color: #175cd3;
+}
+
+.action-ownership-shared {
+    color: #7a32b8;
 }
 
 .btn-add-note-cal.btn-icon.btn-sm {
