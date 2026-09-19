@@ -1430,18 +1430,25 @@ a {
     right: 1px;
     width: 14px;
     height: 14px;
-    font-size: 12px;
-    line-height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: 1px solid #184785;
+    border-radius: 50%;
+    font-size: 10px;
+    line-height: 1;
     text-align: center;
-    text-shadow: 0 0 2px #fff, 1px 0 #fff, -1px 0 #fff, 0 1px #fff, 0 -1px #fff;
 }
 
 .action-ownership-sole {
-    color: #175cd3;
+    color: #fff;
+    background: #184785;
 }
 
 .action-ownership-shared {
-    color: #7a32b8;
+    color: #184785;
+    background: #fff;
 }
 
 .btn-add-note-cal.btn-icon.btn-sm {
