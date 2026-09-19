@@ -363,12 +363,9 @@ class ProgrammeView extends AbstractView {
                                 <input type="hidden" id="log-occurrence-date">
                                 <div class="mb-3" id="log-state-container"
                                     style="display:none;">
-                                    <label class="form-label"
-                                        data-i18n="target_state">
-                                        ${t("target_state") || "État cible"}
-                                    </label>
                                     <select class="form-select"
-                                        id="log-state"></select>
+                                        id="log-state"
+                                        aria-label="${t('target_state')}"></select>
                                 </div>
                                 <div id="log-window-info" class="d-none"></div>
                                 <div id="log-existing-notes"
