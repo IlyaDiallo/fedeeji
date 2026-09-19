@@ -125,9 +125,9 @@ class ProgrammeRenderers {
                 + `<i class="bi bi-card-text"></i> ${targetNotes.length} ${t("note")}</span>`
             : '';
 
-        // Les notes restent accessibles hors de la fenêtre d'exécution.
+        // Les instructions restent accessibles hors de la fenêtre d'exécution.
         const noteBtn = `<button class="btn btn-sm btn-icon btn-outline-info btn-add-note"
-                data-id="${action.id}" title="${t("notes")}" aria-label="${t("notes")}">📝</button>`;
+                data-id="${action.id}" title="${t("instructions")}" aria-label="${t("instructions")}">📝</button>`;
 
         const adminBtns = isMember ? '' : `
             <button class="btn btn-sm btn-outline-primary btn-edit-action"
@@ -365,7 +365,7 @@ class ProgrammeRenderers {
         const notesIcon = hasNotes
             ? `<i class="bi bi-card-text text-info ms-1" `
                 + `title="${it.targetNotes.length} `
-                + `${t("notes").toLowerCase()}"></i>`
+                + `${t("instructions").toLowerCase()}"></i>`
             : '';
         const isDone = it.isDone;
         const expired = RecurrenceUtils.formatDateStr(new Date())

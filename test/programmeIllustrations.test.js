@@ -53,7 +53,7 @@ test('settings exposes labelled editing for admins without execution controls', 
             });
             assert.doesNotMatch(html, /btn-mark-done|btn-edit-log|btn-edit-future/);
             assert.match(html, /btn-add-note/);
-            assert.match(html, /title="notes" aria-label="notes"/);
+            assert.match(html, /title="instructions" aria-label="instructions"/);
             if (isMember) {
                 assert.doesNotMatch(html, /btn-edit-action|btn-delete-action/);
             } else {
