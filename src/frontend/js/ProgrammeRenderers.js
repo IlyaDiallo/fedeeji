@@ -237,13 +237,11 @@ class ProgrammeRenderers {
                     }
                     const state = it.currentState > 0
                         ? it.data.states?.[it.currentState - 1] : '';
-                    const nextState = it.data.states?.[it.currentState] || t('mark_done');
-                    const details = [it.status === 'overdue' ? t('overdue') : '', state]
-                        .filter(Boolean).map(escape).join(' · ');
+                    const details = it.status === 'overdue' ? escape(t('overdue')) : '';
                     return `<div class="list-group-item d-flex align-items-center gap-2">
                         <button type="button" class="btn text-start p-0 flex-grow-1 action-item-cal"
                             data-id="${escape(it.data.id)}" data-date="${date}"
-                            title="${escape(nextState)}">
+                            title="${escape(it.data.name)}">
                             <span class="action-calendar-copy">
                                 ${ProgrammeRenderers.renderActionIllustration(
                                     it.data, collectiveId, 'action-programme-illustration')}
@@ -252,7 +250,7 @@ class ProgrammeRenderers {
                                         ${details}
                                     </small>` : ''}
                                 </span>
-                                <span class="ms-auto text-success small">${escape(nextState)}</span>
+                                ${state ? `<span class="ms-auto text-success small">${escape(state)}</span>` : ''}
                             </span>
                         </button>
                         <button type="button" class="btn btn-sm btn-icon btn-outline-secondary btn-add-note-cal"

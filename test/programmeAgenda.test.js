@@ -101,6 +101,32 @@ test('now includes only today events, including old recurring and cancelled even
     assert.equal(collect(actions, [], events, 'events')[0].type, 'event');
 });
 
+test('now shows only the current intermediate state, never the next step', () => {
+    const states = ['Sortie <en cours>', 'Rentrée'];
+    for (const [steps, currentState, expected] of [
+        [[], 0, null],
+        [states, 0, null],
+        [states, 1, 'Sortie &lt;en cours&gt;'],
+        [states, 2, 'Rentrée']
+    ]) {
+        const items = collect([action('task', today, { states: steps })],
+            currentState ? [{ programmeId: 'task', date: today, type: 'done', state: currentState }] : []);
+        const html = renderers.renderNow({ items, locale: 'fr', collectiveId: 'demo' });
+        assert.doesNotMatch(html, /mark_done/);
+        if (expected) {
+            assert.ok(html.includes(`<span class="ms-auto text-success small">${expected}</span>`));
+            assert.equal(html.split(expected).length - 1, 1);
+        } else {
+            assert.doesNotMatch(html, /ms-auto text-success small/);
+        }
+        if (currentState < 2) assert.doesNotMatch(html, /Rentrée/);
+        if (currentState !== 1) assert.doesNotMatch(html, /Sortie/);
+        assert.match(html, /action-item-cal/);
+        assert.match(html, /data-id="task"/);
+        assert.match(html, /btn-add-note-cal/);
+    }
+});
+
 test('now renders sections by type, not date, and keeps occurrence-specific controls', () => {
     const items = collect([action('Lavabo <test>', today), action('old', '2026-03-01', { windowAfterDays: 50 })], [],
         [action('Réunion', today, { time: '10:00', cancelledDates: [today] })]);
