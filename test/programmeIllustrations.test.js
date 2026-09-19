@@ -43,7 +43,7 @@ test('programme renderer uses stored action illustration in compact mode', () =>
 test('settings exposes labelled editing for admins without execution controls', () => {
     const renderers = loadRenderers();
     for (const isMember of [false, true]) {
-        for (const status of ['due', 'overdue', 'ok']) {
+        for (const status of ['due', 'overdue', 'ok', 'expired']) {
             const html = renderers.renderActionItem({
                 item: {
                     data: { id: 'a1', name: 'Lavabo', states: [] },
@@ -52,6 +52,8 @@ test('settings exposes labelled editing for admins without execution controls', 
                 locale: 'fr', isMember, getMemberName: () => '', collectiveId: 'demo'
             });
             assert.doesNotMatch(html, /btn-mark-done|btn-edit-log|btn-edit-future/);
+            assert.match(html, /btn-add-note/);
+            assert.match(html, /title="notes" aria-label="notes"/);
             if (isMember) {
                 assert.doesNotMatch(html, /btn-edit-action|btn-delete-action/);
             } else {

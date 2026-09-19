@@ -96,7 +96,7 @@ class LogFormManager {
             return;
         }
 
-        // ========== Mode instruction (note) ==========
+        // ========== Mode note ==========
         if (type === 'note') {
             this._openNoteMode({
                 action, actionId, occDateStr, todayStr,
@@ -288,7 +288,7 @@ class LogFormManager {
         dateInput.disabled = true;
         saveBtn.textContent = t("save");
         saveBtn.className = 'btn btn-primary';
-        title.textContent = t("instructions");
+        title.textContent = t("notes");
 
         const actionInfo = this.buildActionInfoHtml({ action, occDateStr });
         windowInfoEl.innerHTML = `
