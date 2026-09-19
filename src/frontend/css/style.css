@@ -1428,15 +1428,15 @@ a {
     position: absolute;
     bottom: 1px;
     right: 1px;
-    width: 14px;
-    height: 14px;
+    width: 18.2px;
+    height: 18.2px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
     border: 1px solid #184785;
     border-radius: 50%;
-    font-size: 10px;
+    font-size: 13px;
     line-height: 1;
     text-align: center;
 }
