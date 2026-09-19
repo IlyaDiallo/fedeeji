@@ -168,6 +168,86 @@ corbeille et ne passent pas par la journalisation complète de `DataService`.
    renseigner l’heure initiale et chaque délai en minutes. Un délai 0 est autorisé.
    Une copie de modèle conserve les paramètres mais laisse les rappels désactivés.
 
+## Installation simplifiée : blueprints (plusieurs téléphones)
+
+Deux modèles sont fournis dans ce dépôt :
+- [`blueprints/feddeeji-reception.yaml`](blueprints/feddeeji-reception.yaml) : une réception par membre, vers un ou plusieurs téléphones ;
+- [`blueprints/feddeeji-validation.yaml`](blueprints/feddeeji-validation.yaml) : une validation commune avec liste d'utilisateurs HA autorisés.
+
+Ces modèles reprennent le contrat ci-dessous. **Ils restent à valider sur votre HA et
+sur les téléphones réels** ; aucune installation n'est effectuée automatiquement.
+Le choix des téléphones et des utilisateurs utilise des listes YAML dans le formulaire,
+plutôt qu'une découverte automatique. La réception iPhone reste à tester séparément.
+
+### Installer sur Synology / Docker
+
+1. Dans Container Manager, repérer le dossier monté vers `/config` du conteneur HA.
+2. Avec File Station, créer dans ce dossier `blueprints/automation/feddeeji/`, puis y
+   copier les deux fichiers YAML ci-dessus (contenu brut, pas la page HTML).
+3. Dans HA, ouvrir **Paramètres → Automatisations et scènes → Blueprints**, puis
+   recharger les blueprints si nécessaire ; s'ils n'apparaissent pas, redémarrer HA.
+4. Conserver le bloc `rest_command.feddeeji_ack` présenté ci-dessous dans
+   `configuration.yaml`. Son URL doit pointer vers **l'instance qui émet les rappels** :
+   une adresse locale accessible depuis le NAS pour le local, l'URL publique pour la
+   production. Redémarrer HA après modification de cette commande.
+
+### Créer la réception d'un membre
+
+Dans Blueprints, choisir **Feddeeji — réception des notifications → Créer une automatisation** :
+- saisir le webhook secret configuré sur sa fiche membre Feddeeji ;
+- renseigner les services Companion sous forme de liste YAML, par exemple :
+  ```yaml
+  - notify.mobile_app_xiaomi_15_ilya
+  - notify.mobile_app_autre_telephone
+  ```
+- choisir **Notification normale** ou **Canal alarme Android** ;
+- désactiver « réseau local uniquement » si Feddeeji appelle HA depuis Internet ;
+- donner un nom explicite, enregistrer et activer.
+
+Chaque téléphone doit d'abord être connecté à HA via Companion, avec les permissions
+notifications/sons. Un service manquant se vérifie dans Outils de développement → Actions.
+Les services de la liste doivent tous correspondre au **même membre Feddeeji**. Pour
+une autre personne, créer une autre réception avec son propre webhook secret.
+Pour des canaux Android différents, créer des réceptions séparées, sans envoyer deux
+fois au même téléphone. L'attribution des validations reste celle du membre du token.
+
+### Créer la validation commune
+
+Créer **une seule** automatisation à partir de **Feddeeji — validation commune**.
+Renseigner la liste des identifiants des comptes HA autorisés :
+
+```yaml
+- "identifiant-utilisateur-HA-1"
+- "identifiant-utilisateur-HA-2"
+```
+
+Pour relever un identifiant, écouter temporairement `mobile_app_notification_action`
+dans **Outils de développement → Événements**, appuyer sur un bouton et relever uniquement
+`context.user_id`. Ne pas partager l'événement complet ni enregistrer les tokens dans
+les traces. Ne pas supprimer le contrôle d'identité si cet identifiant est absent.
+Des comptes HA distincts par personne sont recommandés. Plusieurs téléphones utilisant
+le même compte n'exigent qu'une entrée. Une liste vide refuse toutes les validations.
+
+### Migration et recette
+
+- Désactiver les anciennes automatisations de réception et de validation avant
+  d'activer leurs remplaçantes : ne pas les supprimer avant la fin des essais.
+- Effacer manuellement les anciennes notifications si leurs tags étaient préfixés
+  par `feddeeji-test-` ou mal formés (`[object Object]`).
+- Tester la réception depuis Membres, puis une vraie alerte pilote : le test de
+  connexion n'a volontairement pas de bouton de validation.
+- Déplier la notification, appuyer sur **Fait / Acquitter**, puis vérifier la progression
+  dans Feddeeji et l'effacement (environ 30 secondes). Toucher le corps ne valide rien.
+- En cas d'échec, consulter la cloche Notifications de HA : le blueprint indique le
+  statut HTTP ou un échec REST sans afficher le token. Vérifier aussi les journaux HA,
+  sans publier de payload. Un HTTP 409 ne doit jamais être contourné.
+- Pour ajouter un téléphone au même membre : ajouter son service à la réception,
+  et son utilisateur HA à la validation commune s'il utilise un autre compte.
+
+Une validation commune cible une seule instance Feddeeji. Ne pas activer plusieurs
+validations pour des instances différentes sur les mêmes utilisateurs/préfixes :
+elles appelleraient plusieurs serveurs avec le même bouton.
+
 ## Automatisations HA
 
 Références officielles consultées :

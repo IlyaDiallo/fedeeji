@@ -1,0 +1,64 @@
+blueprint:
+  name: Feddeeji — validation commune
+  description: >-
+    Une seule automatisation pour les utilisateurs HA autorisés d'une instance
+    Feddeeji. Nécessite rest_command.feddeeji_ack dans configuration.yaml.
+    Le serveur de retour doit être celui qui émet les rappels. Désactivez les
+    anciennes validations individuelles. Aucun token n'est affiché en diagnostic.
+  domain: automation
+  input:
+    authorized_users:
+      name: Identifiants des utilisateurs HA autorisés
+      description: >-
+        Liste YAML de chaînes, par exemple ["identifiant-utilisateur-HA"].
+        Utilisez les context.user_id observés lors d'un appui sur un bouton,
+        pas les noms ni les identifiants d'appareils. Ne partagez pas l'événement
+        complet : il contient un token secret. Une liste vide refuse tout.
+      default: []
+      selector:
+        object:
+
+mode: queued
+max: 20
+trace:
+  stored_traces: 0
+variables:
+  authorized_users: !input authorized_users
+triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+conditions:
+  - condition: template
+    value_template: >-
+      {{ authorized_users is sequence and authorized_users is not string
+         and authorized_users is not mapping
+         and trigger.event.context.user_id is not none
+         and trigger.event.context.user_id in authorized_users
+         and trigger.event.data.action is defined
+         and trigger.event.data.action is string
+         and trigger.event.data.action is match('^FEDDEEJI_[A-Za-z0-9_-]{43}$') }}
+actions:
+  - action: rest_command.feddeeji_ack
+    continue_on_error: true
+    data:
+      token: "{{ trigger.event.data.action[9:] }}"
+    response_variable: acknowledgement
+  - if:
+      - condition: template
+        value_template: >-
+          {{ acknowledgement is not defined
+             or acknowledgement.status | default(0) != 200 }}
+    then:
+      - action: persistent_notification.create
+        data:
+          notification_id: feddeeji_validation_error
+          title: Feddeeji — validation non confirmée
+          message: >-
+            {% if acknowledgement is defined %}
+              Le serveur a répondu HTTP {{ acknowledgement.status | default('inconnu') }}.
+              Vérifiez la réalisation dans Feddeeji. Le bouton peut être expiré
+              ou déjà utilisé ; un ancien bouton ne valide jamais l'étape suivante.
+            {% else %}
+              Serveur Feddeeji injoignable ou commande REST indisponible.
+              Vérifiez rest_command.feddeeji_ack, son URL et les journaux HA.
+            {% endif %}

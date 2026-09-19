@@ -1,0 +1,89 @@
+blueprint:
+  name: Feddeeji — réception des notifications
+  description: >-
+    Une automatisation par membre Feddeeji. Renseignez son webhook secret et la
+    liste des services notify.mobile_app_* de ses téléphones. Ne partagez pas
+    le webhook. Désactivez l'ancienne réception pour éviter les doublons.
+    Le mode alarme concerne Android uniquement ; les permissions et volumes
+    restent à régler sur chaque téléphone.
+  domain: automation
+  input:
+    webhook_secret:
+      name: Webhook secret du membre
+      description: Même identifiant secret que sur la fiche membre Feddeeji.
+      selector:
+        text:
+    phone_services:
+      name: Services de notification des téléphones
+      description: >-
+        Liste YAML, par exemple [notify.mobile_app_xiaomi_15_ilya].
+        Noms disponibles dans Outils de développement → Actions.
+        Tous les téléphones de cette liste reçoivent les rappels de ce membre.
+      selector:
+        object:
+    android_channel:
+      name: Canal Android
+      default: Feddeeji
+      selector:
+        select:
+          options:
+            - label: Notification normale
+              value: Feddeeji
+            - label: Canal alarme Android
+              value: alarm_stream
+    local_only:
+      name: Webhook accessible uniquement sur le réseau local
+      description: Désactiver si le serveur Feddeeji appelle HA depuis Internet.
+      default: true
+      selector:
+        boolean:
+
+mode: queued
+max: 20
+trace:
+  stored_traces: 0
+variables:
+  phone_services: !input phone_services
+triggers:
+  - trigger: webhook
+    webhook_id: !input webhook_secret
+    allowed_methods: [POST]
+    local_only: !input local_only
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.json is defined and trigger.json.version == 1
+         and trigger.json.type in ['reminder', 'clear', 'test'] }}
+actions:
+  - repeat:
+      for_each: "{{ phone_services }}"
+      sequence:
+        - choose:
+            - conditions: "{{ trigger.json.type == 'clear' }}"
+              sequence:
+                - action: "{{ repeat.item }}"
+                  continue_on_error: true
+                  data:
+                    message: clear_notification
+                    data:
+                      tag: "{{ trigger.json.notificationId }}"
+          default:
+            - action: "{{ repeat.item }}"
+              continue_on_error: true
+              data:
+                title: "{{ trigger.json.collective }} — {{ trigger.json.action }}"
+                message: >-
+                  {{ trigger.json.stepLabel | default(trigger.json.date | default('Feddeeji')) }}
+                  {{ trigger.json.time | default('') }}
+                  {{ trigger.json.description | default('') }}
+                data:
+                  tag: "{{ trigger.json.notificationId }}"
+                  channel: !input android_channel
+                  importance: high
+                  priority: high
+                  ttl: 0
+                  actions: >-
+                    {{ [{'action': trigger.json.button.action,
+                         'title': trigger.json.button.title}]
+                       if trigger.json.type == 'reminder'
+                          and trigger.json.button is defined else [] }}
