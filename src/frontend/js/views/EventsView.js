@@ -1,7 +1,7 @@
 class EventsView extends AbstractView {
-    constructor(params) {
+    constructor(params, { embedded = false } = {}) {
         super(params);
-        this.setTitle(t("events") + " - " + t("brand"));
+        if (!embedded) this.setTitle(t("events") + " - " + t("brand"));
         this.events = [];
         this.members = [];
         this.alerts = [];
@@ -62,6 +62,12 @@ class EventsView extends AbstractView {
                 </table>
             </div>
 
+            ${this.getModalHtml()}
+        `;
+    }
+
+    getModalHtml() {
+        return `
             <!-- Modal -->
             <div class="modal fade" id="eventModal"
                 tabindex="-1">
@@ -367,7 +373,11 @@ class EventsView extends AbstractView {
                 );
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${escapeHtml(event.name || '')}
+                <td>${this.isMember ? escapeHtml(event.name || '') : `
+                    <button type="button" class="btn btn-link text-start p-0 btn-edit"
+                        data-id="${escapeHtml(event.id)}" title="${t('edit')}">
+                        ${escapeHtml(event.name || '')} <i class="bi bi-pencil" aria-hidden="true"></i>
+                    </button>`}
                     <span class="badge bg-secondary">${t(event.type === 'individual' ? 'event_individual' : 'event_collective')}</span>
                     ${event.type === 'individual' && !this.isMember ? `<small class="d-block">${escapeHtml(this.members.filter(m => m.id === event.memberId).map(m => `${m.firstName} ${m.lastName}`).join(''))}</small>` : ''}
                 </td>
@@ -452,12 +462,16 @@ class EventsView extends AbstractView {
             return;
         }
 
+        this.initForm();
+    }
+
+    initForm() {
         this.modal = new bootstrap.Modal(
             document.getElementById('eventModal')
         );
 
         document.getElementById('btn-add-event')
-            .addEventListener('click', () => {
+            ?.addEventListener('click', () => {
                 this.openModal();
             });
 

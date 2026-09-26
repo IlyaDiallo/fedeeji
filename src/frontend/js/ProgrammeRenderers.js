@@ -43,7 +43,15 @@ class ProgrammeRenderers {
     /**
      * Rendu HTML d'un événement dans la vue liste.
      */
-    static renderEventItem({ item, locale, collectiveId }) {
+    static renderEventEditButton(event, isMember = true) {
+        if (isMember) return '';
+        return `<button type="button" class="btn btn-sm btn-outline-primary btn-edit-event"
+            data-id="${escapeHtml(event.id)}" title="${t('edit')}">
+            <i class="bi bi-pencil" aria-hidden="true"></i> ${t('edit')}
+        </button>`;
+    }
+
+    static renderEventItem({ item, locale, collectiveId, isMember = true }) {
         const event = item.data;
         const occ = item.occurrence;
         const dateStr = new Date(occ.occurrenceDate).toLocaleDateString(locale, {
@@ -86,6 +94,7 @@ class ProgrammeRenderers {
                 </div>
                 <div class="programme-item-actions d-flex align-items-center flex-wrap
                     justify-content-end mt-2 mt-sm-0 align-self-end align-self-sm-auto">
+                    ${ProgrammeRenderers.renderEventEditButton(event, isMember)}
                     ${inscLink}
                 </div>
             </div>`;
@@ -226,7 +235,7 @@ class ProgrammeRenderers {
     }
 
     /** Actions disponibles maintenant et événements du jour, sans réglages. */
-    static renderNow({ items, locale, collectiveId, currentMemberId = null }) {
+    static renderNow({ items, locale, collectiveId, currentMemberId = null, isMember = true }) {
         if (!items.length) return `<p class="text-muted">${t('nothing_now')}</p>`;
         const escape = value => String(value ?? '').replace(/[&<>"']/g,
             char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
@@ -246,12 +255,15 @@ class ProgrammeRenderers {
                     const time = it.data.allDay ? '' : (it.data.time || '');
                     const name = `${time ? escape(time) + ' · ' : ''}${escape(it.data.name)}`;
                     if (it.type === 'event') {
-                        return `<a class="list-group-item list-group-item-action" data-link
+                        return `<div class="list-group-item d-flex flex-wrap align-items-center gap-2">
+                            <a class="flex-grow-1" data-link
                             href="/${encodeURIComponent(collectiveId)}/events">
                             <i class="bi bi-calendar-event programme-now-event-icon me-2"></i>${name}
                             ${it.occurrence.isCancelled
                                 ? `<span class="badge bg-danger">${t('occurrence_cancelled')}</span>` : ''}
-                        </a>`;
+                        </a>
+                        ${ProgrammeRenderers.renderEventEditButton(it.data, isMember)}
+                        </div>`;
                     }
                     const state = it.currentState > 0
                         ? it.data.states?.[it.currentState - 1] : '';
@@ -286,7 +298,7 @@ class ProgrammeRenderers {
      * Rendu de la grille calendrier complète (semaine ou mois).
      */
     static renderCalendarGrid({
-        items, startCal, endCal, viewMode, month, collectiveId, currentMemberId = null
+        items, startCal, endCal, viewMode, month, collectiveId, currentMemberId = null, isMember = true
     }) {
         // Construire la map date -> items
         const map = {};
@@ -355,6 +367,7 @@ class ProgrammeRenderers {
                             title="${it.data.name}">
                             <strong>${it.data.time || ''}</strong> ${it.data.name}
                             <small>${t(it.data.type === 'individual' ? 'event_individual' : 'event_collective')}</small>
+                            ${ProgrammeRenderers.renderEventEditButton(it.data, isMember)}
                         </div>`;
                     } else {
                         html += ProgrammeRenderers.renderCalendarActionCell(

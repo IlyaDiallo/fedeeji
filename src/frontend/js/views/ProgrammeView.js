@@ -20,6 +20,9 @@ class ProgrammeView extends AbstractView {
     }
 
     async getHtml() {
+        if (!this.isMember) {
+            this.eventEditor = new EventsView(this.params, { embedded: true });
+        }
         const addBtn = this.isMember ? '' : `
             <button class="btn btn-primary" id="btn-add-action"
                 title="${t("add_action") || "Ajouter une action"}"
@@ -94,6 +97,8 @@ class ProgrammeView extends AbstractView {
 
             <div id="programme-list" class="list-group border-0"></div>
             <div id="programme-calendar" class="d-none"></div>
+
+            ${this.eventEditor ? this.eventEditor.getModalHtml() : ''}
 
             <!-- Modal action -->
             <div class="modal fade" id="actionModal" tabindex="-1">
@@ -501,6 +506,7 @@ class ProgrammeView extends AbstractView {
             document.getElementById('calendar-nav').classList.add('d-none');
             container.innerHTML = ProgrammeRenderers.renderNow({
                 items: this._collectNowItems(currentFilter),
+                isMember: this.isMember,
                 currentMemberId: this.currentMemberId,
                 locale: this.locale, collectiveId: this.collectiveId
             });
@@ -582,7 +588,7 @@ class ProgrammeView extends AbstractView {
             div.className = 'programme-list-item list-group-item border rounded mb-2';
             div.innerHTML = item.type === 'event'
                 ? ProgrammeRenderers.renderEventItem({
-                    item, locale: this.locale,
+                    item, locale: this.locale, isMember: this.isMember,
                     collectiveId: this.collectiveId
                 })
                 : ProgrammeRenderers.renderActionItem({
@@ -643,6 +649,7 @@ class ProgrammeView extends AbstractView {
             items, startCal, endCal,
             currentMemberId: this.currentMemberId,
             viewMode: this.viewMode,
+            isMember: this.isMember,
             month,
             collectiveId: this.collectiveId
         });
@@ -819,6 +826,24 @@ class ProgrammeView extends AbstractView {
         this.logForm.initListeners();
 
         await this.loadData();
+        if (this.eventEditor) {
+            const editor = this.eventEditor;
+            editor.members = this.members;
+            const select = document.getElementById('event-memberId');
+            select.add(new Option(t('select_member'), ''));
+            this.members.forEach(m => select.add(new Option(`${m.firstName} ${m.lastName}`, m.id)));
+            editor.loadEvents = () => this.loadData();
+            editor.initForm();
+            this.eventEditHandler = e => {
+                const button = e.target.closest('.btn-edit-event');
+                if (!button) return;
+                editor.events = this.events;
+                editor.openModal(button.dataset.id);
+            };
+            ['programme-list', 'programme-calendar'].forEach(id => {
+                document.getElementById(id).addEventListener('click', this.eventEditHandler);
+            });
+        }
     }
 
     // --- Méthodes privées ---
