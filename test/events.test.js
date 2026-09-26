@@ -157,6 +157,33 @@ test('collective reminders target only yes inscriptions for the occurrence; canc
     assert.equal(f.sends.at(-1).payload.type, 'clear');
 });
 
+test('series reminders honor overrides and closing invalidates an outstanding button', async () => {
+    const f = fixture();
+    const event = await f.setup('alert', { type: 'collective', recurrence: 'weekly' });
+    const series = await f.dataService.create({ collectiveId: 'demo', collection: 'inscriptions', data: {
+        scope: 'series', eventId: event.id, memberId: 'alice', periods: [{ startsOn: '2026-05-01', endsBefore: null }]
+    } });
+    assert.deepEqual(await f.scheduler.recipients('demo', event, '2040-01-01'), ['alice']);
+    const exception = await f.dataService.create({ collectiveId: 'demo', collection: 'inscriptions', data: {
+        eventId: event.id, memberId: 'alice', occurrenceDate: event.date, response: 'maybe'
+    } });
+    await f.scheduler.checkAndNotify();
+    assert.equal(f.sends.length, 0);
+    await f.dataService.update({ collectiveId: 'demo', collection: 'inscriptions', id: exception.id, data: { response: 'no' } });
+    assert.deepEqual(await f.scheduler.recipients('demo', event, event.date), []);
+    await f.dataService.delete({ collectiveId: 'demo', collection: 'inscriptions', id: exception.id });
+    await f.scheduler.checkAndNotify();
+    assert.equal(f.sends.length, 1);
+    const record = await f.notificationState.resolveToken('demo', f.sends[0].payload.button.action.slice(9));
+    await f.dataService.update({ collectiveId: 'demo', collection: 'inscriptions', id: series.id, data: {
+        periods: [{ startsOn: '2026-05-01', endsBefore: '2026-06-01' }]
+    } });
+    await assert.rejects(f.scheduler.ack('demo', record.deliveryId, null, event.id, record));
+    f.setTime('2026-06-01T07:40:00Z');
+    await f.scheduler.checkAndNotify();
+    assert.equal(f.sends.at(-1).payload.type, 'clear');
+});
+
 test('advance crosses midnight and uses the collective timezone across DST', () => {
     assert.equal(new Date(Scheduler.eventTimestamp('2026-06-02', '00:15', 'Europe/Paris') - 30 * 60000).toISOString(), '2026-06-01T21:45:00.000Z');
     assert.equal(new Date(Scheduler.eventTimestamp('2026-10-25', '02:30', 'Europe/Paris')).toISOString(), '2026-10-25T00:30:00.000Z');

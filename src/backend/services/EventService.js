@@ -83,6 +83,12 @@ class EventService {
                 const inscriptions = await this.dataService.list({ collectiveId, collection: 'inscriptions' });
                 if (inscriptions.some(i => i.eventId === id)) throw invalid('Supprimez les inscriptions avant de convertir cet événement en individuel');
             }
+            if (previous?.recurrence && previous.recurrence !== 'none' && (!data.recurrence || data.recurrence === 'none')) {
+                const inscriptions = await this.dataService.list({ collectiveId, collection: 'inscriptions' });
+                if (inscriptions.some(i => i.eventId === id && i.scope === 'series' && i.periods?.some(p => !p.endsBefore))) {
+                    throw invalid('Clôturez les inscriptions de série avant de supprimer la récurrence');
+                }
+            }
             // A schedule/recipient change invalidates old buttons without rearming on a description edit.
             const signature = e => JSON.stringify([e?.type, e?.memberId, e?.date, e?.time, e?.allDay,
                 e?.recurrence, e?.recurrenceInterval, e?.recurrenceDays, e?.monthlyType,

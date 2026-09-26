@@ -52,6 +52,10 @@ class InscriptionScheduleView extends AbstractView {
 
             <div id="schedule-content"
                 class="d-none">
+                <div class="mb-3">
+                    <button class="btn btn-outline-primary" id="btn-series-registration"></button>
+                    <p class="form-text">${t('series_help')}</p>
+                </div>
                 <!-- Sélecteur de réponse (pinceau) -->
                 <div class="inscription-brush mb-3
                     d-flex flex-wrap align-items-center
@@ -70,11 +74,12 @@ class InscriptionScheduleView extends AbstractView {
                         brush-btn"
                         data-brush="maybe">
                         ${t("maybe")}</button>
+                    <button class="btn btn-outline-secondary brush-btn" data-brush="reset">${t('series_reset')}</button>
                     <div class="ms-auto d-flex gap-2">
                         <button class="btn
                             btn-outline-secondary"
                             id="btn-apply-all">
-                            ${t("apply_to_all")}
+                            ${t("apply_displayed")}
                         </button>
                         <button class="btn btn-primary"
                             id="btn-save-schedule"
@@ -182,17 +187,10 @@ class InscriptionScheduleView extends AbstractView {
     /** Charge les réponses existantes dans l'état local */
     loadLocalResponses() {
         this.localResponses = {};
-        if (!this.selectedMemberId) return;
-        const relevant = this.inscriptions.filter(
-            p => p.eventId === this.eventId
-                && p.memberId === this.selectedMemberId
-        );
-        relevant.forEach(p => {
-            const date = p.occurrenceDate || this.event.date;
-            if (date) {
-                this.localResponses[date] = p.response;
-            }
-        });
+        this.dirty = false;
+        const save = document.getElementById('btn-save-schedule');
+        if (save) save.disabled = true;
+        // Existing responses are resolved from inscriptions; only edits enter localResponses.
     }
 
     /** Dates d'occurrence qui tombent dans le mois affiché */
@@ -203,6 +201,8 @@ class InscriptionScheduleView extends AbstractView {
         const endDay = new Date(y, m + 1, 0).getDate();
         const endStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(endDay).padStart(2, '0')}`;
 
+        this.occurrences = RecurrenceUtils.generateOccurrences({ event: this.event,
+            startDate: new Date(`${startStr}T12:00:00`), maxOccurrences: Infinity });
         return this.occurrences.filter(o =>
             o.occurrenceDate >= startStr
             && o.occurrenceDate <= endStr
@@ -226,6 +226,9 @@ class InscriptionScheduleView extends AbstractView {
         label.textContent = monthName.charAt(0)
             .toUpperCase() + monthName.slice(1);
 
+        const seriesButton = document.getElementById('btn-series-registration');
+        seriesButton.classList.toggle('d-none', !InscriptionUtils.isRecurrent(this.event));
+        seriesButton.textContent = t(InscriptionUtils.isActive(this.getSeries()) ? 'series_leave' : 'series_join');
         const recType = this.event.recurrence;
 
         if (recType === 'monthly') {
@@ -288,8 +291,7 @@ class InscriptionScheduleView extends AbstractView {
                 const isOcc = !!occData;
                 const isCancelled =
                     occData?.isCancelled || false;
-                const response =
-                    this.localResponses[dateStr] || null;
+                const response = this.responseFor(dateStr);
 
                 if (isOcc) {
                     // Bouton annuler/rétablir (admin)
@@ -333,9 +335,7 @@ class InscriptionScheduleView extends AbstractView {
                             <div class="day-number">
                                 ${dayNum}</div>
                             <div class="day-badge">
-                                ${this.getResponseIcon(
-                                    response
-                                )}
+                                ${this.getResponseIcon(response)}${this.inheritedMark(dateStr)}
                             </div>
                             ${cancelBtn}
                         </td>`;
@@ -364,10 +364,10 @@ class InscriptionScheduleView extends AbstractView {
     /** Affichage liste pour récurrence mensuelle */
     renderMonthlyList(grid) {
         // Afficher toutes les occurrences futures (pas filtrées par mois)
-        const today = window.RecurrenceUtils
-            ? window.RecurrenceUtils.formatDateStr(new Date())
-            : new Date().toISOString().slice(0, 10);
+        const today = InscriptionUtils.today();
 
+        this.occurrences = RecurrenceUtils.generateOccurrences({ event: this.event,
+            startDate: new Date(`${today}T12:00:00`), maxOccurrences: Infinity });
         const allOccs = this.occurrences.filter(
             o => o.occurrenceDate >= today
         );
@@ -399,9 +399,7 @@ class InscriptionScheduleView extends AbstractView {
                 }
             );
             const isCancelled = occ.isCancelled || false;
-            const response =
-                this.localResponses[occ.occurrenceDate]
-                || null;
+            const response = this.responseFor(occ.occurrenceDate);
 
             // Bouton annuler/rétablir (admin)
             const cancelBtn = !this.isMember
@@ -456,9 +454,7 @@ class InscriptionScheduleView extends AbstractView {
                                     .getResponseBadgeClass(
                                         response
                                     )}">
-                                ${this.getResponseLabel(
-                                    response
-                                )}
+                                ${this.getResponseLabel(response)}${this.inheritedMark(occ.occurrenceDate)}
                             </span>
                             ${cancelBtn}
                         </div>
@@ -591,6 +587,8 @@ class InscriptionScheduleView extends AbstractView {
 
     /** Annule ou rétablit une occurrence */
     async toggleCancelDate(date) {
+        if (this.dirty && !confirm(t('discard_responses'))) return;
+        this.loadLocalResponses();
         try {
             const cancelled =
                 this.event.cancelledDates || [];
@@ -627,15 +625,51 @@ class InscriptionScheduleView extends AbstractView {
         }
     }
 
+    getSeries() {
+        return this.inscriptions.find(i => i.scope === 'series' && i.eventId === this.eventId && i.memberId === this.selectedMemberId);
+    }
+
+    responseFor(date) {
+        let inscriptions = this.inscriptions;
+        if (Object.hasOwn(this.localResponses, date)) {
+            if (this.localResponses[date] !== null) return this.localResponses[date];
+            inscriptions = inscriptions.filter(i => !(i.scope !== 'series' && i.eventId === this.eventId
+                && i.memberId === this.selectedMemberId && (i.occurrenceDate || this.event.date) === date));
+        }
+        return InscriptionUtils.resolve({ event: this.event, inscriptions, memberId: this.selectedMemberId, date });
+    }
+
+    inheritedMark(date) {
+        const edited = Object.hasOwn(this.localResponses, date);
+        const explicit = edited ? this.localResponses[date] !== null : this.inscriptions.some(i => i.scope !== 'series'
+            && i.eventId === this.eventId && i.memberId === this.selectedMemberId && (i.occurrenceDate || this.event.date) === date);
+        return !explicit && this.responseFor(date) === 'yes' ? ` <small title="${t('series_inherited')}">↻</small>` : '';
+    }
+
+    async toggleSeriesRegistration() {
+        if (!this.selectedMemberId) return;
+        const active = !InscriptionUtils.isActive(this.getSeries());
+        if (this.dirty && !confirm(t('discard_responses'))) return;
+        if (!active && !confirm(t('series_leave_confirm'))) return;
+        try {
+            await api.request(`/api/${this.collectiveId}/inscriptions/series`, { method: 'PUT',
+                body: JSON.stringify({ eventId: this.eventId, memberId: this.selectedMemberId, active }) });
+            this.inscriptions = await api.get(this.collectiveId, 'inscriptions');
+            this.loadLocalResponses();
+            this.renderMonth();
+        } catch (error) { alert(t('error_save') + ': ' + error.message); }
+    }
+
     /** Applique le pinceau actif à une date */
     toggleResponse(date) {
         if (!this.selectedMemberId) {
             alert(t("select_member"));
             return;
         }
-        const current = this.localResponses[date];
-        // Si déjà la même réponse, on efface
-        if (current === this.activeBrush) {
+        if (this.isMember && date < InscriptionUtils.today()) return;
+        const current = this.responseFor(date);
+        // Effacer revient à l’héritage ; No reste une exception explicite.
+        if (this.activeBrush === 'reset' || current === this.activeBrush) {
             this.localResponses[date] = null;
         } else {
             this.localResponses[date] = this.activeBrush;
@@ -656,10 +690,7 @@ class InscriptionScheduleView extends AbstractView {
         let dates;
         if (recType === 'monthly') {
             // Mode liste : dates futures non annulées
-            const today = window.RecurrenceUtils
-                ? window.RecurrenceUtils.formatDateStr(
-                    new Date()
-                ) : new Date().toISOString().slice(0, 10);
+            const today = InscriptionUtils.today();
             dates = this.occurrences
                 .filter(o => o.occurrenceDate >= today
                     && !o.isCancelled)
@@ -670,8 +701,8 @@ class InscriptionScheduleView extends AbstractView {
                 .filter(o => !o.isCancelled)
                 .map(o => o.occurrenceDate);
         }
-        dates.forEach(d => {
-            this.localResponses[d] = this.activeBrush;
+        dates.filter(d => !this.isMember || d >= InscriptionUtils.today()).forEach(d => {
+            this.localResponses[d] = this.activeBrush === 'reset' ? null : this.activeBrush;
         });
         this.dirty = true;
         document.getElementById('btn-save-schedule')
@@ -736,12 +767,12 @@ class InscriptionScheduleView extends AbstractView {
                     'active',
                     'btn-success', 'btn-outline-success',
                     'btn-danger', 'btn-outline-danger',
-                    'btn-warning', 'btn-outline-warning'
+                    'btn-warning', 'btn-outline-warning', 'btn-secondary', 'btn-outline-secondary'
                 );
                 const colorMap = {
                     yes: 'success',
                     no: 'danger',
-                    maybe: 'warning'
+                    maybe: 'warning', reset: 'secondary'
                 };
                 const color = colorMap[brush];
                 if (brush === this.activeBrush) {
@@ -766,8 +797,12 @@ class InscriptionScheduleView extends AbstractView {
         if (memberSelect) {
             memberSelect.addEventListener(
                 'change', (e) => {
-                    this.selectedMemberId =
-                        e.target.value || null;
+                    if (this.dirty && !confirm(t('discard_responses'))) {
+                        e.target.value = this.selectedMemberId || '';
+                        return;
+                    }
+                    this.selectedMemberId = e.target.value || null;
+                    this.loadLocalResponses();
                     if (this.selectedMemberId) {
                         this.loadLocalResponses();
                         document.getElementById(
@@ -783,6 +818,7 @@ class InscriptionScheduleView extends AbstractView {
             );
         }
 
+        document.getElementById('btn-series-registration').addEventListener('click', () => this.toggleSeriesRegistration());
         // Boutons pinceau
         document.querySelectorAll('.brush-btn')
             .forEach(btn => {

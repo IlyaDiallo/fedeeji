@@ -29,7 +29,7 @@ class InscriptionsView extends AbstractView {
         if (!evt) return false;
         const dateToCheck = occurrenceDate || evt.date;
         if (!dateToCheck) return false;
-        const today = window.RecurrenceUtils ? window.RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().slice(0, 10);
+        const today = InscriptionUtils.today();
         return dateToCheck < today;
     }
 
@@ -108,6 +108,15 @@ class InscriptionsView extends AbstractView {
                                         required>
                                     </select>
                                 </div>
+                                <div class="mb-3 d-none" id="inscription-scope-container">
+                                    <label class="form-label">${t('inscription_scope')}</label>
+                                    <select class="form-select" id="inscription-scope">
+                                        <option value="date">${t('inscription_one_date')}</option>
+                                        <option value="series">${t('inscription_series')}</option>
+                                    </select>
+                                    <p class="form-text">${t('series_help')}</p>
+                                </div>
+                                <div id="inscription-series-members" class="mb-3 d-none"></div>
                                 <div class="mb-3" id="inscription-occurrence-container" style="display:none;">
                                     <label class="form-label"
                                         data-i18n="date">
@@ -224,7 +233,7 @@ class InscriptionsView extends AbstractView {
             `<option value="">${t("select_event")}`
             + `</option>`;
 
-        const today = window.RecurrenceUtils ? window.RecurrenceUtils.formatDateStr(new Date()) : new Date().toISOString().slice(0, 10);
+        const today = InscriptionUtils.today();
         this.events.forEach(e => {
             // Membre : n'afficher que les événements futurs ou récurrents actifs
             if (this.isMember) {
@@ -280,7 +289,9 @@ class InscriptionsView extends AbstractView {
                 eventName += ` (${p.occurrenceDate})`;
             }
 
-            const isPast = this.isEventPast(p.eventId, p.occurrenceDate);
+            const isSeries = p.scope === 'series';
+            if (isSeries) eventName += ` — ${t('series_badge')}`;
+            const isPast = !isSeries && this.isEventPast(p.eventId, p.occurrenceDate);
             const pastBadge = isPast
                 ? ` <span class="badge bg-secondary">`
                     + `${t("past_event")}</span>`
@@ -291,7 +302,11 @@ class InscriptionsView extends AbstractView {
                 this.isMember && isPast;
 
             let actionsHtml = '';
-            if (!locked) {
+            if (isSeries) {
+                actionsHtml = `<button class="btn btn-sm btn-outline-primary btn-series" data-id="${p.id}">
+                    ${t(InscriptionUtils.isActive(p) ? 'series_leave' : 'series_join')}</button>`;
+            }
+            if (!locked && !isSeries) {
                 actionsHtml += `
                     <button class="btn btn-sm
                         btn-outline-primary btn-edit"
@@ -300,7 +315,7 @@ class InscriptionsView extends AbstractView {
                         <i class="bi bi-pencil"></i>
                     </button>`;
             }
-            if (!this.isMember) {
+            if (!this.isMember && !isSeries) {
                 actionsHtml += `
                     <button class="btn btn-sm
                         btn-outline-danger btn-delete"
@@ -317,9 +332,7 @@ class InscriptionsView extends AbstractView {
             tr.innerHTML = `
                 <td>${eventName}${pastBadge}</td>
                 <td>${memberName}</td>
-                <td>${this.getResponseBadge(
-                    p.response
-                )}</td>
+                <td>${isSeries ? t(InscriptionUtils.isActive(p) ? 'series_active' : 'series_closed') : this.getResponseBadge(p.response)}</td>
                 <td>
                     <div class="btn-group-actions">
                         ${actionsHtml}
@@ -329,6 +342,7 @@ class InscriptionsView extends AbstractView {
             tbody.appendChild(tr);
         });
 
+        document.querySelectorAll('.btn-series').forEach(btn => btn.addEventListener('click', () => this.toggleSeries(btn.dataset.id)));
         document.querySelectorAll('.btn-edit')
             .forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -381,6 +395,7 @@ class InscriptionsView extends AbstractView {
             });
         }
 
+        document.getElementById('inscription-scope').addEventListener('change', () => this.updateScope());
         const urlParams = new URLSearchParams(window.location.search);
         const eventIdParam = urlParams.get('eventId');
         if (eventIdParam && this.events.some(e => e.id === eventIdParam)) {
@@ -393,6 +408,11 @@ class InscriptionsView extends AbstractView {
     }
     
     updateOccurrenceSelect(eventId, selectedDate = null) {
+        const evt = this.events.find(e => e.id === eventId);
+        const editing = !!document.getElementById('inscription-id').value;
+        document.getElementById('inscription-scope-container').classList.toggle('d-none', !evt || !InscriptionUtils.isRecurrent(evt) || editing);
+        document.getElementById('inscription-scope').value = 'date';
+        this.updateScope();
         const container = document.getElementById('inscription-occurrence-container');
         const select = document.getElementById('inscription-occurrenceDate');
         
@@ -410,7 +430,8 @@ class InscriptionsView extends AbstractView {
         }
         
         // Générer les occurrences
-        const occurrences = window.RecurrenceUtils ? window.RecurrenceUtils.generateOccurrences({ event }) : [];
+        const occurrences = window.RecurrenceUtils ? window.RecurrenceUtils.generateOccurrences({ event,
+            ...(selectedDate ? { startDate: new Date(`${selectedDate}T12:00:00`) } : {}) }) : [];
         if (occurrences.length === 0) {
             container.style.display = 'none';
             select.innerHTML = '';
@@ -420,7 +441,7 @@ class InscriptionsView extends AbstractView {
         container.style.display = 'block';
         select.innerHTML = `<option value="" disabled selected>${t("select_a_date")}</option>`;
         
-        const today = new Date().toISOString().slice(0, 10);
+        const today = InscriptionUtils.today();
         
         occurrences.forEach(occ => {
             if (this.isMember && occ.occurrenceDate < today) return;
@@ -459,10 +480,40 @@ class InscriptionsView extends AbstractView {
                 ).value = p.response || 'yes';
             }
         } else {
+            this.updateOccurrenceSelect(null);
             document.getElementById('inscription-occurrence-container').style.display = 'none';
             document.getElementById('inscription-occurrenceDate').innerHTML = '';
         }
+        document.getElementById('inscription-eventId').disabled = !!id;
+        document.getElementById('inscription-memberId').disabled = !!id;
         this.modal.show();
+    }
+
+    updateScope() {
+        const series = document.getElementById('inscription-scope').value === 'series';
+        document.getElementById('inscription-occurrence-container').style.display = series ? 'none' : 'block';
+        document.getElementById('inscription-response').closest('.mb-3').classList.toggle('d-none', series);
+        document.getElementById('inscription-memberId').closest('.mb-3').classList.toggle('d-none', this.isMember || series);
+        const container = document.getElementById('inscription-series-members');
+        container.classList.toggle('d-none', !series || this.isMember);
+        if (series && !this.isMember) {
+            this.seriesPicker = new MemberMultiSelect({ container, members: this.members,
+                getMemberName: id => { const m = this.members.find(m => m.id === id); return `${m.lastName} ${m.firstName}`; } });
+        }
+    }
+
+    async setSeries(eventId, memberId, active) {
+        return api.request(`/api/${this.collectiveId}/inscriptions/series`, {
+            method: 'PUT', body: JSON.stringify({ eventId, memberId, active })
+        });
+    }
+
+    async toggleSeries(id) {
+        const p = this.inscriptions.find(i => i.id === id);
+        const active = !InscriptionUtils.isActive(p);
+        if (!active && !confirm(t('series_leave_confirm'))) return;
+        try { await this.setSeries(p.eventId, p.memberId, active); await this.loadData(); }
+        catch (error) { alert(t('error_save') + ': ' + error.message); }
     }
 
     async saveInscription() {
@@ -481,6 +532,18 @@ class InscriptionsView extends AbstractView {
             ).value
         };
         
+        if (document.getElementById('inscription-scope').value === 'series') {
+            const ids = this.isMember ? [api.getMemberId()] : this.seriesPicker.entries.filter(e => e.input.checked).map(e => e.input.value);
+            if (!data.eventId || !ids.length) { alert(t('select_member')); return; }
+            const results = await Promise.allSettled(ids.map(memberId => this.setSeries(data.eventId, memberId, true)));
+            if (results.some(r => r.status === 'rejected')) {
+                alert(t('series_partial_error') + '\n' + results.filter(r => r.status === 'rejected').map(r => r.reason.message).join('\n'));
+                return;
+            }
+            this.modal.hide();
+            await this.loadData();
+            return;
+        }
         const occSelect = document.getElementById('inscription-occurrenceDate');
         const occContainer = document.getElementById('inscription-occurrence-container');
         if (occContainer.style.display !== 'none' && occSelect.value) {
@@ -489,6 +552,8 @@ class InscriptionsView extends AbstractView {
             data.occurrenceDate = null;
         }
 
+        const event = this.events.find(e => e.id === data.eventId);
+        if (event && InscriptionUtils.isRecurrent(event) && !data.occurrenceDate) { alert(t('select_a_date')); return; }
         if (!data.eventId || !data.memberId) {
             alert(
                 `${t("select_event")} / ${t("select_member")}`

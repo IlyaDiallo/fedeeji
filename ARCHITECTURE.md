@@ -36,6 +36,33 @@ Guide de configuration et YAML : [docs/home-assistant.md](docs/home-assistant.md
 ne les active pas. L’ancien rappel quotidien implicite est remplacé ; configurer les
 origines HA et installer les automatisations v1 avant activation.
 
+## Inscriptions aux séries d’événements
+
+- `PUT /api/:collectiveId/inscriptions/series` reçoit `{ eventId, memberId, active }`.
+  Admin : un membre du collectif ; membre : son propre identifiant est imposé.
+- `InscriptionService` conserve dans `inscriptions` une règle `scope: 'series'` par
+  événement/membre et ses `periods: [{ startsOn, endsBefore }]` (fin exclusive,
+  `null` pour une période ouverte). Activation/clôture au jour UTC côté serveur,
+  opérations idempotentes sous le verrou partagé `EventService.locked`.
+- `InscriptionUtils` (navigateur et Node) résout une occurrence : réponse explicite
+  prioritaire, sinon `yes` hérité d’une période couvrant la date, sinon aucune réponse.
+  Les anciennes inscriptions sans date ne concernent que la date initiale ; aucune
+  migration ni matérialisation d’une infinité de dates. Les occurrences annulées
+  ne produisent ni participation effective ni rappel.
+- La clôture conserve l’historique et **toutes les réponses explicites**, y compris
+  les `yes` futurs. Effacer une exception revient à l’héritage ; refuser une date
+  nécessite `no`. Une réinscription ouvre une nouvelle période sans combler les trous.
+- Le calendrier ne sauvegarde que les modifications explicites et génère les dates
+  du mois consulté. La sélection multiple admin réutilise `MemberMultiSelect` ; les
+  appels par membre sont idempotents, mais ne constituent pas une transaction globale.
+- Les routes CRUD/bulk protègent les champs de série et valident les occurrences ;
+  les membres ne modifient pas le passé. La suppression brute d’une règle est refusée.
+  Clôturer les règles ouvertes avant de retirer la récurrence ; la conversion en
+  individuel reste bloquée tant que l’événement possède des inscriptions.
+- `EventNotificationScheduler` emploie le même résolveur pour les destinataires et
+  la revalidation des alertes : un refus ou une clôture rend les anciens boutons
+  inopérants si le membre n’est plus inscrit à cette occurrence.
+
 ## Vue d'ensemble
 
 ```mermaid

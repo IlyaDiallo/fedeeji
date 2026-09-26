@@ -3,6 +3,7 @@ const EventService = require('./EventService');
 const NotificationService = require('./NotificationService');
 const ActionNotificationScheduler = require('./ActionNotificationScheduler');
 const RecurrenceUtils = require('../../frontend/js/RecurrenceUtils');
+const InscriptionUtils = require('../../frontend/js/InscriptionUtils');
 const { buildWebhookUrl, REPEAT_MS } = require('./NotificationConfig');
 const { localClock, isQuiet } = ActionNotificationScheduler;
 const DAY = 86400000;
@@ -43,8 +44,8 @@ class EventNotificationScheduler {
     async recipients(collectiveId, event, date) {
         if (event.type === 'individual') return [event.memberId];
         const inscriptions = await this.dataService.list({ collectiveId, collection: 'inscriptions' });
-        return [...new Set(inscriptions.filter(i => i.eventId === event.id && i.response === 'yes'
-            && (i.occurrenceDate || event.date) === date).map(i => i.memberId))];
+        return [...new Set(inscriptions.filter(i => i.eventId === event.id).map(i => i.memberId))]
+            .filter(memberId => InscriptionUtils.resolve({ event, inscriptions, memberId, date }) === 'yes');
     }
     async current(collectiveId, delivery) {
         const event = await this.dataService.get({ collectiveId, collection: 'events', id: delivery.eventId });
