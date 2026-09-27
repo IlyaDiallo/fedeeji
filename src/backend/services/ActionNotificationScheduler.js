@@ -3,7 +3,7 @@ const NotificationService = require('./NotificationService');
 const NotificationStateService = require('./NotificationStateService');
 const ActionProgressService = require('./ActionProgressService');
 const RecurrenceUtils = require('../../frontend/js/RecurrenceUtils');
-const { recipientIds, buildWebhookUrl, REPEAT_MS } = require('./NotificationConfig');
+const { recipientIds, buildWebhookUrl, ACTION_REPEAT_MS: REPEAT_MS } = require('./NotificationConfig');
 
 function localClock(timestamp, timeZone) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -30,6 +30,23 @@ function nextOccurrence(action, logs, todayStr = RecurrenceUtils.formatDateStr(n
     return RecurrenceUtils.nextActionOccurrence({
         action, todayStr, completedThrough: completed
     })?.occurrenceDate || null;
+}
+
+function reminderDue(alert, state, latest, occurrenceDate, timestamp, timeZone) {
+    const clock = localClock(timestamp, timeZone);
+    if (state === 0) return `${clock.date}T${clock.time}` >= `${occurrenceDate}T${alert.initialTime}`;
+    if (!Number.isFinite(latest?.timestamp)) return false;
+    const rule = alert.stepReminders?.[state - 1]
+        || { mode: 'delay', minutes: alert.stepDelayMinutes?.[state - 1] };
+    if (rule.mode === 'delay') return timestamp >= latest.timestamp + rule.minutes * 60000;
+    const previous = localClock(latest.timestamp, timeZone);
+    let date = previous.date;
+    if (previous.time >= rule.time) {
+        const next = new Date(`${date}T12:00:00Z`);
+        next.setUTCDate(next.getUTCDate() + 1);
+        date = next.toISOString().slice(0, 10);
+    }
+    return `${clock.date}T${clock.time}` >= `${date}T${rule.time}`;
 }
 
 class ActionNotificationScheduler {
@@ -81,9 +98,7 @@ class ActionNotificationScheduler {
                 const { state, maxState, latest, revision } = ActionProgressService.context(action, logs, occurrenceDate);
                 if (state >= maxState) return;
                 const step = state + 1;
-                const due = state === 0
-                    ? `${clock.date}T${clock.time}` >= `${occurrenceDate}T${action.alert.initialTime}`
-                    : Number.isFinite(latest?.timestamp) && timestamp >= latest.timestamp + action.alert.stepDelayMinutes[state - 1] * 60000;
+                const due = reminderDue(action.alert, state, latest, occurrenceDate, timestamp, settings.timeZone);
                 for (const memberId of recipientIds(action)) {
                     const member = members.find(m => m.id === memberId);
                     const webhookUrl = buildWebhookUrl(member);
@@ -96,7 +111,7 @@ class ActionNotificationScheduler {
                         notificationId: crypto.createHash('sha256').update(JSON.stringify([collectiveId, action.id, occurrenceDate, step])).digest('hex')
                     };
                     retained.add(id);
-                    // Once started, a fall-back DST clock must not pause the ten-minute cycle.
+                    // Once started, a fall-back DST clock must not pause the fifteen-minute cycle.
                     if ((!due && !delivery.lastSuccessAt) || isQuiet(clock.time, settings) || timestamp < (delivery.nextAttemptAt || 0)) continue;
                     const token = await this.notificationState.issueToken(collectiveId, { ...identity, revision });
                     delivery = { ...delivery, active: true, lastAttemptAt: timestamp };
@@ -142,6 +157,7 @@ class ActionNotificationScheduler {
         await this.notificationState.pruneTokens(collectiveId);
     }
 }
+ActionNotificationScheduler.reminderDue = reminderDue;
 ActionNotificationScheduler.localClock = localClock;
 ActionNotificationScheduler.isQuiet = isQuiet;
 ActionNotificationScheduler.nextOccurrence = nextOccurrence;

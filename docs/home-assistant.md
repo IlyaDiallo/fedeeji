@@ -24,12 +24,12 @@ insistants. Désactivation explicite : `{"enabled": false}`.
 ```json
 {
   "alert": {
-    "version": 1,
+    "version": 2,
     "enabled": true,
     "initialTime": "09:00",
     "recipientMode": "selected",
     "memberIds": ["identifiant-membre"],
-    "stepDelayMinutes": [30, 120]
+    "stepReminders": [{"mode": "delay", "minutes": 30}, {"mode": "fixed", "time": "18:00"}]
   }
 }
 ```
@@ -38,9 +38,16 @@ insistants. Désactivation explicite : `{"enabled": false}`.
   exige une liste non vide de membres du même collectif. Aucun fallback vers tous.
 - Premier rappel : jour de l’occurrence à `initialTime`, pas au début de `windowDays`.
 - `states` contient les libellés intermédiaires ; la réalisation finale est implicite.
-  Il faut donc exactement `states.length` délais, entiers de 0 à 527040 minutes.
+  Il faut donc exactement `states.length` règles dans `stepReminders`, finale comprise.
 - Chaque délai part de la validation de **l’étape précédente**, jamais de la première.
-- Répétition fixe de 10 minutes après un envoi réussi, par destinataire.
+  L’interface le saisit en heures ; l’API le conserve en minutes entières (0 à 527040).
+- Une heure fixe utilise le fuseau du collectif, le jour de la validation précédente
+  si l’heure est encore à venir, sinon le lendemain. Les anciens `stepDelayMinutes`
+  restent acceptés et sont convertis lors de l’édition.
+- Répétition commune aux actions de **15 minutes** après un envoi réussi, par destinataire.
+  Les événements conservent leur fréquence de 10 minutes.
+- Les actions n’ont plus d’heure de début ni d’option « toute la journée » : la durée
+  par défaut reste indépendante et proposée lors de la saisie d’une réalisation.
 - Valider une étape arrête les rappels de cette étape pour tout le monde.
 
 Paramètres communs, administrés par collectif (aucune valeur de production implicite) :
@@ -410,7 +417,7 @@ channel: alarm_stream
 Conserver `priority: high`, `ttl: 0` et les boutons minimaux validés. Le volume des
 alarmes doit être non nul. Ce n’est pas une sonnerie continue ; le comportement en
 mode Ne pas déranger reste à vérifier séparément. Les rappels restent actuellement
-fixes à **10 minutes**, hors plage silencieuse commune ; aucune fréquence X configurable
+fixes à **15 minutes pour les actions**, hors plage silencieuse commune ; aucune fréquence X configurable
 n’est encore implémentée. L’acquittement d’étape continue d’arrêter les rappels associés.
 Cette validation Android ne constitue pas une validation iPhone.
 
@@ -420,7 +427,7 @@ Cette validation Android ne constitue pas une validation iPhone.
 - [ ] Test simple Android puis iPhone : réception, son et téléphone verrouillé.
 - [ ] Créer une **action pilote de test**, deux étapes intermédiaires et deux destinataires,
       heure quelques minutes dans le futur, délais 1 puis 2 minutes ; l’activer explicitement.
-- [ ] Vérifier premier envoi, répétition après 10 minutes et remplacement (même tag).
+- [ ] Vérifier premier envoi, répétition après 15 minutes et remplacement (même tag).
 - [ ] Appuyer sur **Fait** depuis Android : un seul log serveur, arrêt des rappels pour tous,
       demande d’effacement sur les deux appareils dans les 30 secondes environ.
 - [ ] Vérifier l’étape 2 après 1 minute ; la valider depuis iPhone puis vérifier l’étape finale

@@ -4,6 +4,17 @@
  */
 class ProgrammeRenderers {
 
+    static compareItems(a, b, currentMemberId) {
+        const rank = item => {
+            if (item.type === 'event') return 0;
+            const ids = item.data.memberIds ?? (item.data.memberId ? [item.data.memberId] : []);
+            if (currentMemberId && ids.includes(currentMemberId)) return 1;
+            return ids.length ? 3 : 2;
+        };
+        return rank(a) - rank(b) || (a.type === 'event' && b.type === 'event'
+            ? (a.data.time || '').localeCompare(b.data.time || '') : 0);
+    }
+
     static actionIllustrationUrl(action, collectiveId, compact = true) {
         const safeAction = action || {};
         const recipe = safeAction.illustration
@@ -117,8 +128,7 @@ class ProgrammeRenderers {
         const dateStr = new Date(occ.occurrenceDate).toLocaleDateString(locale, {
             weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
         });
-        const isAllDay = action.allDay !== undefined ? action.allDay : !action.time;
-        const timeStr = isAllDay ? '' : ` ⏰ ${action.time || ''}`;
+        const timeStr = ''; // Actions have no scheduled start time.
         const cancelledLabel = occ.isCancelled
             ? `<span class="badge bg-danger">${t("occurrence_cancelled")}</span>`
             : '';
@@ -241,18 +251,18 @@ class ProgrammeRenderers {
             char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;',
                 '"': '&quot;', "'": '&#39;' }[char]));
         const groups = [
-            ['available_actions', items.filter(it => it.type === 'action')
-                .sort((a, b) => a.date.localeCompare(b.date)
-                    || (a.data.time || '').localeCompare(b.data.time || ''))],
             ['today_events', items.filter(it => it.type === 'event')
-                .sort((a, b) => (a.data.time || '').localeCompare(b.data.time || ''))]
+                .sort((a, b) => ProgrammeRenderers.compareItems(a, b, currentMemberId))],
+            ['available_actions', items.filter(it => it.type === 'action')
+                .sort((a, b) => ProgrammeRenderers.compareItems(a, b, currentMemberId)
+                    || a.date.localeCompare(b.date))]
         ];
         return groups.filter(([, entries]) => entries.length).map(([label, entries]) => {
             return `<section class="mb-3 programme-now">
                 <h3 class="h6 text-muted">${t(label)}</h3>
                 <div class="list-group">${entries.map(it => {
                     const date = it.date;
-                    const time = it.data.allDay ? '' : (it.data.time || '');
+                    const time = it.type === 'action' || it.data.allDay ? '' : (it.data.time || '');
                     const name = `${time ? escape(time) + ' · ' : ''}${escape(it.data.name)}`;
                     if (it.type === 'event') {
                         return `<div class="list-group-item d-flex flex-wrap align-items-center gap-2">
@@ -352,11 +362,8 @@ class ProgrammeRenderers {
                     <div class="calendar-items overflow-auto" `
                         + `style="max-height: ${scrollHeight};">`;
 
-                const dayItems = (map[dateStr] || []).sort((a, b) => {
-                    const ta = a.data.time || '';
-                    const tb = b.data.time || '';
-                    return ta.localeCompare(tb);
-                });
+                const dayItems = (map[dateStr] || []).sort((a, b) =>
+                    ProgrammeRenderers.compareItems(a, b, currentMemberId));
 
                 dayItems.forEach(it => {
                     if (it.type === 'event') {
@@ -420,7 +427,6 @@ class ProgrammeRenderers {
                     it.data, collectiveId, 'action-calendar-illustration', currentMemberId
                 )}
                 <span>${stateIndicator}
-                    <strong>${it.data.time || ''}</strong>
                     ${it.data.name} ${notesIcon}
                     ${expired && !isDone ? `<small>${t('action_expired')}</small>` : ''}</span>
             </div>

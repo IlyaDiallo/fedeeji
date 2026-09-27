@@ -1,6 +1,7 @@
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const MAX_DELAY_MINUTES = 366 * 24 * 60;
 const REPEAT_MS = 10 * 60 * 1000;
+const ACTION_REPEAT_MS = 15 * 60 * 1000;
 
 function invalid(message) {
     const error = new Error(message);
@@ -78,6 +79,23 @@ function normalizeAlert(value, { states = [], memberId, memberIds, members = [] 
         typeof id !== 'string' || !members.some(member => member.id === id))) {
         throw invalid('Destinataires absents ou étrangers au collectif');
     }
+    // v2 rules include the implicit final validation. Preserve legacy minute delays.
+    if (value.stepReminders !== undefined) {
+        if (!Array.isArray(value.stepReminders) || value.stepReminders.length !== states.length) {
+            throw invalid('Un rappel est requis par validation suivante');
+        }
+        const stepReminders = value.stepReminders.map(rule => {
+            object(rule, 'Rappel');
+            if (rule.mode === 'fixed') return { mode: 'fixed', time: time(rule.time, 'Heure du rappel') };
+            if (rule.mode === 'delay' && Number.isSafeInteger(rule.minutes)
+                && rule.minutes >= 0 && rule.minutes <= MAX_DELAY_MINUTES) {
+                return { mode: 'delay', minutes: rule.minutes };
+            }
+            throw invalid('Rappel invalide : heure fixe ou délai de 0 à 527040 minutes');
+        });
+        return { version: 2, enabled: true, initialTime, recipientMode: value.recipientMode,
+            memberIds: value.recipientMode === 'selected' ? [...new Set(ids)] : [], stepReminders };
+    }
     // states are intermediate labels; the implicit final state needs a delay too.
     if (!Array.isArray(value.stepDelayMinutes) || value.stepDelayMinutes.length !== states.length
         || value.stepDelayMinutes.some(n => !Number.isSafeInteger(n) || n < 0 || n > MAX_DELAY_MINUTES)) {
@@ -106,5 +124,5 @@ function buildWebhookUrl(member) {
 
 module.exports = {
     normalizeSettings, normalizeAlert, responsibleIds, recipientIds, buildWebhookUrl,
-    invalid, REPEAT_MS, MAX_DELAY_MINUTES
+    invalid, REPEAT_MS, ACTION_REPEAT_MS, MAX_DELAY_MINUTES
 };

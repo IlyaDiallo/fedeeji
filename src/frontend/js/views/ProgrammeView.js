@@ -191,36 +191,10 @@ class ProgrammeView extends AbstractView {
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input"
-                                            type="radio" name="action-allDay"
-                                            id="action-allDay-yes"
-                                            value="yes" checked>
-                                        <label class="form-check-label"
-                                            for="action-allDay-yes">
-                                            ${t("all_day")}</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input"
-                                            type="radio" name="action-allDay"
-                                            id="action-allDay-no" value="no">
-                                        <label class="form-check-label"
-                                            for="action-allDay-no">
-                                            ${t("time_and_duration")}</label>
-                                    </div>
-                                </div>
-                                <div id="action-time-duration"
-                                    style="display:none;">
+                                <div>
                                     <div class="mb-3">
                                         <label class="form-label">
-                                            ${t("time")}</label>
-                                        <input type="time" class="form-control"
-                                            id="action-time">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="form-label">
-                                            ${t("duration")}</label>
+                                            ${t("action_default_duration")}</label>
                                         <div class="input-group">
                                             <input type="number"
                                                 class="form-control"
@@ -573,7 +547,8 @@ class ProgrammeView extends AbstractView {
             });
         }
 
-        items.sort((a, b) => a.nextDate.localeCompare(b.nextDate));
+        items.sort((a, b) => a.nextDate.localeCompare(b.nextDate)
+            || ProgrammeRenderers.compareItems(a, b, this.currentMemberId));
         this.lastRenderedItems = items;
 
         if (items.length === 0) {

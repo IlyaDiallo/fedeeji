@@ -45,13 +45,37 @@ async function fixture() {
     return { scheduler, state, storage, sent, params, setNow: value => { now = Date.parse(value); }, fail: value => { failN = value; } };
 }
 
-test('initial hour, ten-minute repetitions and persistence across restart', async () => {
+test('initial hour, fifteen-minute repetitions and persistence across restart', async () => {
     const f = await fixture();
     await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 0);
     f.setNow('2026-06-01T07:00:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 2);
-    f.setNow('2026-06-01T07:09:59Z'); await new Scheduler(f.params).checkAndNotify(); assert.equal(f.sent.length, 2);
-    f.setNow('2026-06-01T07:10:00Z'); await new Scheduler(f.params).checkAndNotify(); assert.equal(f.sent.length, 4);
+    f.setNow('2026-06-01T07:14:59Z'); await new Scheduler(f.params).checkAndNotify(); assert.equal(f.sent.length, 2);
+    f.setNow('2026-06-01T07:15:00Z'); await new Scheduler(f.params).checkAndNotify(); assert.equal(f.sent.length, 4);
     assert.equal(f.sent[0].payload.notificationId, f.sent[2].payload.notificationId);
+});
+
+test('fixed-time final reminder starts next day, repeats and stops after final validation', async () => {
+    const f = await fixture();
+    const params = { collectiveId: 'demo', collection: 'actions', id: 'a' };
+    const action = await f.storage.read(params);
+    await f.storage.write({ ...params, data: { ...action, states: ['Commencée'], windowAfterDays: 2,
+        alert: { ...action.alert, stepReminders: [{ mode: 'fixed', time: '18:00' }] } } });
+    await f.storage.write({ collectiveId: 'demo', collection: 'action-logs', id: 'first', data: {
+        id: 'first', programmeId: 'a', date: '2026-06-01', occurrenceDate: '2026-06-01', state: 1,
+        timestamp: Date.parse('2026-06-01T17:00:00Z')
+    } });
+    f.setNow('2026-06-01T17:01:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 0);
+    f.setNow('2026-06-02T15:59:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 0);
+    f.setNow('2026-06-02T16:00:00Z'); await f.scheduler.checkAndNotify(); assert.equal(f.sent.length, 2);
+    assert.equal(f.sent[0].payload.step, 2);
+    f.setNow('2026-06-02T16:15:00Z'); await new Scheduler(f.params).checkAndNotify(); assert.equal(f.sent.length, 4);
+    await f.storage.write({ collectiveId: 'demo', collection: 'action-logs', id: 'final', data: {
+        id: 'final', programmeId: 'a', date: '2026-06-02', occurrenceDate: '2026-06-01', state: 2,
+        timestamp: Date.parse('2026-06-02T16:16:00Z')
+    } });
+    f.setNow('2026-06-02T16:30:00Z'); await f.scheduler.checkAndNotify();
+    assert.equal(f.sent.filter(s => s.payload.type === 'reminder').length, 4);
+    assert.equal(f.sent.filter(s => s.payload.type === 'clear').length, 2);
 });
 
 test('failure retries only the failed recipient; quiet hours suppress reminders without a catch-up burst', async () => {

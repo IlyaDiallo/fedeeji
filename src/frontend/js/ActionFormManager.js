@@ -51,24 +51,44 @@ class ActionFormManager {
         document.getElementById('action-alert-enabled').checked = action.alert?.enabled === true;
         document.getElementById('action-alert-time').value = action.alert?.initialTime || '';
         document.getElementById('action-alert-mode').value = action.alert?.recipientMode || 'responsible';
-        this._renderAlertDelays(action.alert?.stepDelayMinutes || []);
+        this._renderAlertDelays(action.alert?.stepReminders
+            || (action.alert?.stepDelayMinutes || []).map(minutes => ({ mode: 'delay', minutes })));
         this._toggleAlert();
     }
 
     _renderAlertDelays(values) {
         const container = document.getElementById('action-alert-delays');
-        values ||= Array.from(container.querySelectorAll('input')).map(input => input.value);
+        values ||= this._readStepReminders();
         container.replaceChildren();
         const states = document.getElementById('action-states').value.split(',').map(s => s.trim()).filter(Boolean);
         const targets = [...states.slice(1), t('ha_done')];
         states.forEach((previous, index) => {
             const label = document.createElement('label');
             label.className = 'form-label d-block';
-            label.textContent = `${targets[index]} — ${t('ha_delay_after')} « ${previous} »`;
+            label.textContent = `${targets[index]} — ${t('ha_after_validation')} « ${previous} »`;
+            const rule = values[index] || { mode: 'delay', minutes: 60 };
+            const select = document.createElement('select');
+            select.className = 'form-select mb-2';
+            for (const mode of ['delay', 'fixed']) {
+                const option = document.createElement('option');
+                option.value = mode; option.textContent = t(`ha_reminder_${mode}`);
+                select.append(option);
+            }
+            select.value = rule.mode;
             const input = document.createElement('input');
-            input.type = 'number'; input.min = '0'; input.max = '527040'; input.step = '1';
-            input.className = 'form-control mb-2'; input.value = values[index] ?? '';
-            label.append(input); container.append(label);
+            const configure = () => {
+                input.type = select.value === 'fixed' ? 'time' : 'number';
+                if (select.value === 'delay') {
+                    input.min = '0'; input.max = '8784'; input.step = 'any';
+                } else {
+                    input.removeAttribute('min'); input.removeAttribute('max'); input.removeAttribute('step');
+                }
+            };
+            configure();
+            input.className = 'form-control mb-2';
+            input.value = rule.mode === 'fixed' ? rule.time : rule.minutes / 60;
+            select.addEventListener('change', () => { input.value = ''; configure(); });
+            label.append(select, input); container.append(label);
         });
         this._toggleAlert();
     }
@@ -84,23 +104,26 @@ class ActionFormManager {
             document.getElementById('action-alert-mode').value !== 'selected';
     }
 
+    _readStepReminders() {
+        return Array.from(document.querySelectorAll('#action-alert-delays label')).map(label => {
+            const mode = label.querySelector('select').value;
+            const value = label.querySelector('input').value;
+            return mode === 'fixed' ? { mode, time: value }
+                : { mode, minutes: Math.round(Number(value) * 60) };
+        });
+    }
+
     _readAlert() {
         if (!document.getElementById('action-alert-enabled').checked) return { enabled: false };
         return {
             enabled: true, initialTime: document.getElementById('action-alert-time').value,
             recipientMode: document.getElementById('action-alert-mode').value,
             memberIds: Array.from(document.querySelectorAll('#action-alert-members input:checked')).map(input => input.value),
-            stepDelayMinutes: Array.from(document.querySelectorAll('#action-alert-delays input')).map(input => Number(input.value))
+            stepReminders: this._readStepReminders()
         };
     }
 
     // --- Toggles d'interface ---
-
-    toggleAllDay() {
-        const isAllDay = document.getElementById('action-allDay-yes').checked;
-        document.getElementById('action-time-duration')
-            .style.display = isAllDay ? 'none' : 'block';
-    }
 
     toggleExecutionType() {
         const isNow = document.getElementById('exec-type-now')?.checked;
@@ -119,12 +142,7 @@ class ActionFormManager {
             const dateStr = window.RecurrenceUtils
                 ? RecurrenceUtils.formatDateStr(today)
                 : today.toISOString().split('T')[0];
-            const timeStr = today.toTimeString().slice(0, 5);
-
             document.getElementById('action-date').value = dateStr;
-            document.getElementById('action-time').value = timeStr;
-            document.getElementById('action-allDay-no').checked = true;
-            this.toggleAllDay();
         } else {
             if (recContainer) recContainer.style.display = 'block';
             if (windowContainer) windowContainer.style.display = 'block';
@@ -184,7 +202,6 @@ class ActionFormManager {
                 ).join('');
         }
 
-        this.toggleAllDay();
         this.toggleExecutionType();
         this._resetRecurrenceFields();
         this._populateAlert();
@@ -205,7 +222,6 @@ class ActionFormManager {
         if (!form.reportValidity()) return;
 
         const id = document.getElementById('action-id').value;
-        const isAllDay = document.getElementById('action-allDay-yes').checked;
         const isNow = !id
             && document.getElementById('exec-type-now')?.checked;
 
@@ -226,15 +242,11 @@ class ActionFormManager {
             ),
             windowAfterDays: Number(document.getElementById('action-windowAfterDays').value),
 
-            allDay: isAllDay,
-            time: isAllDay
-                ? '' : document.getElementById('action-time').value,
-            duration: isAllDay
-                ? null
-                : Number(document.getElementById('action-duration').value),
-            durationUnit: isAllDay
-                ? null
-                : document.getElementById('action-durationUnit').value,
+            // Clear legacy scheduling fields without discarding the default duration.
+            allDay: null,
+            time: null,
+            duration: Number(document.getElementById('action-duration').value) || null,
+            durationUnit: document.getElementById('action-durationUnit').value,
 
             recurrence: isNow
                 ? 'none'
@@ -277,7 +289,7 @@ class ActionFormManager {
                         programmeId: created.id,
                         type: 'done',
                         date: data.date,
-                        time: data.time || null,
+                        time: new Date().toTimeString().slice(0, 5),
                         duration: data.duration,
                         durationUnit: data.durationUnit,
                         notes: null,
@@ -327,9 +339,6 @@ class ActionFormManager {
 
         document.getElementById('btn-save-action')
             .addEventListener('click', () => this.save());
-
-        document.querySelectorAll('input[name="action-allDay"]')
-            .forEach(r => r.addEventListener('change', () => this.toggleAllDay()));
 
         document.querySelectorAll('input[name="action-executionType"]')
             .forEach(r => r.addEventListener('change',
@@ -397,13 +406,6 @@ class ActionFormManager {
             action.windowDays || 0;
         document.getElementById('action-windowAfterDays').value = action.windowAfterDays || 0;
 
-        const isAllDay = action.allDay !== undefined
-            ? action.allDay : !action.time;
-        document.getElementById('action-allDay-yes').checked = isAllDay;
-        document.getElementById('action-allDay-no').checked = !isAllDay;
-        this.toggleAllDay();
-
-        document.getElementById('action-time').value = action.time || '';
         document.getElementById('action-duration').value =
             action.duration || '';
         document.getElementById('action-durationUnit').value =
@@ -489,13 +491,6 @@ class ActionFormManager {
             tpl.windowDays || 0;
         document.getElementById('action-windowAfterDays').value = tpl.windowAfterDays || 0;
 
-        const isAllDay = tpl.allDay !== undefined
-            ? tpl.allDay : !tpl.time;
-        document.getElementById('action-allDay-yes').checked = isAllDay;
-        document.getElementById('action-allDay-no').checked = !isAllDay;
-        this.toggleAllDay();
-
-        document.getElementById('action-time').value = tpl.time || '';
         document.getElementById('action-duration').value =
             tpl.duration || '';
         document.getElementById('action-durationUnit').value =

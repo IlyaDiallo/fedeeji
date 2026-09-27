@@ -16,15 +16,12 @@ class LogFormManager {
         const dateStr = occDateObj.toLocaleDateString(locale, {
             weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
         });
-        const isAllDay = action?.allDay !== undefined
-            ? action.allDay : !action?.time;
-        const timeStr = (!isAllDay && action?.time)
-            ? `<br>⏰ ${t("time")} : ${action.time}` : '';
+
         const durationStr = action?.duration
             ? `<br>⏱️ ${t("duration")} : ${action.duration} `
                 + `${t(action.durationUnit === 'hours' ? 'hours' : 'minutes')}`
             : '';
-        return `📅 ${dateStr}${timeStr}${durationStr}`;
+        return `📅 ${dateStr}${durationStr}`;
     }
 
     /** Affiche l'identité visuelle de l'action dans le détail. */
@@ -299,7 +296,7 @@ class LogFormManager {
 
         document.getElementById('log-state-container')
             .style.display = 'none';
-        document.getElementById('log-time').value = action?.time || '';
+        document.getElementById('log-time').value = '';
         notesTextarea.value = '';
 
         // Pré-remplir durée depuis l'action

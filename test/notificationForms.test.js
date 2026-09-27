@@ -15,7 +15,10 @@ function fixture() {
         ActionUtils: { DEFAULT_DURATION_UNIT: 'minutes' },
         document: { getElementById, querySelectorAll: selector => selector.includes('members')
             ? [{ value: 'member-a' }, { value: 'member-b' }]
-            : [{ value: '30' }, { value: '120' }] }
+            : [
+                { querySelector: s => ({ value: s === 'select' ? 'delay' : '0.5' }) },
+                { querySelector: s => ({ value: s === 'select' ? 'fixed' : '18:00' }) }
+            ] }
     });
     vm.runInContext(fs.readFileSync('src/frontend/js/ActionFormManager.js', 'utf8') + '\nthis.Manager = ActionFormManager;', context);
     return { Manager: context.Manager, get: getElementById };
@@ -30,7 +33,9 @@ test('action alert form sends numeric delays and explicit opt-in', () => {
     get('action-alert-time').value = '09:00';
     assert.deepEqual(JSON.parse(JSON.stringify(manager._readAlert())), {
         enabled: true, initialTime: '09:00', recipientMode: 'selected',
-        memberIds: ['member-a', 'member-b'], stepDelayMinutes: [30, 120]
+        memberIds: ['member-a', 'member-b'], stepReminders: [
+            { mode: 'delay', minutes: 30 }, { mode: 'fixed', time: '18:00' }
+        ]
     });
 });
 
@@ -43,7 +48,6 @@ test('template copies alert settings without implicitly enabling a new action', 
     let populated;
     manager._populateAlert = action => { populated = action; };
     manager._applyNormalizedRecurrence = () => {};
-    manager.toggleAllDay = () => {};
     manager.toggleExecutionType = () => {};
     manager._onTemplateChange('tpl');
     assert.equal(populated.alert.enabled, false);
